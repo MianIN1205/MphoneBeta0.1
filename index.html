@@ -7,7 +7,7 @@
   <title>眠花糖机</title>
   <!-- 安装为桌面程序（PWA）：安卓 / 电脑读 manifest，苹果读 apple-* 标记 -->
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#FFE4E1">
+  <meta name="theme-color" content="#FFF0F5">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -585,6 +585,7 @@
             placeholder="/* 例：.settings-card { border-radius: 20px; } */"
             rows="5"></textarea>
           <button class="custom-css-apply-btn" id="globalCssApplyBtn">应用</button>
+          <div class="auto-hint">系统顶栏颜色（安卓）：:root { --system-bar-color: #颜色; }，也可以写在某个界面上，比如 #appChatRoom { … }</div>
           <div class="auto-hint">样式出问题时，在网址后面加 ?safe 打开可以暂时停用全局样式</div>
         </div>
 

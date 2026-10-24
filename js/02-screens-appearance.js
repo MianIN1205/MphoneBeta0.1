@@ -405,3 +405,23 @@ document.getElementById('globalCssApplyBtn').addEventListener('click', function(
   btn.textContent = '已应用';
   setTimeout(function() { btn.classList.remove('applied'); btn.textContent = '应用'; }, 1200);
 });
+
+// =============================================
+// 系统顶栏颜色：跟随最上层界面的 CSS 变量 --system-bar-color（写在 theme-color 里，安卓顶栏用这个颜色）
+// 切换界面、改全局 / 角色 CSS 后都会重新取
+// =============================================
+var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+function updateSystemBarColor() {
+  var screens = document.querySelectorAll('.app-screen.active, .settings-screen.active');
+  var el = screens.length ? screens[screens.length - 1] : document.documentElement;
+  var c = getComputedStyle(el).getPropertyValue('--system-bar-color').trim();
+  if (c && themeColorMeta.getAttribute('content') !== c) themeColorMeta.setAttribute('content', c);
+}
+var systemBarRaf = 0;
+function scheduleSystemBarColor() {
+  if (systemBarRaf) return;
+  systemBarRaf = requestAnimationFrame(function() { systemBarRaf = 0; updateSystemBarColor(); });
+}
+new MutationObserver(scheduleSystemBarColor).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+new MutationObserver(scheduleSystemBarColor).observe(document.head, { subtree: true, childList: true, characterData: true });
+updateSystemBarColor();

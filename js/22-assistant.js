@@ -60,7 +60,7 @@ var ASSISTANT_CSS_HINT =
   '常用选择器：.phone（整个手机）、.desktop-apps（主页图标区）、.settings-nav（各界面顶栏）、.settings-card（设置卡片）、.section-label（分区标题）、' +
   '.chat-char-card（消息列表 / 通讯录卡片）、.chat-tab-item（Chat 底栏标签）、.chat-msg-bubble（聊天气泡）、.chat-msg-row.user .chat-msg-bubble（我的气泡）、' +
   '.chat-msg-row.ai .chat-msg-bubble（角色气泡）、.cr-time-sep（聊天里的时间）、.cr-bottom-bar 或 .chat-room-bottom（聊天输入栏）、.feed-post（动态卡片）。' +
-  '写样式时尽量加 .phone 前缀，颜色和圆角要和现有的粉色系风格协调，必要时用 !important。';
+  '安卓系统顶栏颜色用变量 --system-bar-color（写在 :root 或某个界面上，如 #appChatRoom）。写样式时尽量加 .phone 前缀，颜色和圆角要和现有的粉色系风格协调，必要时用 !important。';
 
 function assistantPrompt(char) {
   if (!isAssistantOn(char)) return '';

@@ -36,15 +36,6 @@ html {
   transform: none !important;
   z-index: 9999 !important;
 }
-/* 安卓桌面程序是「真全屏」：系统顶栏已隐藏，界面铺到屏幕最顶上，时间等用应用自己的状态栏；
-   iPhone 是 standalone 模式（系统状态栏一直在），仍按上面的规则让开 */
-@media (display-mode: fullscreen) {
-  .phone.fullscreen {
-    top: 0 !important;
-    height: 100vh !important;
-    height: calc(100dvh - env(safe-area-inset-bottom, 0px)) !important;
-  }
-}
 .phone.fullscreen .settings-screen,
 .phone.fullscreen .app-screen {
   border-radius: 0 !important;
@@ -717,3 +708,8 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
 }
 .chat-msg-avatar::after, .chat-char-card-avatar::after, .contact-card-avatar::after, .new-chat-char-avatar::after,
 .char-avatar-box::after, .chat-room-head-av::after, .feed-post-av::after { content: none; }
+
+/* 系统顶栏颜色（安卓桌面程序 / 手机浏览器地址栏）：取最上层界面的 --system-bar-color。
+   默认和各界面顶部的颜色一致；可以在全局 CSS 或某个界面上改，比如 #appChatRoom { --system-bar-color: #fff; } */
+:root { --system-bar-color: #FFF0F5; }
+.app-screen, .settings-screen { --system-bar-color: #FFE7E7; }
