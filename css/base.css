@@ -713,3 +713,16 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
    默认和各界面顶部的颜色一致；可以在全局 CSS 或某个界面上改，比如 #appChatRoom { --system-bar-color: #fff; } */
 :root { --system-bar-color: #FFF0F5; }
 .app-screen, .settings-screen { --system-bar-color: #FFE7E7; }
+
+/* 壁纸模糊层：只模糊 .phone 上的壁纸，桌面内容在它上面 */
+.wp-blur-layer { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; }
+.desktop, .dock { position: relative; z-index: 1; }
+/* 桌面文字明暗（外观里调过才生效）：时间、日期、签名、图标名字 */
+.phone.desk-text-custom .clock-display,
+.phone.desk-text-custom .date-display,
+.phone.desk-text-custom .signature,
+.phone.desk-text-custom .desktop .dock-label,
+.phone.desk-text-custom .dock .dock-label {
+  color: var(--desk-text) !important;
+  text-shadow: var(--desk-text-shadow);
+}

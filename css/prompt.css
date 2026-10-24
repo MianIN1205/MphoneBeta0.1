@@ -300,3 +300,7 @@
 .pf-del-btn:active { transform: scale(0.97); opacity: 0.72; }
 .pf-del-btn.hidden { display: none; }
 
+
+/* 世界书条目：开关关掉时变淡 */
+.wb-folder-body .pf-entry-card .st-toggle-wrap { flex-shrink: 0; margin-left: 6px; }
+.wb-folder-body .pf-entry-card.disabled .pf-entry-card-body { opacity: 0.45; }

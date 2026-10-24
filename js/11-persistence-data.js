@@ -30,6 +30,48 @@
     };
   });
 
+  // 壁纸模糊（0–20px）与桌面文字明暗（0 = 黑，100 = 白；null = 默认颜色）
+  var wpBlurLayer = document.getElementById('wpBlurLayer');
+  var wpBlurSlider = document.getElementById('wpBlurSlider');
+  var deskTextSlider = document.getElementById('deskTextSlider');
+  var deskTextValue = document.getElementById('deskTextValue');
+  function applyWpBlur(px) {
+    var f = px ? 'blur(' + px + 'px)' : '';
+    wpBlurLayer.style.backdropFilter = f;
+    wpBlurLayer.style.webkitBackdropFilter = f;
+    wpPreview.style.filter = px ? 'blur(' + Math.max(1, Math.round(px * 0.3)) + 'px)' : '';
+    document.getElementById('wpBlurValue').textContent = px;
+  }
+  function applyDeskText(v) {
+    phoneEl.classList.toggle('desk-text-custom', v !== null);
+    if (v === null) { deskTextValue.textContent = '默认'; return; }
+    var c = Math.round(v * 2.55);
+    phoneEl.style.setProperty('--desk-text', 'rgb(' + c + ',' + c + ',' + c + ')');
+    // 浅色字配深色阴影、深色字配浅色阴影，换了背景也看得清
+    phoneEl.style.setProperty('--desk-text-shadow', v >= 50 ? '0 1px 3px rgba(0,0,0,0.45)' : '0 1px 3px rgba(255,255,255,0.65)');
+    deskTextValue.textContent = v + '%';
+  }
+  var wpBlur = mphoneStore.load('mphone_wp_blur', 0);
+  var deskText = mphoneStore.load('mphone_desk_text', null);
+  wpBlurSlider.value = wpBlur;
+  if (deskText !== null) deskTextSlider.value = deskText;
+  applyWpBlur(wpBlur);
+  applyDeskText(deskText);
+  wpBlurSlider.addEventListener('input', function() {
+    applyWpBlur(parseInt(this.value, 10));
+    mphoneStore.save('mphone_wp_blur', parseInt(this.value, 10));
+  });
+  deskTextSlider.addEventListener('input', function() {
+    applyDeskText(parseInt(this.value, 10));
+    mphoneStore.save('mphone_desk_text', parseInt(this.value, 10));
+  });
+  // 点「默认 / xx%」恢复原来的文字颜色
+  deskTextValue.addEventListener('click', function() {
+    deskTextSlider.value = 20;
+    applyDeskText(null);
+    mphoneStore.save('mphone_desk_text', null);
+  });
+
   // 状态栏显示 / 自定义文字
   toggleStatusBar.checked = mphoneStore.load('mphone_statusbar_on', true);
   statusBar.style.display = toggleStatusBar.checked ? 'flex' : 'none';

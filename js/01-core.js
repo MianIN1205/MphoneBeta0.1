@@ -165,7 +165,7 @@ backBtn.addEventListener('click', function() {
   modelChevron.classList.remove('open');
 });
 
-// 设置界面 — 顶栏下方固定横向菜单切换（主API / 语音API / 生图API）
+// 设置界面 — 顶栏下方固定横向菜单切换（主API / 语音API / 生图API / 辅助功能）
 document.querySelectorAll('#settingsSubnav .settings-subnav-item').forEach(function(btn) {
   btn.addEventListener('click', function() {
     var stab = this.dataset.stab;

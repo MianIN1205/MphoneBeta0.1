@@ -533,10 +533,11 @@ function renderRoomLists(idx) {
     openings.forEach(function(text) {
       var item = document.createElement('div');
       item.className = 'drama-opening-item';
-      item.textContent = text;
+      var shown = fillMacros(text, charList[idx]);   // 开场白里的 {{char}} / {{user}} 换成名字
+      item.textContent = shown;
       item.addEventListener('click', function(e) {
         e.stopPropagation();
-        var m = { role: 'assistant', content: text, time: Date.now() };
+        var m = { role: 'assistant', content: shown, time: Date.now() };
         getDramaHistory(idx).push(m);
         saveHistories();
         renderHistMsg(m, dList, dEmpty);

@@ -85,6 +85,21 @@ function chatFormatRules(char) {
   return rules.length ? [{ role: 'system', content: '【回复格式】' + rules.join('\n') }] : [];
 }
 
+// 酒馆通用写法：{{char}} = 角色名，{{user}} = 用户名（本聊天所用账号的昵称）；也认旧写法 <BOT> / <USER>。
+// {{// 注释}} 和 {{trim}} 直接去掉，{{newline}} 换成换行
+function fillMacros(text, char) {
+  if (!text) return text;
+  char = char || {};
+  var charName = char.charAlias || char.charName || '角色';
+  var userName = (typeof resolveCharAccount === 'function' && resolveCharAccount(char).nickname) || '用户';
+  return String(text)
+    .replace(/\{\{\/\/[\s\S]*?\}\}/g, '')
+    .replace(/\{\{\s*trim\s*\}\}/gi, '')
+    .replace(/\{\{\s*newline\s*\}\}/gi, '\n')
+    .replace(/\{\{\s*char\s*\}\}|<BOT>/gi, charName)
+    .replace(/\{\{\s*user\s*\}\}|<USER>/gi, userName);
+}
+
 // histOverride：指定使用的记录（自主活动 / 动态生成时用聊天记录），默认取当前子视图的记录
 function buildMsgs(idx, histOverride) {
   var char = charList[idx] || {};
@@ -158,7 +173,9 @@ function buildMsgs(idx, histOverride) {
     return { role: m.role, content: msgContentForAI(m, i >= richFrom) };
   });
   if (attentionNote) msgs.push(attentionNote);
-  return msgs.concat(rawHist, wbByPos.after);
+  // 提示词、人设、预设、世界书里的 {{char}} / {{user}} 换成名字（聊天记录本身不动）
+  var fill = function(m) { return typeof m.content === 'string' ? { role: m.role, content: fillMacros(m.content, char) } : m; };
+  return msgs.map(fill).concat(rawHist, wbByPos.after.map(fill));
 }
 // 消息头像：角色用角色头像，自己用本聊天选用账号的头像
 function createMsgAvatar(role) {
@@ -193,6 +210,7 @@ function appendMsg(role, content, isTyping, targetListEl, targetEmptyEl) {
 // 气泡文字；角色消息里「〔译〕」之后的内容显示为附加翻译
 function setBubbleText(bubble, content, isAi) {
   content = String(content || '');
+  if (isAi) content = fillMacros(content, charList[openingChatCharIdx]);
   var i = isAi ? content.indexOf('〔译〕') : -1;
   if (i < 0) { bubble.textContent = content; return; }
   bubble.textContent = content.slice(0, i).trim();
@@ -438,6 +456,8 @@ function sendMsg(userText, requestOnly, onDone) {
     }
     saveHistories();
     renderChatCharList();
+    // 切到后台时弹系统通知
+    if (typeof notifyNewMessages === 'function') notifyNewMessages(replyChar, added);
     return added;
   }
 

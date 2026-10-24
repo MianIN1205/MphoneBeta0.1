@@ -163,6 +163,20 @@ function renderWbList() {
       cb.appendChild(nameEl);
       cb.appendChild(subEl);
       card.appendChild(cb);
+      // 条目开关：关掉后保留内容，但不发给模型
+      card.classList.toggle('disabled', entry.enabled === false);
+      var tl = document.createElement('label');
+      tl.className = 'st-toggle-wrap';
+      tl.innerHTML = '<input type="checkbox"><span class="st-toggle-slider"></span>';
+      var tcb = tl.querySelector('input');
+      tcb.checked = entry.enabled !== false;
+      tl.addEventListener('click', function(e) { e.stopPropagation(); });
+      tcb.addEventListener('change', function() {
+        entry.enabled = this.checked;
+        card.classList.toggle('disabled', !this.checked);
+        saveWbEntries();
+      });
+      card.appendChild(tl);
       card.insertAdjacentHTML('beforeend', '<svg class="pf-entry-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>');
       card.addEventListener('click', function() { openWbDetail(entry.id); });
       body.appendChild(card);
@@ -318,7 +332,7 @@ function getActiveWbEntries(char, hist) {
   return wbEntries.filter(function(e) {
     var fid = (e.folderId && known[e.folderId]) ? e.folderId : WB_NONE;
     var linked = ids.indexOf(e.id) >= 0 || folders.indexOf(fid) >= 0;
-    if (!linked || !e.content) return false;
+    if (!linked || !e.content || e.enabled === false) return false;
     if (!e.keywords) return true;
     return e.keywords.split(/[,，]/).some(function(k) {
       k = k.trim().toLowerCase();
@@ -666,3 +680,56 @@ stEntryDetailDelete.addEventListener('click', function() {
 loadStPresetsFromStorage();
 renderStPresetSelector();
 renderStEntryList();
+
+// =============================================
+// 预设导入：酒馆（SillyTavern）对话补全预设 JSON，或本应用自己的 { name, entries }
+// 按 prompt_order 的顺序和开关导入；占位条目（聊天记录、角色描述、世界书等 marker）由应用自己处理，跳过
+// =============================================
+function stPresetFromJson(json, fallbackName) {
+  var toRole = function(r) { return (r === 'user' || r === 'assistant') ? r : 'system'; };
+  if (!Array.isArray(json.prompts)) {
+    if (Array.isArray(json.entries)) {
+      return { name: json.name || fallbackName, entries: json.entries.map(function(e) {
+        return { name: e.name || '未命名条目', role: toRole(e.role), enabled: e.enabled !== false, content: String(e.content || '') };
+      }) };
+    }
+    throw new Error('不是酒馆的对话补全预设（找不到 prompts）');
+  }
+  var byId = {};
+  json.prompts.forEach(function(p) { if (p && p.identifier) byId[p.identifier] = p; });
+  var orders = Array.isArray(json.prompt_order) ? json.prompt_order : [];
+  // 优先用全局顺序（character_id 100001），否则用条目最多的那份
+  var order = orders.filter(function(o) { return o && o.character_id === 100001; })[0] ||
+    orders.slice().sort(function(a, b) { return ((b && b.order) || []).length - ((a && a.order) || []).length; })[0];
+  var list = (order && Array.isArray(order.order))
+    ? order.order.map(function(o) { return { p: byId[o.identifier], enabled: o.enabled !== false }; })
+    : json.prompts.map(function(p) { return { p: p, enabled: p.enabled !== false }; });
+  var entries = list.filter(function(x) { return x.p && !x.p.marker && String(x.p.content || '').trim(); })
+    .map(function(x) {
+      return { name: x.p.name || x.p.identifier || '未命名条目', role: toRole(x.p.role), enabled: x.enabled, content: String(x.p.content) };
+    });
+  if (!entries.length) throw new Error('预设里没有可用的提示词条目');
+  return { name: fallbackName, entries: entries };
+}
+var stPresetImportInput = document.getElementById('stPresetImportInput');
+document.getElementById('stPresetImportBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  stPresetImportInput.value = '';
+  stPresetImportInput.click();
+});
+stPresetImportInput.addEventListener('change', function() {
+  var file = this.files && this.files[0];
+  if (!file) return;
+  file.text().then(function(text) {
+    var preset = stPresetFromJson(JSON.parse(text), file.name.replace(/\.json$/i, '').slice(0, 24) || '导入的预设');
+    stPresets.push(preset);
+    stActivePresetIdx = stPresets.length - 1;
+    saveStPresetsToStorage();
+    renderStPresetSelector();
+    renderStEntryList();
+    var on = preset.entries.filter(function(e) { return e.enabled; }).length;
+    showToast('✓ 已导入「' + preset.name + '」：' + preset.entries.length + ' 条，开启 ' + on + ' 条', 'success');
+  }).catch(function(err) {
+    showToast('✗ 导入失败：' + (err instanceof SyntaxError ? '文件不是有效的 JSON' : err.message), 'error');
+  });
+});

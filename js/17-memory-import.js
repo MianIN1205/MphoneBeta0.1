@@ -233,11 +233,15 @@ function cardToDraft(card, avatar) {
   if (book && Array.isArray(book.entries)) {
     book.entries.forEach(function(e) {
       if (!e || !e.content) return;
+      // 位置：角色描述前后 → 前；作者注释 → 中；按深度插入聊天记录 → 后
+      var ext = (e.extensions && e.extensions.position);
+      var pos = ext === 4 ? 'after' : (ext === 2 || ext === 3) ? 'middle' : 'before';
       pendingEntries.push({
         name: e.comment || e.name || (e.keys && e.keys[0]) || '导入条目',
         keywords: (e.constant ? '' : (e.keys || []).join(',')),
         content: e.content,
-        pos: 'before'
+        pos: pos,
+        enabled: e.enabled !== false
       });
     });
   }

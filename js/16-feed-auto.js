@@ -484,6 +484,7 @@ function generateCharPost(idx) {
     saveFeed();
     renderFeed();
     showToast('「' + charAuthor(char).name + '」发布了新动态', 'success');
+    if (typeof notifyFeedPost === 'function') notifyFeedPost(char, feedPosts[0]);
   });
 }
 
@@ -708,6 +709,7 @@ function autoSendMessage(idx) {
       mphoneStore.save('mphone_unread', chatUnread);
       showToast('「' + charAuthor(char).name + '」给你发来一条消息', 'success');
     }
+    if (typeof notifyNewMessages === 'function') notifyNewMessages(char, added);
     renderChatCharList();
   });
 }
