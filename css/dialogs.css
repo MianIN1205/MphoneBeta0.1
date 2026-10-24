@@ -51,19 +51,7 @@
 
 .new-chat-char-avatar {
   width: 40px; height: 40px; border-radius: 10px;
-  flex-shrink: 0; position: relative; overflow: hidden;
-  background: rgba(0,0,0,0.045);
-  border: 1.5px dashed rgba(190,160,160,0.35);
-}
-.new-chat-char-avatar::before {
-  content: ''; position: absolute;
-  width: 12px; height: 12px; border-radius: 50%;
-  background: rgba(180,140,140,0.22); top: 7px; left: 14px;
-}
-.new-chat-char-avatar::after {
-  content: ''; position: absolute;
-  width: 20px; height: 11px; border-radius: 10px 10px 0 0;
-  background: rgba(180,140,140,0.18); bottom: 4px; left: 10px;
+  flex-shrink: 0;
 }
 
 .new-chat-char-info { flex: 1; min-width: 0; }

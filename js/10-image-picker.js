@@ -98,6 +98,7 @@ document.getElementById('wpBtnReset').addEventListener('click', function() {
 document.getElementById('chatBgUploadBtn').addEventListener('click', function() {
   openImgPicker(function(src) {
     setChatBgForm({ color: selectedChatBgColor, image: src });
+    if (typeof scheduleLiveLook === 'function') scheduleLiveLook();
   });
 });
 

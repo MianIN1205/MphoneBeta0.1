@@ -104,6 +104,9 @@ function buildMsgs(idx, histOverride) {
   // 系统内置助手：应用说明 + 已开启的权限
   var assistantSys = (typeof assistantPrompt === 'function') ? assistantPrompt(char) : '';
   if (assistantSys) msgs.push({ role: 'system', content: assistantSys });
+  // 社交圈：认识谁 + 能看到的最近动态
+  var feedSys = (typeof feedContextFor === 'function') ? feedContextFor(char) : '';
+  if (feedSys) msgs.push({ role: 'system', content: feedSys });
 
   var history = histOverride || getActiveHistory(idx);
 

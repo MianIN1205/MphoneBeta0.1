@@ -79,6 +79,7 @@ function switchChatRoomSubView(view) {
     crBottomBar.classList.toggle('drama-mode', isDrama);
   }
   closeCrPlusPanel();
+  if (typeof applyChatRoomStyle === 'function' && charList[openingChatCharIdx]) applyChatRoomStyle(charList[openingChatCharIdx]);
   // 刚打开、还没显示过的列表停在最新消息
   if (typeof scrollPendingLists === 'function') setTimeout(scrollPendingLists, 0);
 }

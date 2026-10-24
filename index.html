@@ -865,6 +865,11 @@
           <textarea class="mine-field-textarea" id="feedComposeText" rows="4" placeholder="这一刻的想法…"></textarea>
           <div class="feed-compose-imgs" id="feedComposeImgs">
             <button class="feed-compose-img-add" id="feedComposeImgAdd" aria-label="添加图片">+</button>
+            <button class="feed-compose-img-add feed-compose-textimg-add" id="feedComposeTextImgAdd" aria-label="添加文字图">文字图</button>
+          </div>
+          <div class="feed-textimg-row" id="feedTextImgRow">
+            <textarea class="mine-field-textarea" id="feedTextImgInput" rows="2" placeholder="用文字描述这张图，比如：窗外的晚霞，橘粉色的云"></textarea>
+            <button class="feed-textimg-ok" id="feedTextImgOk">添加</button>
           </div>
           <div class="feed-compose-label">谁可以看</div>
           <div class="feed-visible-list" id="feedVisibleList"></div>
@@ -1661,6 +1666,14 @@
           </div>
         </div>
 
+        <!-- 社交圈：认识的角色之间互相看得到动态和评论 -->
+        <div class="section-label">社交圈</div>
+        <div class="settings-card">
+          <div class="bubble-section-label" style="margin-bottom:8px;">认识的角色</div>
+          <div class="feed-visible-list cs-circle-list" id="csCircleList"></div>
+          <div class="auto-hint">点亮的角色和 TA 互相认识，能看到彼此的动态和评论；不认识的角色之间互相看不到。你（用户）和所有角色都认识。</div>
+        </div>
+
         <!-- 内置助手：只对系统内置的助手角色显示 -->
         <div id="assistantPermWrap" style="display:none;">
           <div class="section-label">内置助手</div>
@@ -1818,7 +1831,17 @@
       </div>
 
       <!-- ========== 第三页：美化 ========== -->
-      <div class="settings-content cs-page">
+      <div class="settings-content cs-page" id="csLookPage">
+
+        <!-- 聊天窗口 / 剧情窗口各一套美化；改动立刻应用到窗口 -->
+        <div class="pf-radio-row cs-look-view" id="csLookViewRow">
+          <button class="pf-radio-btn selected" data-view="chat">聊天窗口</button>
+          <button class="pf-radio-btn" data-view="drama">剧情窗口</button>
+        </div>
+        <div class="cs-look-preview" id="csLookPreview">
+          <div class="chat-msg-row ai"><div class="chat-msg-avatar"></div><div class="chat-msg-bubble">今天过得怎么样？</div></div>
+          <div class="chat-msg-row user"><div class="chat-msg-avatar"></div><div class="chat-msg-bubble">还不错，刚下班～</div></div>
+        </div>
 
         <!-- 聊天背景 -->
         <div class="section-label">窗口颜色</div>
@@ -1915,9 +1938,17 @@
               <button class="pf-radio-btn" data-align="left">居左</button>
             </div>
           </div>
+          <div class="auto-row">
+            <span class="auto-row-label">显示格式</span>
+            <div class="pf-radio-row" id="layoutFormatRow">
+              <button class="pf-radio-btn selected" data-format="bubble">气泡</button>
+              <button class="pf-radio-btn" data-format="text">文段</button>
+            </div>
+          </div>
         </div>
 
-        <!-- 状态栏 -->
+        <!-- 状态栏（只有聊天窗口有） -->
+        <div id="csStatusWrap">
         <div class="section-label">状态栏</div>
         <div class="settings-card">
           <div class="auto-row">
@@ -1934,11 +1965,12 @@
               placeholder="/* 例：.cr-status-card { background: #fff7e6; } */"></textarea>
           </div>
         </div>
+        </div>
 
         <!-- 自定义 CSS -->
         <div class="section-label">CSS 美化</div>
         <div class="settings-card">
-          <div class="bubble-section-label" style="margin-bottom:8px;">角色专属样式（进入该角色聊天时生效）</div>
+          <div class="bubble-section-label" style="margin-bottom:8px;" id="customCssLabel">聊天窗口专属样式（进入该角色聊天时生效）</div>
           <textarea class="custom-css-textarea" id="customCssInput"
             placeholder="/* 例：.chat-char-card { border-radius: 8px; } */"
             rows="5"></textarea>

@@ -13,19 +13,7 @@
 
 .chat-msg-avatar {
   width: 32px; height: 32px; border-radius: 50%;
-  flex-shrink: 0; background: rgba(0,0,0,0.045);
-  border: 1.5px dashed rgba(190,160,160,0.35);
-  position: relative; overflow: hidden;
-}
-.chat-msg-avatar::before {
-  content: ''; position: absolute;
-  width: 10px; height: 10px; border-radius: 50%;
-  background: rgba(180,140,140,0.22); top: 5px; left: 11px;
-}
-.chat-msg-avatar::after {
-  content: ''; position: absolute;
-  width: 18px; height: 10px; border-radius: 9px 9px 0 0;
-  background: rgba(180,140,140,0.18); bottom: 3px; left: 7px;
+  flex-shrink: 0;
 }
 
 .chat-msg-bubble {

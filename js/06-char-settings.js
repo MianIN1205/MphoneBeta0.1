@@ -132,7 +132,7 @@ var DEFAULT_CHAT_CFG = {
   lang: '', translate: false, replyMin: 1, replyMax: 3,
   patOn: false, patSuffix: '', voiceId: '', vectorOn: false
 };
-var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusCss: '' };
+var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusCss: '' };
 
 // 表单里暂存的 USER 账号选择与各账号印象（切换账号时不丢）
 // csAccUid 为 '' 表示跟随主账号（「我的」里当前使用的账号）
@@ -289,6 +289,9 @@ function setLookForm(l) {
   document.querySelectorAll('#layoutHeadAlignRow .pf-radio-btn').forEach(function(b) {
     b.classList.toggle('selected', b.dataset.align === l.headAlign);
   });
+  document.querySelectorAll('#layoutFormatRow .pf-radio-btn').forEach(function(b) {
+    b.classList.toggle('selected', b.dataset.format === l.format);
+  });
   document.getElementById('statusOn').checked = l.statusOn;
   document.getElementById('statusFields').value = l.statusFields;
   document.getElementById('statusCss').value = l.statusCss;
@@ -297,15 +300,95 @@ function setLookForm(l) {
 
 function readLookForm() {
   var a = document.querySelector('#layoutHeadAlignRow .pf-radio-btn.selected');
+  var fm = document.querySelector('#layoutFormatRow .pf-radio-btn.selected');
   return {
     showAvatar:   document.getElementById('layoutAvatar').checked,
     headAvatar:   document.getElementById('layoutHeadAvatar').checked,
     headAlign:    a ? a.dataset.align : 'center',
+    format:       fm ? fm.dataset.format : 'bubble',
     statusOn:     document.getElementById('statusOn').checked,
     statusFields: document.getElementById('statusFields').value.trim() || DEFAULT_LOOK.statusFields,
     statusCss:    document.getElementById('statusCss').value
   };
 }
+
+// ---------- 美化：聊天窗口 / 剧情窗口各一套 ----------
+// 剧情窗口没单独设置过时，沿用聊天窗口的样子（状态栏只有聊天窗口有）
+var csLookView = 'chat';
+var csLookParts = { chat: {}, drama: {} };
+function lookPartsOf(char) {
+  var chat = { chatBg: char.chatBg, bubble: char.bubble, look: char.look, customCss: char.customCss || '' };
+  return { chat: chat, drama: char.dramaLook ? Object.assign({}, char.dramaLook) : JSON.parse(JSON.stringify(chat)) };
+}
+function readLookPartForm() {
+  return {
+    chatBg:    { color: selectedChatBgColor, image: selectedChatBgImage },
+    bubble:    readBubbleForm(),
+    look:      readLookForm(),
+    customCss: customCssInput.value
+  };
+}
+function setLookPartForm(view) {
+  var p = csLookParts[view];
+  setChatBgForm(p.chatBg);
+  setBubbleForm(p.bubble);
+  setLookForm(p.look);
+  customCssInput.value = p.customCss || '';
+  document.getElementById('csStatusWrap').style.display = view === 'chat' ? '' : 'none';
+  document.getElementById('customCssLabel').textContent =
+    (view === 'chat' ? '聊天窗口' : '剧情窗口') + '专属样式（进入该角色' + (view === 'chat' ? '聊天' : '剧情') + '时生效）';
+  document.querySelectorAll('#csLookViewRow .pf-radio-btn').forEach(function(b) {
+    b.classList.toggle('selected', b.dataset.view === view);
+  });
+  paintLookPreview();
+}
+function switchLookView(view) {
+  if (view === csLookView) return;
+  csLookParts[csLookView] = readLookPartForm();
+  csLookView = view;
+  setLookPartForm(view);
+}
+document.querySelectorAll('#csLookViewRow .pf-radio-btn').forEach(function(b) {
+  b.addEventListener('click', function(e) { e.stopPropagation(); switchLookView(this.dataset.view); });
+});
+
+// 美化页顶部的小预览
+var csLookPreviewStyle = document.createElement('style');
+document.head.appendChild(csLookPreviewStyle);
+function paintLookPreview() {
+  var p = csLookParts[csLookView];
+  var box = document.getElementById('csLookPreview');
+  var bg = p.chatBg || DEFAULT_CHAT_BG;
+  box.style.background = bg.image ? 'url(' + bg.image + ') center / cover no-repeat' : (bg.color || DEFAULT_CHAT_BG.color);
+  csLookPreviewStyle.textContent = (typeof lookCss === 'function') ? lookCss(p, '#csLookPreview') : '';
+}
+
+// 美化页的改动立刻生效：写回角色并刷新聊天窗口（新建角色只更新预览）
+var csLookTimer = null;
+function liveApplyLook() {
+  csLookParts[csLookView] = readLookPartForm();
+  paintLookPreview();
+  var char = charList[editingCharIndex];
+  if (!char || !appCharSetting.classList.contains('active')) return;
+  var c = csLookParts.chat;
+  char.chatBg = c.chatBg;
+  char.bubble = c.bubble;
+  char.look = c.look;
+  char.customCss = c.customCss;
+  char.dramaLook = csLookParts.drama;
+  saveCharList();
+  if (charList[openingChatCharIdx] === char && typeof applyChatRoomStyle === 'function') applyChatRoomStyle(char);
+}
+function scheduleLiveLook() {
+  clearTimeout(csLookTimer);
+  csLookTimer = setTimeout(liveApplyLook, 150);
+}
+['click', 'input', 'change'].forEach(function(ev) {
+  document.getElementById('csLookPage').addEventListener(ev, function(e) {
+    if (e.target.closest('#csLookViewRow')) return;
+    scheduleLiveLook();
+  });
+});
 
 function fillCharForm(char) {
   document.getElementById('charName').value     = char.charName      || '';
@@ -315,6 +398,7 @@ function fillCharForm(char) {
   setOpeningsForm(char.openings);
   setAvatarBox('charAvatarBox', char.charAvatar, char.charAvatarColor);
   if (typeof fillAssistantForm === 'function') fillAssistantForm(char);
+  fillCircleForm(char);
 
   csAccUid = findAccount(char.userAccountUid) ? char.userAccountUid : '';
   csImpressions = Object.assign({}, char.userImpressions || {});
@@ -325,20 +409,56 @@ function fillCharForm(char) {
   // 导入角色卡带的世界书：先暂存，保存角色时才写入
   csPendingWb = char.pendingWb || null;
 
-  setChatBgForm(char.chatBg);
-  setBubbleForm(char.bubble);
-  customCssInput.value = char.customCss || '';
+  csLookParts = lookPartsOf(char);
+  csLookView = 'chat';
+  setLookPartForm('chat');
   setAutoForm(char.auto);
   setChatCfgForm(char.chatCfg);
-  setLookForm(char.look);
   renderCharWbLinks(char.worldbookIds || [], char.worldbookFolders || []);
   renderMemSummaries(char);
+}
+
+// 社交圈：列出其他角色，点亮 = 认识
+function fillCircleForm(char) {
+  var box = document.getElementById('csCircleList');
+  box.innerHTML = '';
+  var mine = (char && char.circle) || [];
+  charList.forEach(function(c) {
+    if (c === char || (char && char.id && c.id === char.id)) return;
+    var chip = document.createElement('span');
+    chip.className = 'feed-visible-chip' + (mine.indexOf(c.id) >= 0 ? ' on' : '');
+    chip.dataset.id = c.id;
+    chip.textContent = c.charAlias || c.charName || '未命名';
+    chip.addEventListener('click', function() { this.classList.toggle('on'); });
+    box.appendChild(chip);
+  });
+  if (!box.children.length) {
+    var none = document.createElement('span');
+    none.className = 'auto-hint';
+    none.textContent = '还没有其他角色';
+    box.appendChild(none);
+  }
+}
+function readCircleForm() {
+  return Array.prototype.map.call(document.querySelectorAll('#csCircleList .feed-visible-chip.on'), function(c) { return c.dataset.id; });
+}
+// 认识是双向的：保存后同步到其他角色
+function syncCharCircle(char) {
+  var mine = char.circle || [];
+  charList.forEach(function(c) {
+    if (c === char) return;
+    var list = (c.circle || []).filter(function(id) { return id !== char.id; });
+    if (mine.indexOf(c.id) >= 0) list.push(char.id);
+    c.circle = list;
+  });
 }
 
 // 在原角色数据上覆盖表单字段（保留 id、记忆总结、inChat 等不在表单里的字段）
 function readCharForm() {
   var old = charList[editingCharIndex] || {};
   stashImpression();
+  csLookParts[csLookView] = readLookPartForm();
+  var lc = csLookParts.chat;
   return Object.assign({}, old, {
     charName:         document.getElementById('charName').value.trim(),
     charAlias:        document.getElementById('charAlias').value.trim(),
@@ -348,14 +468,16 @@ function readCharForm() {
     charAvatar:       document.getElementById('charAvatarBox')._img || '',
     userAccountUid:   csAccUid,
     userImpressions:  csImpressions,
-    chatBg:           { color: selectedChatBgColor, image: selectedChatBgImage },
-    bubble:           readBubbleForm(),
-    customCss:        customCssInput.value,
+    chatBg:           lc.chatBg,
+    bubble:           lc.bubble,
+    customCss:        lc.customCss,
+    dramaLook:        csLookParts.drama,
     worldbookIds:     readCharWbLinks(),
     worldbookFolders: readCharWbFolders(),
     auto:             readAutoForm(),
     chatCfg:          readChatCfgForm(),
-    look:             readLookForm(),
+    look:             lc.look,
+    circle:           readCircleForm(),
     assistant:        (typeof readAssistantForm === 'function') ? readAssistantForm(old) : old.assistant
   });
 }
@@ -514,6 +636,12 @@ document.getElementById('memAutoSum').addEventListener('change', function() {
 });
 document.getElementById('statusOn').addEventListener('change', function() {
   document.getElementById('statusSub').classList.toggle('open', this.checked);
+});
+document.querySelectorAll('#layoutFormatRow .pf-radio-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('#layoutFormatRow .pf-radio-btn').forEach(function(b) { b.classList.remove('selected'); });
+    this.classList.add('selected');
+  });
 });
 document.querySelectorAll('#layoutHeadAlignRow .pf-radio-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {

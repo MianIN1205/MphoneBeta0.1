@@ -187,3 +187,14 @@
   color: #D05858;
 }
 
+
+/* 美化页：聊天窗口 / 剧情窗口 切换 + 小预览 */
+.cs-look-view { margin: 4px 0 10px; }
+.cs-look-view .pf-radio-btn { flex: 1; }
+.cs-look-preview {
+  border-radius: 16px; padding: 12px; margin-bottom: 4px;
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid rgba(220,180,190,0.4); box-sizing: border-box;
+}
+.cs-look-preview .chat-msg-avatar { width: 26px; height: 26px; }
+.cs-look-preview .chat-msg-bubble { font-size: 13px; }

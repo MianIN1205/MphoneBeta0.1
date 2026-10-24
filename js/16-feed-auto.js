@@ -3,7 +3,7 @@
 // =============================================
 // 动态（朋友圈）+ 角色自主活动
 // =============================================
-// 动态数据：[{ id, author: { type: 'user' | 'char', id, name, avatar }, text, images: [], time,
+// 动态数据：[{ id, author: { type: 'user' | 'char', id, name, avatar }, text, images: [], textImgs: [文字图描述], time,
 //             visibleTo: [角色 id]（仅用户动态）, likes: [author], comments: [{ id, author, text, time, replyTo: author | null }] }]
 var feedPosts = mphoneStore.load('mphone_feed', []);
 var feedList          = document.getElementById('feedList');
@@ -19,6 +19,7 @@ var feedCharPickList  = document.getElementById('feedCharPickList');
 var feedCommentBar    = document.getElementById('feedCommentBar');
 var feedCommentInput  = document.getElementById('feedCommentInput');
 var feedComposeImages = [];
+var feedComposeTextImgs = [];   // 文字图：用一段文字描述画面，显示成一张图片卡
 var feedCommentTarget = null;   // { post, replyTo }
 
 // _busy 只是运行时状态，不写入存储
@@ -56,6 +57,51 @@ function feedTimeText(t) {
   return (dt.getMonth() + 1) + '月' + dt.getDate() + '日 ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
 }
 
+// ---------- 文字图 ----------
+// 动态里的方形卡片；点开时画成一张真正的图片，可以全屏看、保存、收藏
+function createTextImgEl(text) {
+  var el = document.createElement('div');
+  el.className = 'feed-textimg';
+  var span = document.createElement('span');
+  span.textContent = text;
+  el.appendChild(span);
+  el.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (typeof openImgViewer === 'function') openImgViewer(textImgDataUrl(text), { source: '动态' });
+  });
+  return el;
+}
+function textImgDataUrl(text) {
+  var size = 1080, pad = 130, fontSize = 52, lineH = fontSize * 1.6;
+  var c = document.createElement('canvas');
+  c.width = c.height = size;
+  var ctx = c.getContext('2d');
+  var g = ctx.createLinearGradient(0, 0, size, size);
+  g.addColorStop(0, '#fde7ea');
+  g.addColorStop(1, '#f3e6f5');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  ctx.font = fontSize + 'px "PingFang SC", "Microsoft YaHei", sans-serif';
+  // 按宽度逐字换行（中文没有空格，按字符切）
+  var lines = [];
+  String(text).split('\n').forEach(function(para) {
+    var line = '';
+    Array.from(para).forEach(function(ch) {
+      if (ctx.measureText(line + ch).width > size - pad * 2 && line) { lines.push(line); line = ch; }
+      else line += ch;
+    });
+    lines.push(line);
+  });
+  var maxLines = Math.floor((size - pad * 2) / lineH);
+  if (lines.length > maxLines) { lines = lines.slice(0, maxLines); lines[maxLines - 1] = lines[maxLines - 1].slice(0, -1) + '…'; }
+  ctx.fillStyle = '#7a5a66';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  var top = size / 2 - (lines.length - 1) * lineH / 2;
+  lines.forEach(function(l, i) { ctx.fillText(l, size / 2, top + i * lineH); });
+  return c.toDataURL('image/png');
+}
+
 // ---------- 渲染 ----------
 function renderFeed() {
   var me = getMineAccount();
@@ -87,7 +133,7 @@ function renderFeedPost(post, me) {
   var avatar = post.author.type === 'char'
     ? ((charList[findCharIdx(post.author.id)] || {}).charAvatar || post.author.avatar)
     : post.author.avatar;
-  if (avatar) av.style.backgroundImage = 'url(' + avatar + ')';
+  if (avatar) { av.style.backgroundImage = 'url(' + avatar + ')'; av.classList.add('avatar-img'); }
   var meta = document.createElement('div');
   meta.className = 'feed-post-meta';
   var name = document.createElement('div');
@@ -119,14 +165,15 @@ function renderFeedPost(post, me) {
     text.textContent = post.text;
     el.appendChild(text);
   }
-  if (post.images && post.images.length) {
+  if ((post.images && post.images.length) || (post.textImgs && post.textImgs.length)) {
     var imgs = document.createElement('div');
     imgs.className = 'feed-post-imgs';
-    post.images.forEach(function(src) {
+    (post.images || []).forEach(function(src) {
       var img = document.createElement('img');
       img.src = src;
       imgs.appendChild(img);
     });
+    (post.textImgs || []).forEach(function(t) { imgs.appendChild(createTextImgEl(t)); });
     el.appendChild(imgs);
   }
 
@@ -228,24 +275,53 @@ document.addEventListener('click', function(e) {
 // ---------- 发动态 ----------
 function renderComposeImgs() {
   feedComposeImgs.querySelectorAll('.feed-compose-thumb').forEach(function(t) { t.remove(); });
-  feedComposeImages.forEach(function(src, i) {
+  function thumb(list, i) {
     var t = document.createElement('div');
     t.className = 'feed-compose-thumb';
-    t.style.backgroundImage = 'url(' + src + ')';
     var x = document.createElement('button');
     x.textContent = '×';
-    x.addEventListener('click', function() { feedComposeImages.splice(i, 1); renderComposeImgs(); });
+    x.addEventListener('click', function() { list.splice(i, 1); renderComposeImgs(); });
     t.appendChild(x);
     feedComposeImgs.insertBefore(t, feedComposeImgAdd);
+    return t;
+  }
+  feedComposeImages.forEach(function(src, i) { thumb(feedComposeImages, i).style.backgroundImage = 'url(' + src + ')'; });
+  feedComposeTextImgs.forEach(function(text, i) {
+    var t = thumb(feedComposeTextImgs, i);
+    t.classList.add('textimg');
+    var span = document.createElement('span');
+    span.textContent = text;
+    t.insertBefore(span, t.firstChild);
   });
-  feedComposeImgAdd.style.display = feedComposeImages.length >= 9 ? 'none' : '';
+  // 图片和文字图合计最多 9 张
+  var full = feedComposeImages.length + feedComposeTextImgs.length >= 9;
+  feedComposeImgAdd.style.display = full ? 'none' : '';
+  feedComposeTextImgAdd.style.display = full ? 'none' : '';
 }
+var feedComposeTextImgAdd = document.getElementById('feedComposeTextImgAdd');
+var feedTextImgRow = document.getElementById('feedTextImgRow');
+var feedTextImgInput = document.getElementById('feedTextImgInput');
+feedComposeTextImgAdd.addEventListener('click', function() {
+  feedTextImgRow.classList.toggle('open');
+  if (feedTextImgRow.classList.contains('open')) feedTextImgInput.focus();
+});
+document.getElementById('feedTextImgOk').addEventListener('click', function() {
+  var text = feedTextImgInput.value.trim();
+  if (!text) { shakeEl(feedTextImgInput); return; }
+  feedComposeTextImgs.push(text);
+  feedTextImgInput.value = '';
+  feedTextImgRow.classList.remove('open');
+  renderComposeImgs();
+});
 
 document.getElementById('feedBtnPost').addEventListener('click', function(e) {
   e.stopPropagation();
   feedPopup.classList.remove('open');
   feedComposeText.value = '';
   feedComposeImages = [];
+  feedComposeTextImgs = [];
+  feedTextImgInput.value = '';
+  feedTextImgRow.classList.remove('open');
   renderComposeImgs();
   // 谁可以看：默认全部角色
   feedVisibleList.innerHTML = '';
@@ -271,12 +347,13 @@ feedComposeOverlay.addEventListener('click', function(e) {
 });
 document.getElementById('feedComposeSend').addEventListener('click', function() {
   var text = feedComposeText.value.trim();
-  if (!text && !feedComposeImages.length) { shakeEl(feedComposeText); return; }
+  if (!text && !feedComposeImages.length && !feedComposeTextImgs.length) { shakeEl(feedComposeText); return; }
   feedPosts.unshift({
     id: genFeedId('p'),
     author: getMineAccount(),
     text: text,
     images: feedComposeImages.slice(),
+    textImgs: feedComposeTextImgs.slice(),
     time: Date.now(),
     visibleTo: Array.from(feedVisibleList.querySelectorAll('.feed-visible-chip.on')).map(function(c) { return c.dataset.id; }),
     likes: [],
@@ -394,11 +471,14 @@ function generateCharPost(idx) {
   var msgs = charContextMsgs(idx).concat([{
     role: 'system',
     content: '【发动态】现在是 ' + nowText() + '。请你以「' + charAuthor(char).name + '」的身份，发一条朋友圈 / 微博式的个人动态。' +
-             '内容可以和最近的聊天、生活、心情相关，口吻自然，符合人设，一般不超过 100 字。只输出动态正文，不要加引号、标题或任何说明。'
+             '内容可以和最近的聊天、生活、心情相关，口吻自然，符合人设，一般不超过 100 字。只输出动态正文，不要加引号、标题或任何说明。' +
+             '想配图的话，在正文后面用 <文字图>画面描述</文字图> 附上 1～3 张「文字图」（用一两句话描述照片里的画面，比如：窗外的晚霞，橘粉色的云）；不配图也可以。'
   }]);
   return callApiOnce(msgs).then(function(text) {
+    var textImgs = [];
+    text = text.replace(/<文字图>([\s\S]*?)<\/文字图>/g, function(_, t) { if (t.trim()) textImgs.push(t.trim()); return ''; });
     feedPosts.unshift({
-      id: genFeedId('p'), author: charAuthor(char), text: stripQuotes(text), images: [],
+      id: genFeedId('p'), author: charAuthor(char), text: stripQuotes(text.trim()), images: [], textImgs: textImgs.slice(0, 9),
       time: Date.now(), likes: [], comments: []
     });
     saveFeed();
@@ -407,18 +487,52 @@ function generateCharPost(idx) {
   });
 }
 
-// 动态的文字版，供角色阅读
-function feedPostAsText(post) {
+// ---------- 社交圈 ----------
+// 角色之间互相认识（角色设置 → 社交圈）才能看到彼此的动态、点赞和评论；用户和所有角色都认识
+function knowsAuthor(char, author) {
+  if (!author) return false;
+  if (author.type === 'user' || author.id === char.id) return true;
+  return (char.circle || []).indexOf(author.id) >= 0;
+}
+// 用户的动态看「谁可以看」，角色的动态要认识发布者
+function charCanSeePost(char, post) {
+  if (post.author.type === 'user') return (post.visibleTo || []).indexOf(char.id) >= 0;
+  return knowsAuthor(char, post.author);
+}
+
+// 动态的文字版，供角色阅读（viewer：读的角色，只显示 TA 认识的人的点赞和评论）
+function feedPostAsText(post, viewer) {
+  var known = function(a) { return !viewer || knowsAuthor(viewer, a); };
   var lines = ['发布者：' + post.author.name + (post.author.type === 'user' ? '（用户）' : ''),
-               '内容：' + (post.text || '') + (post.images && post.images.length ? '（附图 ' + post.images.length + ' 张）' : '')];
-  if (post.likes.length) lines.push('点赞：' + post.likes.map(function(a) { return a.name; }).join('，'));
-  if (post.comments.length) {
+               '内容：' + (post.text || '') + (post.images && post.images.length ? '（附图 ' + post.images.length + ' 张）' : '') +
+               (post.textImgs || []).map(function(t) { return '（配图：' + t + '）'; }).join('')];
+  var likes = post.likes.filter(known);
+  if (likes.length) lines.push('点赞：' + likes.map(function(a) { return a.name; }).join('，'));
+  var comments = post.comments.filter(function(c) { return known(c.author); });
+  if (comments.length) {
     lines.push('评论区：');
-    post.comments.forEach(function(c) {
-      lines.push('- ' + c.author.name + (c.replyTo ? ' 回复 ' + c.replyTo.name : '') + '：' + c.text);
+    comments.forEach(function(c) {
+      var to = c.replyTo ? ' 回复 ' + (known(c.replyTo) ? c.replyTo.name : '某人') : '';
+      lines.push('- ' + c.author.name + to + '：' + c.text);
     });
   }
   return lines.join('\n');
+}
+
+// 聊天时告诉角色：TA 认识谁，以及社交圈里最近的动态
+var FEED_CONTEXT_MAX = 6;
+function feedContextFor(char) {
+  if (!char || !char.id) return '';
+  var friends = charList.filter(function(c) { return c !== char && (char.circle || []).indexOf(c.id) >= 0; })
+    .map(function(c) { return c.charAlias || c.charName; }).filter(Boolean);
+  var posts = feedPosts.filter(function(p) { return charCanSeePost(char, p); }).slice(0, FEED_CONTEXT_MAX);
+  var out = '【社交圈】除了用户，你认识的其他角色：' + (friends.join('、') || '没有') + '。其他角色你都不认识，也看不到他们的动态。';
+  if (posts.length) {
+    out += '\n你能看到的最近动态（从新到旧）：\n' + posts.map(function(p) {
+      return '[' + feedTimeText(p.time) + '] ' + feedPostAsText(p, char).replace(/\n/g, '\n  ');
+    }).join('\n') + '\n聊天时可以自然地提到这些动态，但不必每次都提。';
+  }
+  return out;
 }
 
 // 解析角色返回的 { like, comment }，容错处理多余文字
@@ -450,7 +564,7 @@ function charInteract(post, idx) {
   var msgs = charContextMsgs(idx).concat(imgMsg, [{
     role: 'system',
     content: '【动态互动】现在是 ' + nowText() + '。你（' + me.name + '）在刷动态时看到了' + (isOwn ? '自己发的' : '下面这条') + '动态：\n\n' +
-             feedPostAsText(post) + '\n\n' +
+             feedPostAsText(post, char) + '\n\n' +
              '请以角色身份决定是否点赞，并写一条简短评论；如果评论区里有人回复了你或评论了你的动态，就回复对方。' +
              '只输出 JSON：{"like": true 或 false, "comment": "评论内容"}，不想评论时 comment 为空字符串。'
   }]);
@@ -475,7 +589,7 @@ function requestFeedInteraction(post) {
   var targets = [];
   charList.forEach(function(char, idx) {
     var me = charAuthor(char);
-    var canSee = post.author.type === 'user' ? (post.visibleTo || []).indexOf(char.id) >= 0 : true;
+    var canSee = charCanSeePost(char, post);
     if (canSee && charNeedsToRespond(post, me)) targets.push(idx);
   });
   if (!targets.length) { showToast('暂时没有需要回应的角色', 'success'); return; }

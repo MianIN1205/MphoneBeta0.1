@@ -184,7 +184,9 @@ document.getElementById('backFav').addEventListener('click', function() {
 function toggleFavPost(post) {
   if (isFavRef(post.id)) { removeFav(post.id); showToast('已取消收藏', 'success'); return; }
   addFav({
-    kind: 'post', refId: post.id, text: post.text || '', images: (post.images || []).slice(),
+    kind: 'post', refId: post.id,
+    text: (post.text || '') + (post.textImgs || []).map(function(t) { return '\n［文字图］' + t; }).join(''),
+    images: (post.images || []).slice(),
     source: '动态', author: post.author.name, time: post.time
   });
 }

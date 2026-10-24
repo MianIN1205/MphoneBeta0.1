@@ -36,6 +36,15 @@ html {
   transform: none !important;
   z-index: 9999 !important;
 }
+/* 安卓桌面程序是「真全屏」：系统顶栏已隐藏，界面铺到屏幕最顶上，时间等用应用自己的状态栏；
+   iPhone 是 standalone 模式（系统状态栏一直在），仍按上面的规则让开 */
+@media (display-mode: fullscreen) {
+  .phone.fullscreen {
+    top: 0 !important;
+    height: 100vh !important;
+    height: calc(100dvh - env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
 .phone.fullscreen .settings-screen,
 .phone.fullscreen .app-screen {
   border-radius: 0 !important;
@@ -690,3 +699,21 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
   background: rgba(240,128,128,0.08); color: #D05858;
 }
 
+
+/* 默认头像：白底，粉灰色小人居中（带外阴影）。所有角色头像位置共用；
+   设置了图片（.avatar-img）时隐藏小人，设置了颜色时小人画在颜色上 */
+.chat-msg-avatar, .chat-char-card-avatar, .contact-card-avatar, .new-chat-char-avatar,
+.char-avatar-box, .chat-room-head-av, .feed-post-av {
+  position: relative; overflow: hidden;
+  background-color: #fff;
+  background-size: cover; background-position: center;
+  border: 1px solid rgba(220,195,200,0.55);
+}
+.chat-msg-avatar::before, .chat-char-card-avatar::before, .contact-card-avatar::before, .new-chat-char-avatar::before,
+.char-avatar-box::before, .chat-room-head-av::before, .feed-post-av::before {
+  content: ''; position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3Cfilter id='s' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='1.2' stdDeviation='1.6' flood-color='%239c6f7d' flood-opacity='0.38'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url(%23s)' fill='%23cfb3bb'%3E%3Ccircle cx='32' cy='21' r='10.5'/%3E%3Cpath d='M13 54.5c0-11 8.5-19 19-19s19 8 19 19a1.5 1.5 0 0 1-1.5 1.5h-35A1.5 1.5 0 0 1 13 54.5z'/%3E%3C/g%3E%3C/svg%3E") center / 80% no-repeat;
+  pointer-events: none;
+}
+.chat-msg-avatar::after, .chat-char-card-avatar::after, .contact-card-avatar::after, .new-chat-char-avatar::after,
+.char-avatar-box::after, .chat-room-head-av::after, .feed-post-av::after { content: none; }
