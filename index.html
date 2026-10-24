@@ -577,6 +577,17 @@
           </div>
         </div>
 
+        <!-- 全局 CSS：作用于整个界面，MianIN 设计的样式也写在这里 -->
+        <div class="section-label">CSS 美化</div>
+        <div class="settings-card">
+          <div class="bubble-section-label" style="margin-bottom:8px;">全局样式（作用于整个界面）</div>
+          <textarea class="custom-css-textarea" id="globalCssInput"
+            placeholder="/* 例：.settings-card { border-radius: 20px; } */"
+            rows="5"></textarea>
+          <button class="custom-css-apply-btn" id="globalCssApplyBtn">应用</button>
+          <div class="auto-hint">样式出问题时，在网址后面加 ?safe 打开可以暂时停用全局样式</div>
+        </div>
+
       </div>
 
     </div>
@@ -1647,6 +1658,32 @@
           </div>
           <div class="wb-content" id="wbContent">
             <div class="wb-empty-hint">暂无关联世界书</div>
+          </div>
+        </div>
+
+        <!-- 内置助手：只对系统内置的助手角色显示 -->
+        <div id="assistantPermWrap" style="display:none;">
+          <div class="section-label">内置助手</div>
+          <div class="settings-card auto-card">
+            <div class="auto-row">
+              <span class="auto-row-label">作为系统助手</span>
+              <label class="st-toggle-wrap"><input type="checkbox" id="asOn"><span class="st-toggle-slider"></span></label>
+            </div>
+            <div class="auto-sub" id="asSub">
+              <div class="auto-row">
+                <span class="auto-row-label">添加世界书</span>
+                <label class="st-toggle-wrap"><input type="checkbox" id="asPermWb"><span class="st-toggle-slider"></span></label>
+              </div>
+              <div class="auto-row">
+                <span class="auto-row-label">设计界面 CSS</span>
+                <label class="st-toggle-wrap"><input type="checkbox" id="asPermCss"><span class="st-toggle-slider"></span></label>
+              </div>
+              <div class="auto-row">
+                <span class="auto-row-label">读取接口报错</span>
+                <label class="st-toggle-wrap"><input type="checkbox" id="asPermErr"><span class="st-toggle-slider"></span></label>
+              </div>
+            </div>
+            <div class="auto-hint">开启后 TA 熟悉这个应用的用法，可以答疑；添加世界书、修改样式会先发确认卡片，点「确认」才生效，之后也能撤销。读取报错时不会看到密钥。</div>
           </div>
         </div>
 

@@ -8,7 +8,7 @@ var backCharSetting = document.getElementById('backCharSetting');
 var charSaveBtn     = document.getElementById('charSaveBtn');
 
 var DEFAULT_CHAR_LIST = [
-  { charName: '', charAlias: 'MianIN', userNickname: '', charPersona: '' }
+  { charName: '', charAlias: 'MianIN', userNickname: '', charPersona: '', builtinAssistant: true }   // 系统内置助手
 ];
 var charsWereSaved = !!mphoneStore.load('mphone_chars', null);
 var charList = mphoneStore.load('mphone_chars', null) || JSON.parse(JSON.stringify(DEFAULT_CHAR_LIST));   // 所有角色数据
@@ -314,6 +314,7 @@ function fillCharForm(char) {
   document.getElementById('charPersona').value  = char.charPersona   || '';
   setOpeningsForm(char.openings);
   setAvatarBox('charAvatarBox', char.charAvatar, char.charAvatarColor);
+  if (typeof fillAssistantForm === 'function') fillAssistantForm(char);
 
   csAccUid = findAccount(char.userAccountUid) ? char.userAccountUid : '';
   csImpressions = Object.assign({}, char.userImpressions || {});
@@ -354,7 +355,8 @@ function readCharForm() {
     worldbookFolders: readCharWbFolders(),
     auto:             readAutoForm(),
     chatCfg:          readChatCfgForm(),
-    look:             readLookForm()
+    look:             readLookForm(),
+    assistant:        (typeof readAssistantForm === 'function') ? readAssistantForm(old) : old.assistant
   });
 }
 
@@ -459,13 +461,30 @@ function updateCharWbCount() {
 
 // 打开角色设置：idx = -1 为新建
 // draft：新建时预填的数据（导入角色卡用）
-function openCharSetting(idx, draft) {
+// keepView：从聊天室打开时，本次对话期间保持上次退出时的页面和滚动位置
+function openCharSetting(idx, draft, keepView) {
   editingCharIndex = idx;
   if (idx === -1) fillCharForm(draft || {});
   else fillCharForm(charList[idx]);
-  goCsPage(0, false);
   document.getElementById('charDeleteBtn').style.display = (idx === -1) ? 'none' : '';
   appCharSetting.classList.add('active');
+  var v = csViewState;
+  var keep = keepView && v && charList[idx] && v.id === charList[idx].id && v.session === chatRoomSession;
+  goCsPage(keep ? v.page : 0, false);
+  document.querySelectorAll('#csPages .cs-page').forEach(function(p, i) { p.scrollTop = keep ? (v.tops[i] || 0) : 0; });
+}
+
+// 退出角色设置时记下当前在哪一页、每页滚到哪里（只在同一次打开的对话里沿用）
+var csViewState = null;
+var chatRoomSession = 0;   // 每次从消息列表打开对话加一
+function rememberCsView() {
+  var char = charList[editingCharIndex];
+  if (!char || editingCharIndex !== openingChatCharIdx) { csViewState = null; return; }
+  csViewState = {
+    id: char.id, session: chatRoomSession,
+    page: Math.round(csPages.scrollLeft / Math.max(1, csPages.clientWidth)),
+    tops: Array.prototype.map.call(document.querySelectorAll('#csPages .cs-page'), function(p) { return p.scrollTop; })
+  };
 }
 
 // 角色设置 — 三页切换：点标签跳页，左右滑动时同步标签
@@ -479,7 +498,8 @@ function setCsTab(i) {
   document.querySelectorAll('#csTabs .cs-tab').forEach(function(t) {
     t.classList.toggle('active', parseInt(t.dataset.page, 10) === i);
   });
-  document.getElementById('csToggleSlider').style.transform = 'translateX(' + (i * 46) + 'px)';
+  var tab = document.querySelector('#csTabs .cs-tab');
+  document.getElementById('csToggleSlider').style.transform = 'translateX(' + (i * ((tab && tab.offsetWidth) || 58)) + 'px)';
 }
 document.querySelectorAll('#csTabs .cs-tab').forEach(function(t) {
   t.addEventListener('click', function() { goCsPage(parseInt(this.dataset.page, 10)); });

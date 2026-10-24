@@ -226,3 +226,28 @@
   border-radius: 16px; padding: 6px 16px; font-size: 13px; cursor: pointer; font-family: inherit;
 }
 .chat-msg-bubble.img-bubble img, .feed-post-imgs img, .fav-item-imgs img { cursor: zoom-in; }
+
+/* 内置助手的操作确认卡片 */
+.cr-action-card {
+  margin: 0 0 0 40px; max-width: 78%; align-self: flex-start; box-sizing: border-box;
+  background: rgba(255,255,255,0.85); border-radius: 12px;
+  border: 1px solid rgba(220,180,190,0.5); padding: 9px 11px;
+  font-size: 12px; color: #6f5560; line-height: 1.55;
+}
+#appChatRoom.cr-no-avatar .cr-action-card { margin-left: 0; }
+.cr-action-head { font-weight: 600; color: #b5576b; margin-bottom: 4px; }
+.cr-action-line b { font-weight: 600; color: #8a6a76; }
+.cr-action-pre {
+  margin: 6px 0 0; padding: 6px 8px; max-height: 140px; overflow: auto;
+  background: rgba(0,0,0,0.04); border-radius: 8px;
+  font-family: inherit; font-size: 11.5px; white-space: pre-wrap; word-break: break-all;
+}
+.cr-action-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.cr-action-status { flex: 1; font-size: 11px; color: #a08890; }
+.cr-action-card[data-state="done"] .cr-action-status { color: #5a9a6e; }
+.cr-action-btn {
+  border: none; border-radius: 12px; padding: 4px 12px; font-size: 12px;
+  cursor: pointer; font-family: inherit;
+}
+.cr-action-btn.primary { background: #D05858; color: #fff; }
+.cr-action-btn.ghost { background: rgba(0,0,0,0.06); color: #8a6a76; }

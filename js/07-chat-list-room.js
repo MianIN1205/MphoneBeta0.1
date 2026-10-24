@@ -96,6 +96,7 @@ newChatOverlay.addEventListener('click', function(e) {
 
 // 返回（不保存）：撤销「应用」的预览样式
 backCharSetting.addEventListener('click', function() {
+  rememberCsView();
   appCharSetting.classList.remove('active');
   var opened = appChatRoom.classList.contains('active') ? charList[openingChatCharIdx] : null;
   applyChatRoomStyle(opened || null);
@@ -158,6 +159,7 @@ charSaveBtn.addEventListener('click', function() {
     }
     renderChatCharList();
     // 编辑模式：保存后同样关闭界面
+    rememberCsView();
     appCharSetting.classList.remove('active');
   }
 
@@ -251,6 +253,7 @@ function lastSessionMsg(char) {
 function msgPreviewText(m) {
   if (!m) return '暂无聊天记录';
   if (m.recalled) return m.role === 'user' ? '你撤回了一条消息' : '对方撤回了一条消息';
+  if (m.action) return '[操作] ' + (typeof actionTitle === 'function' ? actionTitle(m.action) : '');
   if (m.imgSrc) return '[图片]';
   if (m.voice) return '[语音]' + (m.transcript ? ' ' + m.transcript : '');
   return String(m.content || '').replace(/〔译〕[\s\S]*$/, '').replace(/\s+/g, ' ');
@@ -433,7 +436,7 @@ backChatRoom.addEventListener('click', function() {
 // 聊天对话界面 — 设置按钮 → 角色设置界面
 chatRoomSettingsBtn.addEventListener('click', function() {
   if (openingChatCharIdx === -1) return;
-  openCharSetting(openingChatCharIdx);
+  openCharSetting(openingChatCharIdx, null, true);
 });
 
 // 把角色的聊天背景、气泡样式、专属 CSS 应用到聊天室；char 为 null 时清除

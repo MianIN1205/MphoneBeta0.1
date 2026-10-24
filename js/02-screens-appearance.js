@@ -379,3 +379,29 @@ function applyFontScale(sizePx) {
 fontSizeSlider.addEventListener('input', function() {
   applyFontScale(parseInt(this.value, 10));
 });
+
+// =============================================
+// 外观 — 全局 CSS（作用于整个界面；内置助手设计的样式也写在这里）
+// 网址带 ?safe 时不加载，样式写坏了也能打开改回来
+// =============================================
+var globalCssEl = document.createElement('style');
+globalCssEl.id = 'globalCss';
+document.head.appendChild(globalCssEl);
+var globalCss = mphoneStore.load('mphone_global_css', '');
+var globalCssSafeMode = /[?&]safe\b/.test(location.search);
+var globalCssInput = document.getElementById('globalCssInput');
+function setGlobalCss(css) {
+  globalCss = css || '';
+  mphoneStore.save('mphone_global_css', globalCss);
+  globalCssEl.textContent = globalCssSafeMode ? '' : globalCss;
+  globalCssInput.value = globalCss;
+}
+globalCssEl.textContent = globalCssSafeMode ? '' : globalCss;
+globalCssInput.value = globalCss;
+document.getElementById('globalCssApplyBtn').addEventListener('click', function() {
+  var btn = this;
+  setGlobalCss(globalCssInput.value);
+  btn.classList.add('applied');
+  btn.textContent = '已应用';
+  setTimeout(function() { btn.classList.remove('applied'); btn.textContent = '应用'; }, 1200);
+});

@@ -11,10 +11,10 @@ function getDramaHistory(idx) { var k = charKey(idx); if (!dramaHistories[k]) dr
 function stripMsg(m) {
   var o = { role: m.role, content: m.content, imgSrc: m.imgSrc, status: m.status, time: m.time,
             quote: m.quote, recalled: m.recalled, recalledText: m.recalledText,
-            voice: m.voice, transcript: m.transcript };
+            voice: m.voice, transcript: m.transcript, action: m.action };
   if (m.alts) {
     o.alts = m.alts.map(function(group) {
-      return group.map(function(g) { return { role: g.role, content: g.content, status: g.status, time: g.time }; });
+      return group.map(function(g) { return { role: g.role, content: g.content, status: g.status, time: g.time, action: g.action }; });
     });
     o.altIdx = m.altIdx;
   }
@@ -101,6 +101,9 @@ function buildMsgs(idx, histOverride) {
   if (impression)        extra += '你对用户的特别印象 / 设定：\n' + impression + '\n';
   var sysContent = (sys + (extra ? '\n\n---\n' + extra : '')).trim();
   var msgs = sysContent ? [{ role: 'system', content: sysContent }] : [];
+  // 系统内置助手：应用说明 + 已开启的权限
+  var assistantSys = (typeof assistantPrompt === 'function') ? assistantPrompt(char) : '';
+  if (assistantSys) msgs.push({ role: 'system', content: assistantSys });
 
   var history = histOverride || getActiveHistory(idx);
 
@@ -226,6 +229,7 @@ function renderHistMsg(m, list, empty) {
     list._altTime = 0;
   }
   if (m.recalled) return renderRecallNotice(m, list, empty);
+  if (m.action && typeof renderActionCard === 'function') return renderActionCard(m, list, empty);
   if (m.voice) {
     var vrow = createVoiceBubble(m, list, empty);
     if (m.quote) vrow._extras.push(appendQuoteBlock(list, m.quote, 'user'));
@@ -268,7 +272,10 @@ function trailingReplyGroup(hist) {
 }
 
 function cloneGroup(group) {
-  return group.map(function(g) { return { role: g.role, content: g.content, status: g.status, time: g.time }; });
+  return group.map(function(g) {
+    return { role: g.role, content: g.content, status: g.status, time: g.time,
+             action: g.action ? JSON.parse(JSON.stringify(g.action)) : undefined };
+  });
 }
 
 function switchAlt(m, dir) {
@@ -322,6 +329,7 @@ function appendQuoteBlock(list, quote, role) {
 // 发给 AI / 用于总结的消息文字：撤回的只告诉它「撤回了一条消息」，引用的附上引用内容
 function msgTextForAI(m) {
   if (m.recalled) return '[用户撤回了一条消息]';
+  if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   var c = m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
   if (m.quote) c = '「引用 ' + m.quote.author + '：' + m.quote.text + '」\n' + c;
   return c;
@@ -348,11 +356,15 @@ function msgContentForAI(m, rich) {
 function commitAssistantReply(hist, raw, list, empty) {
   var status = '';
   raw = String(raw || '').replace(/<status>([\s\S]*?)<\/status>/i, function(_, s) { status = s.trim(); return ''; });
+  // 内置助手的操作块（添加世界书、改样式…）单独成为确认卡片
+  var actions = [];
+  if (typeof extractAssistantActions === 'function') raw = extractAssistantActions(hist, raw, actions);
   var parts = raw.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean);
   if (!parts.length && status) parts = ['…'];
   var now = Date.now();
   var added = parts.map(function(p) { return { role: 'assistant', content: p, time: now }; });
   if (added.length && status) added[added.length - 1].status = status;
+  actions.forEach(function(a) { added.push({ role: 'assistant', content: '', action: a, time: now }); });
   added.forEach(function(m) {
     hist.push(m);
     if (list) renderHistMsg(m, list, empty);
@@ -451,7 +463,12 @@ function sendMsg(userText, requestOnly, onDone) {
       try {
         var delta = JSON.parse(line.slice(5).trim()).choices[0].delta;
         var piece = (delta && delta.content) || '';
-        if (piece) { aiText += piece; typing.bubble.textContent = aiText; if (activeList) activeList.scrollTop = 999999; }
+        if (piece) {
+          aiText += piece;
+          // 操作块不直接显示原始代码，写完后会变成确认卡片
+          typing.bubble.textContent = aiText.replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️').trim();
+          if (activeList) activeList.scrollTop = 999999;
+        }
       } catch(_) {}
     }
     function finishStream() {
