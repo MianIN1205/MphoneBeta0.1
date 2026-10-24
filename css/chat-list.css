@@ -1,0 +1,177 @@
+/* =============================================
+   消息页顶栏右侧控件
+   ============================================= */
+.msg-right-wrap {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+  position: relative;
+}
+.msg-right-wrap.visible { display: flex; }
+
+.msg-toggle-wrap {
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.07);
+  border-radius: 20px;
+  padding: 3px;
+  position: relative;
+}
+
+.msg-toggle-slider {
+  position: absolute;
+  width: 30px; height: 30px;
+  background: #fff;
+  border-radius: 15px;
+  left: 3px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18), 0 0 0 0.5px rgba(0,0,0,0.06);
+  transition: transform 0.25s cubic-bezier(0.34,1.2,0.64,1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.msg-toggle-slider.contacts { transform: translateX(30px); }
+
+.msg-toggle-btn {
+  width: 30px; height: 30px;
+  background: none; border: none;
+  border-radius: 15px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  position: relative; z-index: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.msg-toggle-btn svg {
+  width: 14px; height: 14px;
+  stroke: #bbb; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+  transition: stroke 0.2s ease;
+}
+
+.msg-toggle-btn.active svg { stroke: #D05858; }
+
+.msg-plus-btn {
+  background: none; border: none;
+  cursor: pointer; padding: 4px 3px;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.msg-plus-btn svg {
+  width: 20px; height: 20px;
+  stroke: #444; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+}
+
+.msg-plus-popup {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: rgba(255,248,252,0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid rgba(255,255,255,0.8);
+  z-index: 300;
+  min-width: 148px;
+  transform-origin: top right;
+  transform: scale(0.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.30s cubic-bezier(0.34,1.4,0.64,1), opacity 0.18s ease;
+}
+
+.msg-plus-popup.open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: all;
+}
+
+.msg-plus-popup-item {
+  padding: 12px 16px;
+  font-size: 14px; color: #444;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  transition: background 0.15s;
+}
+
+.msg-plus-popup-item:first-child { border-radius: 14px 14px 0 0; }
+.msg-plus-popup-item:last-child { border-bottom: none; border-radius: 0 0 14px 14px; }
+.msg-plus-popup-item:active { background: rgba(240,128,128,0.08); }
+
+.msg-plus-popup-item svg {
+  width: 15px; height: 15px;
+  stroke: #aaa; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+  flex-shrink: 0;
+}
+
+/* =============================================
+   消息子视图（聊天 / 通讯录）
+   ============================================= */
+.msg-view { display: none; }
+.msg-view.active { display: block; }
+
+/* 通讯录页面布局 */
+.msg-view[data-view="contacts"].active {
+  display: flex;
+  min-height: 360px;
+}
+
+.contacts-index-bar {
+  width: 18px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 0 8px;
+  background: rgba(255,255,255,0.70);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 2px 7px rgba(0,0,0,0.08),
+    inset 0 -1px 4px rgba(0,0,0,0.04),
+    0 1px 4px rgba(200,170,170,0.14);
+  position: fixed;
+  left: 16px;
+  bottom: 82px;
+  z-index: 50;
+}
+
+.contacts-main-area {
+  flex: 1;
+}
+
+.ci-item {
+  width: 16px;
+  height: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: #ccc;
+  cursor: pointer;
+  border-radius: 50%;
+  user-select: none;
+  line-height: 1;
+  transition: color 0.12s, background 0.12s;
+  letter-spacing: 0;
+}
+
+.ci-item:active {
+  color: #D05858;
+  background: rgba(208,88,88,0.10);
+}
+
+.ci-item.ci-star {
+  color: #E8A0A0;
+  font-size: 11px;
+  margin-bottom: 1px;
+}
+

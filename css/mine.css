@@ -1,0 +1,415 @@
+/* =============================================
+   Chat — 「我的」界面（账号信息与更换账号）
+   ============================================= */
+.mine-wrap {
+  padding: 16px 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mine-profile-card {
+  background: rgba(255,255,255,0.88);
+  border-radius: 20px;
+  padding: 18px 16px;
+  box-shadow: 0 3px 16px rgba(180,130,130,0.10), 0 1px 4px rgba(0,0,0,0.04);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(255,255,255,0.9);
+}
+
+.mine-avatar-box {
+  width: 66px; height: 66px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD0 100%);
+  border: 2px solid rgba(255,255,255,0.95);
+  box-shadow: 0 3px 12px rgba(208,88,88,0.18);
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  transition: transform 0.15s ease;
+}
+.mine-avatar-box:active { transform: scale(0.94); }
+
+.mine-avatar-box svg {
+  width: 28px; height: 28px;
+  stroke: rgba(190,110,120,0.75);
+  stroke-width: 1.8; fill: none;
+}
+.mine-avatar-box.has-img svg { display: none; }
+
+.mine-avatar-edit-badge {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.36);
+  color: #fff; font-size: 9px;
+  text-align: center; padding: 2px 0;
+}
+
+.mine-profile-info {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.mine-profile-name-row {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.mine-profile-realname {
+  font-size: 16px; font-weight: 700; color: #2c2224;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.mine-profile-id-tag {
+  font-size: 11px; color: #C86464;
+  background: rgba(240,128,128,0.12);
+  padding: 2px 8px; border-radius: 10px;
+  font-weight: 500; flex-shrink: 0;
+  max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.mine-profile-bio {
+  font-size: 12px; color: #888; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mine-form-card {
+  background: rgba(255,255,255,0.86);
+  border-radius: 18px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.05);
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.mine-field-row {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.mine-field-label {
+  width: 58px; font-size: 12px; font-weight: 600;
+  color: #665558; flex-shrink: 0;
+}
+
+.mine-field-input {
+  flex: 1;
+  border: 1px solid rgba(210,180,180,0.35);
+  background: rgba(255,250,252,0.85);
+  border-radius: 10px;
+  padding: 7px 11px;
+  font-size: 13px; color: #333;
+  font-family: inherit; outline: none;
+  transition: border-color 0.18s, background 0.18s;
+}
+.mine-field-input:focus {
+  border-color: rgba(208,88,88,0.55); background: #fff;
+}
+
+.mine-field-textarea {
+  width: 100%;
+  border: 1px solid rgba(210,180,180,0.35);
+  background: rgba(255,250,252,0.85);
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-size: 13px; color: #333;
+  font-family: inherit; outline: none; resize: none;
+  min-height: 58px; line-height: 1.45;
+  transition: border-color 0.18s, background 0.18s;
+}
+.mine-field-textarea:focus {
+  border-color: rgba(208,88,88,0.55); background: #fff;
+}
+
+.mine-profile-card { position: relative; }
+
+/* 名片右上角修改按钮 */
+.mine-edit-btn {
+  position: absolute; top: 10px; right: 10px;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; background: rgba(208,88,88,0.08);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0;
+  transition: transform 0.14s ease, background 0.15s ease;
+}
+.mine-edit-btn:active { transform: scale(0.9); background: rgba(208,88,88,0.16); }
+.mine-edit-btn svg {
+  width: 14px; height: 14px;
+  stroke: #D05858; stroke-width: 2; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.mine-profile-info { padding-right: 24px; }
+
+/* 更换账号抽屉 */
+.mine-acc-drawer {
+  border: 1px solid rgba(208,88,88,0.28);
+  background: rgba(255,255,255,0.88);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(208,88,88,0.08);
+  overflow: hidden;
+}
+.mine-acc-drawer .mine-switch-btn {
+  border: none; background: transparent; box-shadow: none; border-radius: 0;
+}
+.mine-switch-btn .mine-switch-chevron {
+  margin-left: auto; width: 14px; height: 14px;
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.mine-acc-drawer.open .mine-switch-chevron { transform: rotate(180deg); }
+.mine-acc-drawer-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.mine-acc-drawer.open .mine-acc-drawer-body { max-height: 320px; }
+.mine-acc-drawer .mine-acc-list {
+  max-height: 300px; padding: 0 12px 12px;
+}
+.mine-acc-item.mine-acc-add-item { border-style: dashed; }
+
+/* 「我的」— 钱包 / 收藏 入口 */
+.mine-entry-card {
+  background: rgba(255,255,255,0.88); border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05); padding: 2px 14px;
+}
+.mine-entry-row {
+  display: flex; align-items: center; gap: 10px; padding: 12px 0; cursor: pointer;
+  border-bottom: 1px solid rgba(0,0,0,0.045);
+}
+.mine-entry-row:last-child { border-bottom: none; }
+.mine-entry-icon { font-size: 16px; width: 22px; text-align: center; }
+.mine-entry-name { flex: 1; font-size: 14px; color: #333; font-weight: 500; }
+.mine-entry-value { font-size: 12.5px; color: #b0889a; }
+.mine-entry-arrow { font-size: 18px; color: #ccc; line-height: 1; }
+
+/* 钱包 */
+.wallet-card {
+  margin-top: 8px; border-radius: 20px; padding: 18px 18px 16px;
+  background: linear-gradient(135deg, #F6B7C4 0%, #E58FA3 100%); color: #fff;
+  box-shadow: 0 6px 20px rgba(220,120,140,0.3); position: relative;
+}
+.wallet-owner { font-size: 12px; opacity: 0.9; }
+.wallet-label { font-size: 11px; opacity: 0.85; margin-top: 12px; }
+.wallet-balance { font-size: 30px; font-weight: 700; letter-spacing: 0.5px; margin-top: 2px; }
+.wallet-topup-btn {
+  position: absolute; right: 16px; bottom: 16px;
+  border: none; border-radius: 14px; padding: 6px 16px;
+  background: rgba(255,255,255,0.9); color: #D05858; font-weight: 600; font-size: 13px;
+  cursor: pointer; font-family: inherit;
+}
+.wallet-records { padding: 4px 14px; }
+.wallet-rec { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.045); }
+.wallet-rec:last-child { border-bottom: none; }
+.wallet-rec-main { flex: 1; min-width: 0; }
+.wallet-rec-note { font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wallet-rec-time { font-size: 10.5px; color: #bbb; margin-top: 2px; }
+.wallet-rec-amt { font-size: 14px; font-weight: 600; color: #6FAE84; }
+.wallet-rec-amt.out { color: #333; }
+
+/* 收藏 */
+.fav-filter { display: flex; gap: 6px; padding: 10px 20px 4px; flex-shrink: 0; }
+.fav-filter-btn {
+  border: none; border-radius: 14px; padding: 5px 14px; font-size: 12.5px;
+  background: rgba(255,255,255,0.65); color: #a07080; cursor: pointer; font-family: inherit;
+}
+.fav-filter-btn.active { background: #D05858; color: #fff; }
+.fav-list { display: flex; flex-direction: column; gap: 10px; padding: 6px 0 20px; }
+.fav-item {
+  background: rgba(255,255,255,0.9); border-radius: 16px; padding: 12px 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.fav-item-head { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #b0889a; }
+.fav-item-head span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fav-item-head button {
+  border: none; background: none; color: #c08aa0; font-size: 11px; cursor: pointer; font-family: inherit;
+}
+.fav-item-text { font-size: 13.5px; color: #333; line-height: 1.6; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+.fav-item-imgs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; }
+.fav-item-imgs img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
+.fav-item-imgs.single { grid-template-columns: 1fr; }
+.fav-item-imgs.single img { aspect-ratio: auto; max-height: 260px; object-fit: contain; }
+
+/* 聊天消息长按菜单 */
+.msg-ctx-menu {
+  position: fixed; z-index: 9000; display: none;
+  background: rgba(40,30,35,0.92); border-radius: 10px; padding: 4px; gap: 2px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+.msg-ctx-menu.open { display: flex; }
+.msg-ctx-menu button {
+  border: none; background: none; color: #fff; font-size: 12.5px; padding: 6px 12px;
+  border-radius: 8px; cursor: pointer; font-family: inherit;
+}
+.msg-ctx-menu button:active { background: rgba(255,255,255,0.15); }
+.msg-ctx-menu button.hide { display: none; }
+
+/* 引用块（消息下方）与输入栏上方的引用条 */
+.cr-quote {
+  max-width: 62%; margin-top: -6px; padding: 4px 9px; border-radius: 6px;
+  background: rgba(0,0,0,0.05); color: #888; font-size: 11.5px; line-height: 1.45;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cr-quote.user { align-self: flex-end; margin-right: 40px; }
+.cr-quote.ai   { align-self: flex-start; margin-left: 40px; }
+#appChatRoom.cr-no-avatar .cr-quote.user { margin-right: 0; }
+#appChatRoom.cr-no-avatar .cr-quote.ai { margin-left: 0; }
+.cr-quote-bar {
+  display: none; align-items: center; gap: 8px; flex-shrink: 0;
+  padding: 6px 14px; background: rgba(255,240,240,0.92);
+  border-top: 1px solid rgba(200,170,170,0.35);
+}
+.cr-quote-bar.open { display: flex; }
+.cr-quote-bar-text {
+  flex: 1; min-width: 0; font-size: 12px; color: #888;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cr-quote-bar-close { border: none; background: none; color: #bbb; font-size: 13px; cursor: pointer; }
+
+/* 撤回提示 */
+.cr-recall-notice { align-self: center; font-size: 11.5px; color: #aaa; padding: 2px 0; }
+.cr-recall-reedit { color: #6a8fc0; margin-left: 6px; cursor: pointer; }
+
+/* 账号行左滑：右侧露出 登录 / 修改 / 删除 */
+.mine-acc-swipe { position: relative; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+.mine-acc-swipe-acts {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 132px;
+  display: flex; z-index: 2;
+  transform: translateX(132px);
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.mine-acc-swipe-btn {
+  flex: 1; border: none; color: #fff; font-size: 12px; font-weight: 600; padding: 0;
+  cursor: pointer; font-family: inherit;
+}
+.swipe-login  { background: #6FAE84; }
+.swipe-edit   { background: #E0A24E; }
+.swipe-delete { background: #D05858; }
+.mine-acc-front {
+  position: relative; z-index: 1; background: #fff;
+  transition: padding-right 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  cursor: grab;
+}
+.mine-acc-swipe-hint { font-size: 10px; color: #d0b8c0; flex-shrink: 0; }
+.mine-acc-swipe.open .mine-acc-swipe-hint { visibility: hidden; }
+.mine-acc-add-item .mine-acc-item-name { color: #D05858; }
+.mine-acc-add-item .mine-acc-item-av {
+  background: rgba(208,88,88,0.08);
+  color: #D05858; font-size: 20px; font-weight: 300;
+}
+
+.mine-switch-btn {
+  width: 100%;
+  border: 1px solid rgba(208,88,88,0.28);
+  background: rgba(255,255,255,0.88);
+  border-radius: 16px;
+  padding: 12px 16px;
+  font-size: 14px; font-weight: 600; color: #D05858;
+  cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 2px 12px rgba(208,88,88,0.08);
+  transition: transform 0.14s ease, background 0.15s ease;
+}
+.mine-switch-btn:active {
+  transform: scale(0.97);
+  background: rgba(255,240,243,0.95);
+}
+.mine-switch-btn svg {
+  width: 16px; height: 16px;
+  stroke: #D05858; stroke-width: 2; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* 更换账号弹窗列表 */
+.mine-acc-overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.32); z-index: 460;
+  align-items: center; justify-content: center;
+  border-radius: 52px;
+}
+.mine-acc-overlay.open { display: flex; }
+
+.mine-acc-modal {
+  background: rgba(255,248,252,0.98);
+  border-radius: 22px;
+  padding: 18px 16px 15px;
+  width: 296px; max-height: 75%;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.22);
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.mine-acc-title {
+  font-size: 15px; font-weight: 600; color: #222; text-align: center;
+}
+
+.mine-acc-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 240px; overflow-y: auto; padding: 2px;
+}
+
+.mine-acc-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; border-radius: 14px;
+  background: rgba(255,255,255,0.85);
+  border: 1.5px solid rgba(210,180,180,0.28);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.mine-acc-item.active {
+  border-color: #D05858;
+  background: rgba(255,240,242,0.92);
+}
+
+.mine-acc-item-av {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD0 100%);
+  background-size: cover; background-position: center;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.mine-acc-item-av svg {
+  width: 18px; height: 18px;
+  stroke: rgba(190,110,120,0.75); stroke-width: 1.8; fill: none;
+}
+.mine-acc-item-av.has-img svg { display: none; }
+
+.mine-acc-item-info { flex: 1; min-width: 0; }
+
+.mine-acc-item-name {
+  font-size: 13px; font-weight: 600; color: #222;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.mine-acc-item-sub {
+  font-size: 11px; color: #999;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.mine-acc-item-badge {
+  font-size: 10px; color: #D05858; font-weight: 600;
+  padding: 2px 6px; border-radius: 8px;
+  background: rgba(208,88,88,0.12); flex-shrink: 0;
+}
+
+.mine-acc-del-btn {
+  background: none; border: none; color: #ccc;
+  cursor: pointer; padding: 4px; font-size: 14px;
+  line-height: 1; flex-shrink: 0;
+}
+.mine-acc-del-btn:hover { color: #D05858; }
+
+.mine-acc-actions { display: flex; gap: 8px; }
+.mine-acc-btn {
+  flex: 1; border: none; border-radius: 12px;
+  padding: 9px 0; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.mine-acc-btn-add { background: #D05858; color: #fff; }
+.mine-acc-btn-close { background: rgba(220,200,200,0.35); color: #665; }
+

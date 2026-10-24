@@ -1,0 +1,336 @@
+/* =============================================
+   角色设置界面
+   ============================================= */
+.save-nav-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: #D05858;
+  padding: 4px 6px;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.save-nav-btn:active { opacity: 0.6; }
+
+.char-info-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.char-avatar-box {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: rgba(0,0,0,0.045);
+  border: 1.5px dashed rgba(190,160,160,0.50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.15s;
+}
+.char-avatar-box:active { background: rgba(0,0,0,0.07); }
+
+/* 已设置图片的头像：隐藏占位小人，图片铺满 */
+.avatar-img {
+  background-size: cover !important;
+  background-position: center !important;
+  border: none !important;
+}
+.avatar-img::before, .avatar-img::after { display: none !important; }
+
+/* 角色设置 — 关联世界书勾选列表 */
+.wb-link-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 2px; font-size: 13px; color: #555; cursor: pointer;
+}
+.wb-link-item input { accent-color: #c06080; }
+
+.char-avatar-box::before {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: rgba(180,140,140,0.22);
+  top: 10px; left: 18px;
+}
+.char-avatar-box::after {
+  content: '';
+  position: absolute;
+  width: 28px; height: 16px;
+  border-radius: 14px 14px 0 0;
+  background: rgba(180,140,140,0.18);
+  bottom: 6px; left: 12px;
+}
+
+.char-card-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  justify-content: center;
+}
+
+.char-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.char-field-row .char-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 28px;
+  letter-spacing: 0.3px;
+}
+
+.char-field-row .field-input {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.char-field-hint {
+  font-weight: 400;
+  color: #ccc;
+  letter-spacing: 0.3px;
+}
+
+.char-field-required {
+  font-weight: 600;
+  color: #E08080;
+  letter-spacing: 0.3px;
+}
+
+/* 角色/用户头像包裹 + 角色标签 */
+.char-avatar-wrap {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.char-role-tag {
+  font-size: 7px; font-weight: 700;
+  color: rgba(150,110,110,0.55);
+  letter-spacing: 0.9px;
+  line-height: 1;
+}
+
+/* 合并人设卡片内小标题 */
+.persona-title-sm {
+  font-size: 12px; font-weight: 600; color: #555;
+}
+
+/* 卡片内分隔线 */
+.card-inner-divider {
+  height: 1px;
+  background: rgba(0,0,0,0.05);
+  margin: 12px 0;
+}
+
+.persona-header {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.persona-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.persona-subtitle {
+  font-size: 10px;
+  font-weight: 500;
+  color: #bbb;
+  letter-spacing: 0.8px;
+}
+
+.persona-textarea {
+  width: 100%;
+  min-height: 90px;
+  border: none;
+  outline: none;
+  background: rgba(0,0,0,0.045);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #333;
+  font-family: inherit;
+  resize: none;
+  line-height: 1.6;
+}
+.persona-textarea::placeholder { color: #ccc; }
+
+.world-book-card {
+  background: rgba(255,255,255,0.92);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+  margin-bottom: 14px;
+}
+
+.wb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.wb-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.wb-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.wb-subtitle {
+  font-size: 10px;
+  font-weight: 500;
+  color: #bbb;
+  letter-spacing: 0.8px;
+}
+
+.wb-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wb-count {
+  font-size: 12px;
+  color: #aaa;
+  font-weight: 500;
+}
+
+.wb-arrow {
+  width: 16px; height: 16px;
+  stroke: #bbb; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.wb-arrow.open { transform: rotate(90deg); }
+
+.wb-content {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.30s cubic-bezier(0.4,0,0.2,1);
+}
+
+.wb-content.open {
+  max-height: 300px;
+  border-top: 1px solid rgba(0,0,0,0.045);
+}
+
+.wb-empty-hint {
+  padding: 16px;
+  font-size: 12px;
+  color: #ccc;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.contacts-main-area { padding: 8px 0 20px 20px; }
+
+.contact-card {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 16px; padding: 11px 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.contact-card:active { background: rgba(255,255,255,0.72); transform: scale(0.98); }
+
+.contact-card-avatar {
+  width: 46px; height: 46px; border-radius: 12px;
+  flex-shrink: 0; position: relative; overflow: hidden;
+  background: rgba(0,0,0,0.045);
+  border: 1.5px dashed rgba(190,160,160,0.35);
+}
+.contact-card-avatar::before {
+  content: ''; position: absolute;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(180,140,140,0.22); top: 8px; left: 16px;
+}
+.contact-card-avatar::after {
+  content: ''; position: absolute;
+  width: 24px; height: 13px; border-radius: 12px 12px 0 0;
+  background: rgba(180,140,140,0.18); bottom: 5px; left: 11px;
+}
+
+.contact-card-info { flex: 1; min-width: 0; }
+.contact-card-alias {
+  font-size: 15px; font-weight: 600; color: #222;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.contact-card-name {
+  font-size: 12px; color: #aaa; margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+@keyframes shakeX {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+.shake { animation: shakeX 0.38s ease; }
+
+@keyframes cardGlow {
+  0%   { box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+  40%  { box-shadow: 0 0 0 3px rgba(208,88,88,0.38), 0 4px 22px rgba(208,88,88,0.32), 0 2px 10px rgba(0,0,0,0.08); }
+  100% { box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+}
+.card-glow { animation: cardGlow 1s ease forwards; }
+
+/* 角色设置 — 操作按钮行 */
+.char-action-row {
+  display: flex; gap: 10px; padding: 4px 0 8px;
+}
+.char-action-btn {
+  flex: 1; padding: 13px 0; border: none; border-radius: 16px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: opacity 0.15s, transform 0.15s;
+}
+.char-action-btn:active { opacity: 0.72; transform: scale(0.97); }
+.char-upload-btn {
+  background: rgba(255,255,255,0.92);
+  border: 1.5px solid rgba(200,180,180,0.40);
+  color: #555;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.char-delete-btn {
+  background: rgba(255,215,215,0.90);
+  color: #c03030;
+  box-shadow: 0 2px 10px rgba(200,60,60,0.10);
+}
+

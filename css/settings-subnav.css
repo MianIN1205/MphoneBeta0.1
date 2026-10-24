@@ -1,0 +1,45 @@
+/* =============================================
+   设置界面 — 顶栏下方固定横向切换菜单
+   ============================================= */
+.settings-subnav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  background: rgba(255, 236, 238, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(200, 170, 170, 0.38);
+  flex-shrink: 0;
+  z-index: 15;
+}
+
+.settings-subnav-item {
+  flex: 1;
+  text-align: center;
+  padding: 7px 0;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #998085;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.3px;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.settings-subnav-item.active {
+  background: rgba(255, 255, 255, 0.94);
+  color: #C05068;
+  box-shadow: 0 2px 8px rgba(190, 120, 135, 0.16);
+}
+
+.settings-subnav-item:active:not(.active) { opacity: 0.7; }
+
+.settings-subpanel { display: none; }
+.settings-subpanel.active { display: block; }
+

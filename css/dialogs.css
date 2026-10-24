@@ -1,0 +1,91 @@
+/* =============================================
+   新建对话 — 角色选择弹窗
+   ============================================= */
+.new-chat-overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.30); z-index: 450;
+  align-items: center; justify-content: center;
+  border-radius: 52px;
+}
+.new-chat-overlay.open { display: flex; }
+
+.new-chat-modal {
+  background: rgba(255,248,252,0.97);
+  border-radius: 22px; padding: 20px 18px 16px;
+  width: 290px;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.20);
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.new-chat-modal-title {
+  font-size: 15px; font-weight: 600; color: #222;
+  text-align: center; letter-spacing: 0.3px;
+}
+
+.new-chat-list {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 4px 4px;
+}
+
+.new-chat-char-item {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.88);
+  border-radius: 14px; padding: 10px 13px;
+  cursor: pointer; user-select: none;
+  border: 1.5px solid transparent;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  transition: transform 0.20s cubic-bezier(0.34,1.3,0.64,1),
+              box-shadow 0.20s ease,
+              border-color 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.new-chat-char-item.selected {
+  transform: translateY(-3px);
+  border-color: rgba(208,88,88,0.42);
+  box-shadow:
+    0 8px 22px rgba(208,88,88,0.20),
+    0 0 16px rgba(208,88,88,0.14),
+    0 2px 8px rgba(0,0,0,0.08);
+}
+
+.new-chat-char-avatar {
+  width: 40px; height: 40px; border-radius: 10px;
+  flex-shrink: 0; position: relative; overflow: hidden;
+  background: rgba(0,0,0,0.045);
+  border: 1.5px dashed rgba(190,160,160,0.35);
+}
+.new-chat-char-avatar::before {
+  content: ''; position: absolute;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: rgba(180,140,140,0.22); top: 7px; left: 14px;
+}
+.new-chat-char-avatar::after {
+  content: ''; position: absolute;
+  width: 20px; height: 11px; border-radius: 10px 10px 0 0;
+  background: rgba(180,140,140,0.18); bottom: 4px; left: 10px;
+}
+
+.new-chat-char-info { flex: 1; min-width: 0; }
+.new-chat-char-alias {
+  font-size: 14px; font-weight: 600; color: #222;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.new-chat-char-name {
+  font-size: 11px; color: #aaa; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.new-chat-action-row {
+  display: flex; gap: 10px;
+}
+
+.new-chat-btn {
+  flex: 1; padding: 12px 0; border: none; border-radius: 14px;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: opacity 0.15s, transform 0.15s;
+}
+.new-chat-btn:active { opacity: 0.72; transform: scale(0.97); }
+.new-chat-cancel  { background: #F0F0F0; color: #666; }
+.new-chat-confirm { background: #FFE4E1; color: #B04040; }
+

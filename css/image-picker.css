@@ -1,0 +1,65 @@
+/* =============================================
+   通用图片选择弹窗
+   ============================================= */
+.img-picker-overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.32); z-index: 700;
+  align-items: center; justify-content: center;
+  border-radius: 52px;
+}
+.img-picker-overlay.open { display: flex; }
+.phone.fullscreen .img-picker-overlay { border-radius: 0 !important; }
+
+.img-picker-modal {
+  background: rgba(255,248,252,0.97);
+  border-radius: 22px; padding: 22px 18px 18px;
+  width: 284px;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.20);
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.img-picker-title {
+  font-size: 15px; font-weight: 600; color: #222;
+  text-align: center; letter-spacing: 0.3px;
+}
+
+.img-picker-section-label {
+  font-size: 11px; font-weight: 600; color: #aaa;
+  letter-spacing: 0.5px; margin-bottom: 7px;
+}
+
+.img-picker-url-row {
+  display: flex; gap: 8px; align-items: center;
+}
+
+.img-picker-url-input {
+  flex: 1; border: none; outline: none;
+  background: rgba(0,0,0,0.045); border-radius: 10px;
+  padding: 9px 11px; font-size: 13px; color: #333; font-family: inherit;
+}
+.img-picker-url-input::placeholder { color: #ccc; }
+
+.img-picker-url-confirm {
+  padding: 9px 14px; border: none; border-radius: 10px;
+  font-size: 13px; font-weight: 600; color: #B04040;
+  background: rgba(240,180,180,0.18); font-family: inherit; cursor: pointer;
+  transition: opacity 0.15s, transform 0.13s; flex-shrink: 0;
+}
+.img-picker-url-confirm:active { opacity: 0.72; transform: scale(0.95); }
+
+.img-picker-local-btn {
+  width: 100%; padding: 13px 0; border: none; border-radius: 14px;
+  font-size: 14px; font-weight: 600; color: #555;
+  background: rgba(0,0,0,0.046); font-family: inherit; cursor: pointer;
+  transition: opacity 0.15s, transform 0.13s;
+}
+.img-picker-local-btn:active { opacity: 0.72; transform: scale(0.97); }
+
+.img-picker-cancel {
+  width: 100%; padding: 12px 0; border: none; border-radius: 14px;
+  font-size: 14px; font-weight: 600; color: #888;
+  background: #F0F0F0; font-family: inherit; cursor: pointer;
+  transition: opacity 0.15s, transform 0.13s;
+}
+.img-picker-cancel:active { opacity: 0.72; transform: scale(0.97); }
+

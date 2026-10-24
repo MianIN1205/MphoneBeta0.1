@@ -1,0 +1,544 @@
+/* =============================================
+   笔记界面 — 三点菜单
+   ============================================= */
+.notes-more-wrap {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notes-del-cancel-btn {
+  display: none;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(200,160,160,0.45);
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 12px; font-weight: 500; color: #C05050;
+  cursor: pointer; font-family: inherit;
+  transition: opacity 0.15s, transform 0.14s;
+}
+.notes-del-cancel-btn:active { opacity: 0.72; transform: scale(0.94); }
+.notes-del-cancel-btn.visible { display: block; }
+
+.notes-more-btn {
+  background: none; border: none;
+  cursor: pointer; padding: 6px 2px;
+  display: none;
+  align-items: center; justify-content: center;
+}
+
+.notes-more-btn.visible { display: flex; }
+
+.notes-more-btn svg {
+  width: 20px; height: 20px; fill: #333;
+}
+
+.notes-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: rgba(255, 248, 252, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid rgba(255,255,255,0.8);
+  z-index: 300;
+  min-width: 128px;
+  transform-origin: top right;
+  transform: scale(0.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.30s cubic-bezier(0.34,1.4,0.64,1), opacity 0.18s ease;
+}
+
+.notes-popup.open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: all;
+}
+
+.notes-popup-item {
+  padding: 12px 16px;
+  font-size: 14px; color: #444;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  transition: background 0.15s;
+}
+
+.notes-popup-item:first-child { border-radius: 14px 14px 0 0; }
+.notes-popup-item:last-child  { border-bottom: none; border-radius: 0 0 14px 14px; }
+.notes-popup-item:active      { background: rgba(240,128,128,0.08); }
+
+.notes-popup-item svg {
+  width: 15px; height: 15px;
+  stroke: #aaa; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+  flex-shrink: 0;
+}
+
+/* =============================================
+   笔记界面 — 书架
+   ============================================= */
+.notes-shelf-area { padding: 20px 0 12px; }
+
+.bookshelf {
+  background: rgba(210, 185, 160, 0.28);
+  border-radius: 14px;
+  padding: 14px 8px 12px;
+  margin-bottom: 16px;
+  box-shadow:
+    inset 0 5px 16px rgba(120,80,50,0.15),
+    inset 0 1px 5px rgba(100,60,30,0.10);
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 8px;
+  transition: box-shadow 0.18s ease;
+}
+
+.book-slot {
+  flex: 0 0 calc(33.33% - 6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+
+.book-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(100,70,50,0.68);
+  text-align: center;
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookshelf.drag-over {
+  box-shadow:
+    inset 0 5px 16px rgba(120,80,50,0.15),
+    inset 0 1px 5px rgba(100,60,30,0.10),
+    0 0 0 2px rgba(208,88,88,0.38),
+    0 0 18px rgba(208,88,88,0.20);
+}
+
+.book {
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+  height: 100px;
+  min-height: 100px;
+  max-height: 100px;
+  flex-shrink: 0;
+  flex-grow: 0;
+  border-radius: 4px 12px 12px 4px;
+  background: #FFEBCD;
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.14),
+    0 1px 5px rgba(0,0,0,0.09),
+    2px 0 6px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
+  user-select: none;
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* 书脊竖线：左侧粗线（边缘）+ 折痕细线，正片叠底 */
+.book::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.30) 0px,
+    rgba(0,0,0,0.30) 4px,
+    transparent     4px,
+    transparent     11px,
+    rgba(0,0,0,0.16) 11px,
+    rgba(0,0,0,0.16) 13px,
+    transparent     13px
+  );
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.book.drag-target {
+  box-shadow:
+    0 0 0 2px rgba(208,88,88,0.42),
+    0 4px 14px rgba(0,0,0,0.14);
+}
+
+.book.held {
+  transform: scale(1.12) translateY(-8px);
+  box-shadow:
+    0 14px 32px rgba(0,0,0,0.22),
+    0 4px 12px rgba(0,0,0,0.14),
+    0 0 0 1.5px rgba(208,88,88,0.28);
+  z-index: 10;
+  cursor: grabbing;
+}
+
+/* =============================================
+   笔记界面 — 新建笔记弹窗
+   ============================================= */
+.book-new-overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.28); z-index: 500;
+  align-items: center; justify-content: center;
+  border-radius: 52px;
+}
+.book-new-overlay.open { display: flex; }
+
+.book-new-modal {
+  background: rgba(255,248,252,0.97);
+  border-radius: 22px; padding: 22px 18px 18px;
+  width: 310px;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.20);
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.book-new-title {
+  font-size: 15px; font-weight: 600; color: #222;
+  text-align: center; margin-bottom: -4px;
+}
+
+.book-new-body { display: flex; gap: 16px; align-items: flex-start; }
+
+.book-new-preview {
+  flex-shrink: 0; width: 64px; height: 100px;
+  border-radius: 4px 12px 12px 4px;
+  background: #FFEBCD;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.14), 0 1px 5px rgba(0,0,0,0.09), 2px 0 6px rgba(0,0,0,0.06);
+  position: relative; overflow: hidden;
+}
+
+.book-new-preview::after {
+  content: ''; position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to right,
+    rgba(0,0,0,0.30) 0px, rgba(0,0,0,0.30) 4px,
+    transparent 4px, transparent 11px,
+    rgba(0,0,0,0.16) 11px, rgba(0,0,0,0.16) 13px,
+    transparent 13px);
+  mix-blend-mode: multiply; pointer-events: none;
+}
+
+.book-new-fields { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+.book-new-input {
+  width: 100%; border: none; outline: none;
+  background: rgba(0,0,0,0.05); border-radius: 10px;
+  padding: 9px 11px; font-size: 13px; color: #333; font-family: inherit;
+}
+.book-new-input::placeholder { color: #ccc; }
+
+.book-new-cover-row { display: flex; gap: 7px; }
+
+.book-cover-btn {
+  flex: 1; padding: 8px 4px;
+  border: none; border-radius: 10px;
+  font-size: 11px; font-weight: 500; color: #555;
+  font-family: inherit; cursor: pointer;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 1px 5px rgba(0,0,0,0.08);
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  transition: transform 0.14s ease;
+}
+.book-cover-btn:active { transform: scale(0.92); }
+.book-cover-btn svg {
+  width: 13px; height: 13px; stroke: #C06080; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+}
+
+/* 封面展开区域：固定高度，防止弹窗移位 */
+.book-cover-expand {
+  height: 28px;
+  position: relative;
+  overflow: visible;
+}
+.book-cover-expand > div {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.book-cover-expand > div.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.book-color-swatches { flex-wrap: wrap; gap: 5px; }
+
+.color-swatch {
+  width: 16px; height: 16px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; box-sizing: border-box;
+  transition: border-color 0.15s, transform 0.12s;
+  flex-shrink: 0;
+}
+.color-swatch.selected, .color-swatch:hover {
+  border-color: rgba(180,80,100,0.55); transform: scale(1.22);
+}
+
+/* 上传封面子按钮行 */
+.book-upload-btns { gap: 7px; }
+
+.book-upload-sub-btn {
+  flex: 1; padding: 5px 4px;
+  border: none; border-radius: 8px;
+  font-size: 10px; font-weight: 500; color: #555;
+  font-family: inherit; cursor: pointer;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  transition: transform 0.14s ease;
+  white-space: nowrap;
+}
+.book-upload-sub-btn:active { transform: scale(0.92); }
+.book-upload-sub-btn svg {
+  width: 11px; height: 11px; stroke: #C06080; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none; flex-shrink: 0;
+}
+
+.book-new-action-row { display: flex; gap: 8px; }
+
+.book-new-btn {
+  flex: 1; padding: 11px 0; border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s; font-family: inherit;
+}
+.book-new-btn:active { opacity: 0.72; transform: scale(0.97); }
+.book-new-btn-cancel { background: #F0F0F0; color: #666; }
+.book-new-btn-save   { background: #FFE4E1; color: #B04040; }
+
+/* =============================================
+   笔记界面 — 删除模式
+   ============================================= */
+.book-del-btn {
+  position: absolute; top: -7px; left: calc(50% + 23px);
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #e05050; color: #fff;
+  border: 1.5px solid #fff;
+  display: none; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 20;
+  font-size: 12px; line-height: 1; padding: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  transition: transform 0.12s ease;
+}
+.book-del-btn:active { transform: scale(0.86); }
+.delete-mode .book-del-btn { display: flex; }
+
+/* =============================================
+   笔记界面 — 删除确认弹窗
+   ============================================= */
+.book-del-confirm-overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.30); z-index: 600;
+  align-items: center; justify-content: center;
+  border-radius: 52px;
+}
+.book-del-confirm-overlay.open { display: flex; }
+
+.book-del-confirm-box {
+  background: rgba(255,248,252,0.97);
+  border-radius: 20px; padding: 24px 20px 18px;
+  width: 270px; box-shadow: 0 10px 36px rgba(0,0,0,0.20);
+  text-align: center;
+}
+.book-del-confirm-title { font-size: 15px; font-weight: 600; color: #222; margin-bottom: 6px; }
+.book-del-confirm-desc  { font-size: 12px; color: #999; margin-bottom: 20px; }
+.book-del-confirm-btns  { display: flex; gap: 10px; }
+
+.book-del-confirm-btn {
+  flex: 1; padding: 11px 0; border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s; font-family: inherit;
+}
+.book-del-confirm-btn:active:not(:disabled) { opacity: 0.72; transform: scale(0.97); }
+.book-del-cancel-btn { background: #F0F0F0; color: #666; }
+.book-del-ok-btn { background: #FFE0E0; color: #c03030; }
+.book-del-ok-btn:disabled { background: #eee; color: #bbb; cursor: not-allowed; }
+.book-del-countdown { font-size: 11px; font-weight: 400; opacity: 0.7; }
+
+/* =============================================
+   笔记界面 — 空书架提示
+   ============================================= */
+.bookshelf-empty-hint {
+  width: 100%;
+  text-align: center;
+  padding: 22px 8px;
+  font-size: 11px;
+  color: rgba(120,90,70,0.48);
+  line-height: 1.9;
+  letter-spacing: 0.3px;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* 三点按钮禁用（删除模式） */
+.notes-more-btn.disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+/* =============================================
+   书架满提示弹窗
+   ============================================= */
+.shelf-full-overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.25); z-index: 550;
+  align-items: center; justify-content: center;
+  border-radius: 52px;
+}
+.shelf-full-overlay.open { display: flex; }
+
+.shelf-full-box {
+  background: rgba(255,248,252,0.97);
+  border-radius: 20px; padding: 28px 22px 20px;
+  width: 270px; box-shadow: 0 10px 36px rgba(0,0,0,0.20);
+  text-align: center;
+}
+
+.shelf-full-text {
+  font-size: 14px; color: #555;
+  line-height: 1.8; margin-bottom: 20px;
+  letter-spacing: 0.2px;
+}
+
+.shelf-full-btn {
+  width: 100%; padding: 12px 0; border: none;
+  border-radius: 12px; font-size: 15px; font-weight: 600;
+  background: #FFE4E1; color: #B04040; cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.shelf-full-btn:active { opacity: 0.72; transform: scale(0.97); }
+
+/* === 笔记本阅读弹窗 === */
+.book-viewer-backdrop {
+  display: none; position: absolute; inset: 0; z-index: 250;
+  background: rgba(0,0,0,0.04);
+  backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+  border-radius: 52px;
+  align-items: center; justify-content: center;
+}
+.book-viewer-backdrop.open { display: flex; }
+
+.book-viewer {
+  width: 300px; height: 450px;
+  border-radius: 16px; display: flex; overflow: hidden;
+  box-shadow:
+    8px 10px 5px rgba(0,0,0,0.40),
+    0 2px 8px rgba(0,0,0,0.18),
+    0 0 0 1px rgba(0,0,0,0.06);
+  transform: scale(0.88); opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.34,1.25,0.64,1), opacity 0.22s ease;
+}
+.book-viewer-backdrop.open .book-viewer { transform: scale(1); opacity: 1; }
+
+.bv-spine {
+  width: 18px; flex-shrink: 0; background: #FFEBCD; position: relative;
+  z-index: 1;
+}
+.bv-spine::before {
+  content: ''; position: absolute; top: 0; bottom: 0; right: 0;
+  width: 1.5px; background: rgba(0,0,0,0.10);
+}
+/* 无中间竖线：移除 ::after */
+
+.bv-page-area {
+  flex: 1; background: #FDF5E6;
+  display: flex; flex-direction: column; overflow: hidden;
+  position: relative;
+}
+
+/* 书脊阴影：覆盖整个页面区域左侧（含 pages-wrap）的全高渐变条 */
+.bv-page-area::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 22px;
+  background: linear-gradient(to right,
+    rgba(0,0,0,0.18) 0%,
+    rgba(0,0,0,0.06) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+.bv-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 10px 8px;
+  border-bottom: 1px solid rgba(160,140,100,0.16);
+  flex-shrink: 0; background: #FDF5E6;
+}
+.bv-toolbar-right { display: flex; align-items: center; gap: 1px; }
+
+.bv-tool-btn {
+  background: none; border: none; cursor: pointer; padding: 5px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 7px; transition: background 0.15s;
+}
+.bv-tool-btn:active { background: rgba(0,0,0,0.08); }
+.bv-tool-btn svg {
+  width: 16px; height: 16px;
+  stroke: #999; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+}
+
+.bv-pages-wrap { flex: 1; overflow: hidden; position: relative; }
+
+.bv-pages-track {
+  position: relative; width: 100%; height: 100%;
+}
+
+.bv-page {
+  position: absolute; inset: 0;
+  background: #FDF5E6;
+  overflow-y: auto; padding: 8px 12px;
+  will-change: transform;
+}
+.bv-page::-webkit-scrollbar { display: none; }
+
+.bv-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(160,140,100,0.16);
+  flex-shrink: 0; background: #FDF5E6;
+}
+
+.bv-nav-btn {
+  background: none; border: none; cursor: pointer;
+  padding: 5px 8px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 7px; transition: background 0.15s;
+}
+.bv-nav-btn:active { background: rgba(0,0,0,0.08); }
+.bv-nav-btn svg {
+  width: 16px; height: 16px;
+  stroke: #888; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+}
+.bv-nav-btn.hidden { visibility: hidden; }
+
+.bv-page-num {
+  font-size: 11px; color: #bbb;
+  letter-spacing: 0.5px; font-weight: 500;
+}
+
