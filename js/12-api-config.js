@@ -43,13 +43,9 @@ refreshBtn.addEventListener('click', function(e) {
   if (!url || !key) return;
   _refreshing = true;
   refreshBtn.classList.add('spinning');
-  fetch(url.replace(/\/$/, '') + '/models', { headers: { 'Authorization': 'Bearer ' + key } })
-    .then(function(r) {
-      if (!r.ok) throw new Error(r.status);
-      return r.json();
-    })
-    .then(function(d) {
-      var models = (d.data || []).map(function(m) { return m.id; }).sort();
+  // 按接口类型取模型列表（Claude 官方 / OpenAI 兼容，见 24-llm.js）
+  llmListModels(url, key)
+    .then(function(models) {
       if (!models.length) throw new Error('empty');
       modelPopup.innerHTML = '';
       models.forEach(function(id) {
@@ -82,6 +78,6 @@ refreshBtn.addEventListener('click', function(e) {
       console.warn('[Mphone] 获取模型列表失败:', err);
       refreshBtn.classList.remove('spinning');
       _refreshing = false;
-      showToast('✗ 获取失败', 'error');
+      showToast('✗ 获取失败：' + (err && err.message ? String(err.message).slice(0, 60) : ''), 'error');
     });
 });

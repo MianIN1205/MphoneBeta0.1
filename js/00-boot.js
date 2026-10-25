@@ -189,7 +189,12 @@ var MPHONE_SCRIPTS = [
   "js/20-media-send.js",
   "js/21-image-viewer.js",
   "js/22-assistant.js",
-  "js/23-assist.js"
+  "js/23-assist.js",
+  "js/24-llm.js",
+  "js/25-mcp.js",
+  "js/26-desk-apps.js",
+  "js/27-widgets.js",
+  "js/28-memory.js"
 ];
 
 // 要等全部脚本执行完才能跑的初始化（会用到后面脚本里的函数），用 onMphoneReady 登记

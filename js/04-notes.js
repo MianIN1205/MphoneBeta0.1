@@ -233,14 +233,23 @@ document.getElementById('bookNewSave').addEventListener('click', function() {
 // =============================================
 // 笔记界面 — 书架管理 syncShelves
 // =============================================
-// 生成一个书本槽：{ name, color, cover, pages }
+// 生成一个书本槽：{ name, color, cover, pages, sys }
+// sys = 'diary' | 'gallery'：书架上的「日记」「相册」，点开进对应界面，不能删除
+var SYS_BOOK_EMBLEM = { diary: '📔', gallery: '🖼️' };
 function createBookSlot(data) {
   var slot  = document.createElement('div');
-  slot.className = 'book-slot';
+  slot.className = 'book-slot' + (data.sys ? ' sys-book' : '');
   var book  = document.createElement('div');
   book.className = 'book';
   applyBookCover(book, data.color, data.cover);
   if (Array.isArray(data.pages)) book._bvPages = data.pages;
+  if (data.sys) {
+    book._sys = data.sys;
+    var emblem = document.createElement('span');
+    emblem.className = 'book-emblem';
+    emblem.textContent = SYS_BOOK_EMBLEM[data.sys] || '📘';
+    book.appendChild(emblem);
+  }
   var label = document.createElement('span');
   label.className = 'book-label';
   label.textContent = data.name;
@@ -259,7 +268,8 @@ function saveShelves() {
         name:  slot.querySelector('.book-label').textContent,
         color: book._color || '#FFEBCD',
         cover: book._cover || '',
-        pages: book._bvPages || [{}]
+        pages: book._bvPages || [{}],
+        sys:   book._sys || undefined
       };
     });
   });
@@ -593,6 +603,8 @@ function renderBookPages() {
 }
 
 function openBookViewer(book) {
+  // 「日记」「相册」这类系统书：直接打开对应界面
+  if (book._sys && typeof openSysBook === 'function') { openSysBook(book._sys); return; }
   currentBook = book;
   book._bvPages = book._bvPages || [{}];
   currentPageIndex = 0;

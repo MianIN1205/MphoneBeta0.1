@@ -151,8 +151,8 @@ function createVoiceBubble(m, list, empty) {
   var durStr = mins + ':' + String(secs).padStart(2, '0');
   var audio  = new Audio(m.voice.src);
 
-  // 气泡宽度按时长自适应（2s→114px … ≥20s→220px）
-  var bubbleW = Math.min(220, Math.max(100, 80 + durationSec * 7));
+  // 气泡宽度按时长自适应（短语音 120px … ≥18s→220px）
+  var bubbleW = Math.min(220, Math.max(120, 92 + durationSec * 7));
 
   var row = document.createElement('div');
   row.className = 'chat-msg-row user';
@@ -170,7 +170,8 @@ function createVoiceBubble(m, list, empty) {
   playBtn.className = 'voice-play-btn';
   playBtn.innerHTML = '<svg viewBox="0 0 16 16" width="12" height="12" fill="rgba(160,80,120,0.85)"><polygon points="3,2 14,8 3,14"/></svg>';
 
-  var cvsW = Math.max(40, bubbleW - 28 - 36 - 26);
+  // 波形宽度 = 气泡宽 − 左右内边距 20 − 播放键 28 − 两个间距 14 − 时长 32
+  var cvsW = Math.max(24, bubbleW - 94);
   var cvs = document.createElement('canvas');
   cvs.className = 'voice-waveform';
   cvs.width = cvsW; cvs.height = 28;

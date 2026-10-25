@@ -145,6 +145,10 @@ function buildMsgs(idx, histOverride) {
     }
   }
 
+  // 记忆库：珍贵的回忆 + 和最近对话相关的记忆 + 怎样记下新记忆（权限在角色设置「扩展」页）
+  var memSys = (typeof memoryContextFor === 'function') ? memoryContextFor(char, history) : '';
+  if (memSys) msgs.push({ role: 'system', content: memSys });
+
   // 世界书：按注入位置分组（前 = 紧跟系统提示，中 = 预设条目之后，后 = 聊天记录之后）
   var wbByPos = { before: [], middle: [], after: [] };
   getActiveWbEntries(char, history).forEach(function(e) {
@@ -361,13 +365,14 @@ function msgTextForAI(m) {
 function msgContentForAI(m, rich) {
   var text = msgTextForAI(m);
   if (!rich || m.role !== 'user' || m.recalled) return text;
+  // 图片前面带一句文字：有些接口（如部分 Gemini 中转）不接受只有图片、没有文字的消息
   if (m.imgSrc && mediaCfg.vision) {
-    var parts = [];
-    if (m.quote) parts.push({ type: 'text', text: '「引用 ' + m.quote.author + '：' + m.quote.text + '」' });
+    var parts = [{ type: 'text', text: (m.quote ? '「引用 ' + m.quote.author + '：' + m.quote.text + '」\n' : '') + '（我发了一张图片）' }];
     parts.push({ type: 'image_url', image_url: { url: m.imgSrc } });
     return parts;
   }
-  if (m.voice && mediaCfg.voiceMode === 'audio') {
+  // 「发送音频」模式，或「转成文字」但还没转出文字（比如接口不支持语音识别）时，直接把录音发过去
+  if (m.voice && (mediaCfg.voiceMode === 'audio' || !m.transcript)) {
     return [{ type: 'text', text: text }, { type: 'input_audio', _voiceSrc: m.voice.src }];
   }
   return text;
@@ -380,6 +385,8 @@ function commitAssistantReply(hist, raw, list, empty) {
   // 内置助手的操作块（添加世界书、改样式…）单独成为确认卡片
   var actions = [];
   if (typeof extractAssistantActions === 'function') raw = extractAssistantActions(hist, raw, actions);
+  // 角色悄悄记下的记忆：存进记忆库，不显示
+  if (typeof memExtractTags === 'function') raw = memExtractTags(charOfHistory(hist), raw);
   var parts = raw.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean);
   if (!parts.length && status) parts = ['…'];
   var now = Date.now();
@@ -461,65 +468,46 @@ function sendMsg(userText, requestOnly, onDone) {
     return added;
   }
 
-  // 聊天视图附加回复格式要求（剧情视图不拆条、不加状态栏）；发送前把录音转成音频数据
-  resolveMediaParts(buildMsgs(openingChatCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : []))
-  .then(function(messages) {
-    return fetch(cfg.url.replace(/\/$/, '') + '/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.key },
-      body: JSON.stringify({ model: cfg.model, messages: messages, temperature: cfg.temp, stream: true }),
-      signal: ctrl.signal
-    });
+  // 聊天视图附加回复格式要求（剧情视图不拆条、不加状态栏）；请求按接口类型自动适配（见 24-llm.js）
+  var started = false;
+  function finishStream() {
+    endGen();
+    if (aiText) {
+      var added = deliver(aiText);
+      if (isChatView) maybeAutoSummarize(replyCharIdx);
+      // 只在「聊天」子视图回复后按概率触发动态（剧情不触发）
+      if (isChatView) maybeAutoPostAfterChat(replyCharIdx);
+      if (onDone) onDone(added);
+    } else {
+      typing.row.remove();
+      appendMsg('ai', '⚠️ 未收到回复内容', false).bubble.classList.add('error');
+      if (onDone) onDone([]);
+    }
+  }
+  // 开了 MCP 时把工具交给模型；用工具的过程显示在打字气泡里
+  var mcpTools = (typeof mcpActiveTools === 'function') ? mcpActiveTools() : [];
+  // 开了向量记忆时先算好这次对话的向量（失败就用本地相似度）
+  (typeof memPrepare === 'function' ? memPrepare(replyChar, hist) : Promise.resolve()).then(function() {
+    return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : []), {
+    stream: true,
+    signal: ctrl.signal,
+    tools: mcpTools,
+    callTool: mcpTools.length ? mcpCallFromLLM : null,
+    toolLabel: function(name) { var hit = mcpToolMap[name]; return hit ? (hit.tool.title || hit.tool.name) : name; },
+    onStatus: function(text) { typing.bubble.textContent = text; if (activeList) activeList.scrollTop = 999999; },
+    onText: function(full) {
+      if (!started) { typing.bubble.innerHTML = ''; started = true; }
+      aiText = full;
+      // 操作块不直接显示原始代码，写完后会变成确认卡片
+      typing.bubble.textContent = aiText.replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
+        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').trim();
+      if (activeList) activeList.scrollTop = 999999;
+    }
+  });
   })
-  .then(function(res) {
-    if (!res.ok) return res.text().then(function(t) {
-      var msg = res.status;
-      try { var e = JSON.parse(t); msg = (e.error && e.error.message) || msg; } catch(_) {}
-      throw new Error(msg);
-    });
-    var reader = res.body.getReader(), decoder = new TextDecoder('utf-8'), lineBuf = '';
-    typing.bubble.innerHTML = '';
-    // 处理一行 SSE 数据（行可能跨网络分块，需先拼接完整再解析）
-    function handleLine(line) {
-      line = line.trim();
-      if (!line || line === 'data: [DONE]' || line.indexOf('data:') !== 0) return;
-      try {
-        var delta = JSON.parse(line.slice(5).trim()).choices[0].delta;
-        var piece = (delta && delta.content) || '';
-        if (piece) {
-          aiText += piece;
-          // 操作块不直接显示原始代码，写完后会变成确认卡片
-          typing.bubble.textContent = aiText.replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️').trim();
-          if (activeList) activeList.scrollTop = 999999;
-        }
-      } catch(_) {}
-    }
-    function finishStream() {
-      if (lineBuf) { handleLine(lineBuf); lineBuf = ''; }
-      endGen();
-      if (aiText) {
-        var added = deliver(aiText);
-        if (isChatView) maybeAutoSummarize(replyCharIdx);
-        // 只在「聊天」子视图回复后按概率触发动态（剧情不触发）
-        if (isChatView) maybeAutoPostAfterChat(replyCharIdx);
-        if (onDone) onDone(added);
-      } else {
-        typing.row.remove();
-        appendMsg('ai', '⚠️ 未收到回复内容', false).bubble.classList.add('error');
-        if (onDone) onDone([]);
-      }
-    }
-    function read() {
-      return reader.read().then(function(result) {
-        if (result.done) { finishStream(); return; }
-        lineBuf += decoder.decode(result.value, { stream: true });
-        var lines = lineBuf.split('\n');
-        lineBuf = lines.pop();
-        lines.forEach(handleLine);
-        return read();
-      });
-    }
-    return read();
+  .then(function(full) {
+    if (full) aiText = full;
+    finishStream();
   })
   .catch(function(err) {
     endGen();

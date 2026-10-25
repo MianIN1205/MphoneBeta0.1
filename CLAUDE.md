@@ -1,0 +1,46 @@
+# 眠花糖机（Mphone）
+
+一个“小手机”风格的 AI 角色扮演网页（PWA），纯原生 HTML/CSS/JS，没有构建步骤。
+线上地址：https://mianin1205.github.io/MphoneBeta0.1/ （GitHub Pages，仓库 MianIN1205/MphoneBeta0.1，分支 main）
+
+## 和用户合作的规矩
+- 所有回复、总结、按钮都用中文。
+- 每次提交 / 推送前都要先问，用户同意了才推。不要再提“局域网服务器”方案（用户已拒绝）。
+- 不要擅自改用户已有的设计：空状态提示、占位图标、“开发中”这类文字都是故意留的；改界面文字、交互前先问。
+- 已定的交互：输入框里的 ↵ 是换行，键盘回车只发送用户消息不叫 AI，❄️ 才请求回复（生成中变 ⏹）；表情键和加号键弹出同样高度的底部抽屉；MianIN 是内置默认角色兼系统助手。
+- 界面动效要克制：淡入 + 轻微缩放，不要回弹、不要花哨。
+- 本地备份放在 `F:\Ai资料\mhtj备份claude\`，文件夹名 `MMDDHHMMhtm<简短描述>`，例如 `10251216htm助手社交圈与通知`。
+
+## 文件结构
+- `index.html`：只有界面结构（各个 app-screen、弹窗）。
+- `css/`：15 个样式文件，`<link>` 顺序有影响。
+- `js/`：普通脚本（不是模块），由 `js/00-boot.js` 的 `MPHONE_SCRIPTS` 按顺序注入。所有顶层名字都是全局共享的。
+  - 加载时调用后面文件里的函数会报错：用 `typeof` 判断，或者用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v9`）。
+- `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。
+- 文件都是 CRLF 换行。Git Bash 的 `sed -i` 会悄悄改成 LF，改文件请用 Edit 工具或 node 脚本。
+
+## 主要模块（js/）
+| 文件 | 内容 |
+|---|---|
+| 00-boot | `mphoneStore`（IndexedDB 键值存储，键名都以 `mphone_` 开头）、脚本加载 |
+| 01-core | 公共工具、API 报错记录 |
+| 02 / 03 / 07 | 界面切换与外观、Chat 标签页、聊天列表与聊天室 |
+| 04-notes | 书架（日记 / 相册是系统书） |
+| 06 / 08 | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）、聊天与剧情两套美化 |
+| 09-prompt | 系统提示词、预设（可导入酒馆预设）、世界书、思维链 |
+| 12-api-config | 主 API 设置 |
+| 13-chat-messages | `buildMsgs` 拼提示词、发送与接收回复、`fillMacros`（{{char}} / {{user}}） |
+| 16-feed-auto | 动态（朋友圈）、社交圈、自主活动 |
+| 17-memory-import | 数据备份导入、角色卡导入 |
+| 18 / 20 | 语音与生图 API、发图片和语音给 AI |
+| 22-assistant | MianIN 助手权限（加世界书、改 CSS、看报错） |
+| 23-assist | 设置 → 辅助功能（通知、后台保活、数据管理） |
+| 24-llm | `llmRequest` 统一调用各家模型（Claude 原生接口，其余走 OpenAI 兼容），以及工具调用循环 |
+| 25-mcp | MCP 客户端（Streamable HTTP） |
+| 26 / 27 | 桌面 app（相册、纪念日与日程、日记）、桌面网格与小组件（编辑模式拖动） |
+| 28-memory | 角色记忆（短期 / 长期 / 珍贵，可选向量检索）、记忆库界面、导出 Word |
+
+## 测试
+- 内置浏览器面板里 service worker 注册不上（控制台有 “fetching the script” 报错），这是环境问题，不是 bug。
+- 没有真实 API 时，用假的 `fetch` 或 `llmRequest` 测试流程，测完把测试数据清掉。

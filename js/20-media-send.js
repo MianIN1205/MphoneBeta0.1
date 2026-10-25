@@ -44,8 +44,25 @@ function sttEndpoint() {
 }
 function sttReady() { var e = sttEndpoint(); return !!(e.url && e.key); }
 
-// 把一段录音（dataURL）转成文字
+// 把一段录音（dataURL）转成文字：先用语音识别接口；接口不支持（如 Gemini）时，改让聊天模型听写
 function sttTranscribe(src) {
+  return sttTranscribeWhisper(src).catch(function(err) {
+    var main = getApiCfg();
+    if (!main.url || !main.key || !main.model) throw err;
+    return sttTranscribeByChat(src).catch(function() { throw err; });
+  });
+}
+function sttTranscribeByChat(src) {
+  return llmRequest([{ role: 'user', content: [
+    { type: 'text', text: '请把这段语音逐字转写成文字，只输出转写结果，不要加任何说明。听不清就输出「（听不清）」。' },
+    { type: 'input_audio', _voiceSrc: src }
+  ] }], { stream: false, keepMedia: true, temperature: 0 }).then(function(text) {
+    text = String(text || '').trim();
+    if (!text) throw new Error('没有识别出文字');
+    return text;
+  });
+}
+function sttTranscribeWhisper(src) {
   var e = sttEndpoint();
   if (!e.url || !e.key) return Promise.reject(new Error('请先配置语音识别接口或主 API'));
   var type = (String(src).match(/^data:([^;,]+)/) || [])[1] || 'audio/webm';
@@ -117,5 +134,61 @@ function resolveMediaParts(msgs) {
   });
   return Promise.all(jobs).then(function() { return msgs; });
 }
+
+// ---------- 测试：当前模型能不能真的看到图片、听到语音 ----------
+// 识图：画一张写着随机数字的图，问模型图里写了什么；语音：合成 3 声「嘟」，问模型听到几声
+function mediaTestResult(text, ok) {
+  var el = document.getElementById('mediaTestResult');
+  el.textContent = text;
+  el.style.color = ok === true ? '#4f9a6a' : ok === false ? '#c0506a' : '';
+}
+function mediaTestAsk(content) {
+  // 测试时原样发送图片 / 音频，不自动换成文字
+  return llmRequest([{ role: 'user', content: content }], { stream: false, keepMedia: true, temperature: 0 })
+    .then(function(text) { return String(text || '').trim(); });
+}
+document.getElementById('mediaTestImgBtn').addEventListener('click', function() {
+  var code = String(Math.floor(1000 + Math.random() * 9000));
+  var c = document.createElement('canvas');
+  c.width = 320; c.height = 160;
+  var x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, 320, 160);
+  x.fillStyle = '#222'; x.font = 'bold 72px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(code, 160, 80);
+  mediaTestResult('正在测试识图…');
+  mediaTestAsk([
+    { type: 'text', text: '图片里写的是什么数字？只回答数字。' },
+    { type: 'image_url', image_url: { url: c.toDataURL('image/png') } }
+  ]).then(function(reply) {
+    var ok = reply.indexOf(code) >= 0;
+    mediaTestResult(ok ? '✓ 识图正常：图里是 ' + code + '，模型回答「' + reply.slice(0, 30) + '」'
+                       : '✗ 模型没认出来：图里是 ' + code + '，模型回答「' + reply.slice(0, 40) + '」', ok);
+  }, function(err) { mediaTestResult('✗ 识图请求失败：' + err.message, false); });
+});
+document.getElementById('mediaTestAudioBtn').addEventListener('click', function() {
+  // 3 声 880Hz 的「嘟」，16kHz 单声道 WAV
+  var rate = 16000, n = rate * 2, pcm = new Int16Array(n);
+  for (var i = 0; i < n; i++) {
+    var t = i / rate, k = Math.floor(t / 0.6), inBeep = k < 3 && (t - k * 0.6) < 0.3;
+    pcm[i] = inBeep ? Math.round(Math.sin(2 * Math.PI * 880 * t) * 12000) : 0;
+  }
+  var bytes = new Uint8Array(44 + n * 2), v = new DataView(bytes.buffer);
+  var w = function(o, s) { for (var j = 0; j < s.length; j++) v.setUint8(o + j, s.charCodeAt(j)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  for (var q = 0; q < n; q++) v.setInt16(44 + q * 2, pcm[q], true);
+  var bin = '';
+  for (var p = 0; p < bytes.length; p += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(p, p + 0x8000));
+  mediaTestResult('正在测试语音…');
+  mediaTestAsk([
+    { type: 'text', text: '这段音频里一共有几声「嘟」的提示音？只回答一个阿拉伯数字。' },
+    { type: 'input_audio', input_audio: { data: btoa(bin), format: 'wav' } }
+  ]).then(function(reply) {
+    var ok = /3|三/.test(reply);
+    mediaTestResult(ok ? '✓ 语音正常：模型听到了 3 声，回答「' + reply.slice(0, 30) + '」'
+                       : '✗ 模型可能没听到音频：应为 3 声，模型回答「' + reply.slice(0, 40) + '」', ok);
+  }, function(err) { mediaTestResult('✗ 语音请求失败：' + err.message + '（这个模型或接口可能不支持音频输入）', false); });
+});
 
 fillMediaForm();

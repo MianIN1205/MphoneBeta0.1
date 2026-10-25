@@ -726,3 +726,119 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
   color: var(--desk-text) !important;
   text-shadow: var(--desk-text-shadow);
 }
+
+/* =============================================
+   桌面网格 + 小组件（长按桌面编辑）
+   网格左右各缩进到和程序坞图标同一条线上（31px），4 列的中心正好对着程序坞的 4 个图标；
+   格子边长 --desk-cell 由脚本按宽度算，图标 50px
+   ============================================= */
+.desktop-apps.desk-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: var(--desk-cell, 73.5px);
+  row-gap: 0; column-gap: 0; padding: 0; margin: 18px 11px 0;
+  justify-items: stretch; align-items: stretch; position: relative;
+}
+.desk-grid > .dock-item { justify-content: center; align-items: center; touch-action: none; }
+
+/* 小组件占 2×2：面板左右和两边图标的外沿对齐，上沿对齐第一行图标，下沿对齐第二行图标；底下是名字，和图标名字在同一行 */
+.desk-widget {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  gap: 5px; padding-top: calc((var(--desk-cell, 73.5px) - 69px) / 2);
+  cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent;
+}
+.widget-face {
+  --face: calc(var(--desk-cell, 73.5px) + 50px);
+  position: relative; width: var(--face); height: var(--face); flex-shrink: 0;
+  border-radius: 24px; overflow: hidden; box-sizing: border-box; padding: 12px 10px 11px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background-size: cover; background-position: center; color: #5a4249;
+  box-shadow: 0 6px 20px rgba(120,70,80,0.13), 0 2px 6px rgba(0,0,0,0.06);
+}
+.desk-widget .dock-label { line-height: 14px; }
+.widget-empty { margin: auto; text-align: center; font-size: 11.5px; color: #a08890; line-height: 1.7; }
+
+/* 两人头像：半透明的玻璃底，壁纸透得出来 */
+.widget-face.style-avatars {
+  background-color: rgba(255,255,255,0.24);
+  backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+/* Emoji：柔和的粉色渐变 */
+.widget-face.style-emoji { background: linear-gradient(150deg, #fff5f7 0%, #fde4ea 55%, #f4e4f4 100%); border: 1px solid rgba(255,255,255,0.8); }
+/* 图片背景：底部压一层渐变，文字靠左下 */
+.widget-face.style-image { color: #fff; justify-content: flex-end; align-items: flex-start; padding: 12px; background-color: #e9c9d2; }
+.widget-face.style-image::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to top, rgba(40,20,30,0.55), rgba(40,20,30,0) 62%);
+}
+.widget-face.style-image > * { position: relative; }
+.widget-face.type-photo { padding: 0; background-color: rgba(255,255,255,0.5); }
+
+/* 两个人的头像：叠在一起，中间一颗小爱心 */
+.widget-pair { position: relative; display: flex; align-items: center; margin-bottom: 4px; }
+.widget-av {
+  width: 40px !important; height: 40px !important; border-radius: 50% !important; flex-shrink: 0;
+  box-shadow: 0 0 0 2px #fff, 0 4px 10px rgba(120,70,80,0.18);
+}
+.widget-pair .widget-av + .widget-av { margin-left: -10px; }
+.widget-heart {
+  position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%); z-index: 2;
+  width: 17px; height: 17px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 6px rgba(208,88,88,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1; color: #e05a78;
+}
+.widget-emoji { font-size: 36px; line-height: 1; margin-bottom: 2px; filter: drop-shadow(0 3px 6px rgba(160,80,100,0.18)); }
+
+.widget-title {
+  max-width: 100%; font-size: 11px; font-weight: 600; opacity: 0.78;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
+}
+.widget-num { display: flex; align-items: baseline; gap: 2px; line-height: 1.05; color: #c0506a; white-space: nowrap; }
+.widget-num b { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+.widget-num small { font-size: 10.5px; font-weight: 600; opacity: 0.8; }
+.style-image .widget-title { text-align: left; opacity: 0.92; }
+.style-image .widget-num { color: #fff; }
+/* 玻璃底：字带一点白色光晕，换了壁纸也看得清；调过「桌面文字」时跟着变 */
+.style-avatars .widget-title, .style-avatars .widget-num { text-shadow: 0 1px 4px rgba(255,255,255,0.8); }
+.phone.desk-text-custom .style-avatars .widget-title,
+.phone.desk-text-custom .style-avatars .widget-num { color: var(--desk-text); text-shadow: var(--desk-text-shadow); }
+
+/* 编辑桌面 */
+.desktop.editing .widget-face { outline: 1.5px dashed rgba(208,88,88,0.55); outline-offset: 3px; }
+.desktop.editing .desk-grid > .dock-item .dock-icon { outline: 1.5px dashed rgba(208,88,88,0.45); outline-offset: 3px; }
+/* 编辑时每个格子中间一个小点，看得出区域划分 */
+.desktop.editing .desk-grid {
+  background-image: radial-gradient(circle, rgba(208,88,88,0.28) 1.6px, transparent 2px);
+  background-size: var(--desk-cell, 73.5px) var(--desk-cell, 73.5px);
+}
+.desk-dragging { opacity: 0.25; }
+.desk-ghost {
+  z-index: 9999; pointer-events: none; opacity: 0.92; transform: scale(1.05);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.desk-ghost.desk-widget { justify-content: flex-start; }
+.widget-remove {
+  position: absolute; z-index: 3;
+  top: calc((var(--desk-cell, 73.5px) - 69px) / 2 - 7px);
+  left: calc((var(--desk-cell, 73.5px) - 50px) / 2 - 7px);
+  width: 22px; height: 22px; border-radius: 50%; border: none; padding: 0;
+  background: rgba(60,50,55,0.72); color: #fff; font-size: 16px; line-height: 22px; cursor: pointer;
+}
+.desk-edit-bar {
+  display: none; position: absolute; left: 31px; right: 31px; bottom: 6px; z-index: 5;
+  gap: 10px; justify-content: center;
+}
+.desktop.editing .desk-edit-bar { display: flex; }
+.desk-edit-btn {
+  flex: 1; border: none; border-radius: 16px; padding: 10px 0; font-size: 13px; font-weight: 600;
+  background: rgba(255,255,255,0.88); color: #b0506a; cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.10);
+}
+.desk-edit-btn.primary { background: #D05858; color: #fff; }
+.widget-type-icon { font-size: 26px; width: 38px; text-align: center; flex-shrink: 0; }
+.widget-type-desc { font-size: 11px; color: #a08890; margin-top: 2px; }
+.widget-preview-wrap {
+  display: flex; justify-content: center; padding: 14px; border-radius: 16px;
+  background: linear-gradient(135deg, #f7c9d4, #d9cdee);
+}
+.widget-preview-wrap .widget-face { pointer-events: none; }

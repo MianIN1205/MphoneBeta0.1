@@ -431,23 +431,10 @@ feedCommentInput.addEventListener('keydown', function(e) {
 
 // ---------- AI 调用（非流式，返回完整文本） ----------
 function callApiOnce(messages) {
-  var cfg = getApiCfg();
-  if (!cfg.url || !cfg.key || !cfg.model) return Promise.reject(new Error('请先在设置中配置 API 和模型'));
-  return resolveMediaParts(messages).then(function(ms) {
-    return fetch(cfg.url.replace(/\/$/, '') + '/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.key },
-      body: JSON.stringify({ model: cfg.model, messages: ms, temperature: cfg.temp, stream: false })
-    });
-  }).then(function(res) {
-    return res.text().then(function(t) {
-      var d = null;
-      try { d = JSON.parse(t); } catch (_) {}
-      if (!res.ok) throw new Error((d && d.error && d.error.message) || ('请求失败 ' + res.status));
-      var content = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-      if (!content) throw new Error('未收到回复内容');
-      return String(content).trim();
-    });
+  // 按接口类型自动适配（见 24-llm.js）
+  return llmRequest(messages, { stream: false }).then(function(text) {
+    if (!text) throw new Error('未收到回复内容');
+    return String(text).trim();
   });
 }
 
@@ -475,6 +462,7 @@ function generateCharPost(idx) {
              '想配图的话，在正文后面用 <文字图>画面描述</文字图> 附上 1～3 张「文字图」（用一两句话描述照片里的画面，比如：窗外的晚霞，橘粉色的云）；不配图也可以。'
   }]);
   return callApiOnce(msgs).then(function(text) {
+    text = memExtractTags(char, text);   // TA 顺手记下的记忆
     var textImgs = [];
     text = text.replace(/<文字图>([\s\S]*?)<\/文字图>/g, function(_, t) { if (t.trim()) textImgs.push(t.trim()); return ''; });
     feedPosts.unshift({
@@ -484,6 +472,7 @@ function generateCharPost(idx) {
     saveFeed();
     renderFeed();
     showToast('「' + charAuthor(char).name + '」发布了新动态', 'success');
+    memLogFeed(char, '我在动态里发了：' + feedPosts[0].text.slice(0, 80));
     if (typeof notifyFeedPost === 'function') notifyFeedPost(char, feedPosts[0]);
   });
 }
@@ -570,7 +559,7 @@ function charInteract(post, idx) {
              '只输出 JSON：{"like": true 或 false, "comment": "评论内容"}，不想评论时 comment 为空字符串。'
   }]);
   return callApiOnce(msgs).then(function(text) {
-    var r = parseInteraction(text);
+    var r = parseInteraction(memExtractTags(char, text));
     if (r.like && !isOwn && !post.likes.some(function(a) { return sameAuthor(a, me); })) post.likes.push(me);
     if (r.comment) {
       // 回复对象：最近一条 @ 自己或评论自己动态的用户评论
@@ -580,6 +569,7 @@ function charInteract(post, idx) {
         if (c.author.type === 'user' && (sameAuthor(c.replyTo, me) || (isOwn && !c.replyTo))) { replyTo = c.author; break; }
       }
       post.comments.push({ id: genFeedId('c'), author: me, text: r.comment, time: Date.now(), replyTo: replyTo });
+      memLogFeed(char, (isOwn ? '我在自己的动态下回复：' : '我在 ' + post.author.name + ' 的动态下评论：') + r.comment.slice(0, 80));
     }
   });
 }

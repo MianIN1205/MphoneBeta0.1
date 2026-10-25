@@ -142,7 +142,8 @@ document.getElementById('memExportBtn').addEventListener('click', function() {
   var d = new Date();
   downloadJson({
     app: 'mphone', type: 'char', version: 1, char: c,
-    chat: chatHistories[char.id] || [], drama: dramaHistories[char.id] || []
+    chat: chatHistories[char.id] || [], drama: dramaHistories[char.id] || [],
+    mems: (typeof memStore !== 'undefined' && memStore[char.id]) || []
   }, (char.charAlias || 'char') + '-记忆备份-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.json');
   showToast('✓ 已导出', 'success');
 });
@@ -159,6 +160,7 @@ document.getElementById('memRestoreBtn').addEventListener('click', function() {
         charList[editingCharIndex] = restored;
         chatHistories[cur.id]  = b.chat  || [];
         dramaHistories[cur.id] = b.drama || [];
+        if (Array.isArray(b.mems) && typeof memStore !== 'undefined') { memStore[cur.id] = b.mems; saveMemStore(); }
         saveCharList();
         saveHistories();
         fillCharForm(restored);
@@ -310,7 +312,7 @@ function readDocxText(buf) {
   });
 }
 
-// ---------- 桌面：记忆库（暂时留白） ----------
+// ---------- 桌面：记忆库（界面和记忆系统在 28-memory.js） ----------
 document.getElementById('dockMemory').addEventListener('click', function() {
   document.getElementById('appMemory').classList.add('active');
 });

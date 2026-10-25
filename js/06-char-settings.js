@@ -399,6 +399,7 @@ function fillCharForm(char) {
   setAvatarBox('charAvatarBox', char.charAvatar, char.charAvatarColor);
   if (typeof fillAssistantForm === 'function') fillAssistantForm(char);
   fillCircleForm(char);
+  fillMemCfgForm(char.memCfg);
 
   csAccUid = findAccount(char.userAccountUid) ? char.userAccountUid : '';
   csImpressions = Object.assign({}, char.userImpressions || {});
@@ -417,6 +418,41 @@ function fillCharForm(char) {
   renderCharWbLinks(char.worldbookIds || [], char.worldbookFolders || []);
   renderMemSummaries(char);
 }
+
+// 扩展页 — 记忆权限：开关、读取条数、可写入的类型、短期保留天数、动态是否记入
+var DEFAULT_MEM_CFG = { on: true, read: true, topK: 6, write: true, types: { short: true, long: true, precious: true }, shortDays: 3, feed: true };
+function fillMemCfgForm(m) {
+  m = Object.assign({}, DEFAULT_MEM_CFG, m || {});
+  var types = Object.assign({}, DEFAULT_MEM_CFG.types, m.types || {});
+  document.getElementById('memOn').checked = m.on;
+  document.getElementById('memOnSub').classList.toggle('open', m.on);
+  document.getElementById('memRead').checked = m.read;
+  document.getElementById('memTopK').value = m.topK;
+  document.getElementById('memWrite').checked = m.write;
+  document.getElementById('memShortDays').value = m.shortDays;
+  document.getElementById('memFeed').checked = m.feed;
+  document.querySelectorAll('#memTypeChips .feed-visible-chip').forEach(function(c) { c.classList.toggle('on', !!types[c.dataset.type]); });
+}
+function readMemCfgForm() {
+  var num = function(id, def, min, max) { var v = parseInt(document.getElementById(id).value, 10); return isNaN(v) ? def : Math.max(min, Math.min(max, v)); };
+  var types = {};
+  document.querySelectorAll('#memTypeChips .feed-visible-chip').forEach(function(c) { types[c.dataset.type] = c.classList.contains('on'); });
+  return {
+    on:        document.getElementById('memOn').checked,
+    read:      document.getElementById('memRead').checked,
+    topK:      num('memTopK', 6, 1, 30),
+    write:     document.getElementById('memWrite').checked,
+    types:     types,
+    shortDays: num('memShortDays', 3, 1, 60),
+    feed:      document.getElementById('memFeed').checked
+  };
+}
+document.getElementById('memOn').addEventListener('change', function() {
+  document.getElementById('memOnSub').classList.toggle('open', this.checked);
+});
+document.querySelectorAll('#memTypeChips .feed-visible-chip').forEach(function(c) {
+  c.addEventListener('click', function() { this.classList.toggle('on'); });
+});
 
 // 社交圈：列出其他角色，点亮 = 认识
 function fillCircleForm(char) {
@@ -478,6 +514,7 @@ function readCharForm() {
     chatCfg:          readChatCfgForm(),
     look:             lc.look,
     circle:           readCircleForm(),
+    memCfg:           readMemCfgForm(),
     assistant:        (typeof readAssistantForm === 'function') ? readAssistantForm(old) : old.assistant
   });
 }
@@ -623,7 +660,7 @@ function goCsPage(i, smooth) {
 }
 function csTabWidth() {
   var tab = document.querySelector('#csTabs .cs-tab');
-  return (tab && tab.offsetWidth) || 58;
+  return (tab && tab.offsetWidth) || 52;
 }
 // 高亮对应标签；pos 是页码（可带小数），animate = 点标签时平滑移过去，手指滑动时直接跟手
 function setCsTab(pos, animate) {
