@@ -41,7 +41,10 @@ function getActiveMsgListEl() {
 function getActiveEmptyEl() {
   return document.getElementById(currentCrSubView === 'contacts' ? 'dramaRoomEmpty' : 'chatRoomEmpty');
 }
-function getApiCfg() {
+// 传入角色且它在便捷拓展栏选了模型预设时，用那套预设（见 29-quick-bar.js）
+function getApiCfg(char) {
+  var p = (char && typeof charApiPreset === 'function') ? charApiPreset(char) : null;
+  if (p) return { url: p.url || '', key: p.key || '', model: p.model || '', temp: isNaN(parseFloat(p.temp)) ? 0.8 : parseFloat(p.temp) };
   return {
     url:   (document.getElementById('apiUrl').value.trim()  || mphoneStore.load('mphone_api_url', null)     || ''),
     key:   (document.getElementById('apiKey').value.trim()  || mphoneStore.load('mphone_api_key', null)     || ''),
@@ -157,7 +160,7 @@ function buildMsgs(idx, histOverride) {
   msgs = msgs.concat(wbByPos.before);
 
   // 注入当前预设中已启用的提示词条目（按条目各自的 role 身份发送）
-  var curPreset = stPresets && stPresets[stActivePresetIdx];
+  var curPreset = (typeof charPromptPreset === 'function') ? charPromptPreset(char) : (stPresets && stPresets[stActivePresetIdx]);
   if (curPreset && Array.isArray(curPreset.entries)) {
     curPreset.entries.forEach(function(entry) {
       if (entry && entry.enabled && entry.content && entry.content.trim()) {
@@ -429,7 +432,7 @@ function stopGenerating() { if (genState) genState.ctrl.abort(); }
 
 // onDone(added)：回复结束后调用，added 是写入记录的角色消息（失败或停止且没有内容时为空数组）
 function sendMsg(userText, requestOnly, onDone) {
-  var cfg = getApiCfg();
+  var cfg = getApiCfg(charList[openingChatCharIdx]);
   if (!cfg.url || !cfg.key) { appendMsg('ai', '⚠️ 请先在设置中填写 API 地址和密钥，点击「当前应用」保存。', false); if (onDone) onDone([]); return; }
   if (!cfg.model)           { appendMsg('ai', '⚠️ 请先选择模型。', false); if (onDone) onDone([]); return; }
   if (genState) { showToast('正在回复中，可以先点 ⏹ 停止', 'error'); if (onDone) onDone([]); return; }
@@ -491,6 +494,7 @@ function sendMsg(userText, requestOnly, onDone) {
     return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : []), {
     stream: true,
     signal: ctrl.signal,
+    cfg: cfg,
     tools: mcpTools,
     callTool: mcpTools.length ? mcpCallFromLLM : null,
     toolLabel: function(name) { var hit = mcpToolMap[name]; return hit ? (hit.tool.title || hit.tool.name) : name; },

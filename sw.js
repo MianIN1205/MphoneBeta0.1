@@ -3,7 +3,7 @@
 // 只处理本站文件，AI / 语音 / 生图等外部接口请求完全不经过这里。
 
 // 文件拆分后 css/、js/ 也要预先缓存；改动这个列表时把版本号加一
-const CACHE = 'mphone-v9';
+const CACHE = 'mphone-v10';
 const CSS = ['base', 'appearance', 'chat', 'notes', 'chat-list', 'char-settings', 'chat-room', 'mine',
              'dialogs', 'char-look', 'prompt', 'image-picker', 'messages', 'settings-subnav', 'prompt-presets']
   .map(function (n) { return './css/' + n + '.css'; });
@@ -12,7 +12,7 @@ const JS = ['00-boot', '01-core', '02-screens-appearance', '03-chat-tabs', '04-n
             '11-persistence-data', '12-api-config', '13-chat-messages', '14-voice-room', '15-mine',
             '16-feed-auto', '17-memory-import', '18-media-api', '19-wallet-fav-menu', '20-media-send',
             '21-image-viewer', '22-assistant', '23-assist', '24-llm',
-            '25-mcp', '26-desk-apps', '27-widgets', '28-memory']
+            '25-mcp', '26-desk-apps', '27-widgets', '28-memory', '29-quick-bar']
   .map(function (n) { return './js/' + n + '.js'; });
 const CORE = ['./', './index.html', './manifest.webmanifest',
               './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png']

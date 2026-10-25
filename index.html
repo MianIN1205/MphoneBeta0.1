@@ -1667,6 +1667,13 @@
       </div>
 
       <div class="settings-content" id="chatRoomContent" style="display:flex;flex-direction:column;padding:0;overflow:hidden;">
+        <!-- 便捷拓展栏：在顶栏阴影下，选本窗口用的模型预设 / 预设 / 世界书（角色设置「聊天」页里开关） -->
+        <div class="cr-qb" id="crQuickBar">
+          <button class="cr-qb-chip" data-qb="api"><span class="cr-qb-key">模型</span><span class="cr-qb-val"></span></button>
+          <button class="cr-qb-chip" data-qb="preset"><span class="cr-qb-key">预设</span><span class="cr-qb-val"></span></button>
+          <button class="cr-qb-chip" data-qb="wb"><span class="cr-qb-key">世界书</span><span class="cr-qb-val"></span></button>
+          <div class="cr-qb-pop" id="crQuickPop"></div>
+        </div>
         <!-- 聊天子视图 -->
         <div class="cr-view active" data-crview="chat">
           <div class="chat-msg-list" id="chatMsgList">
@@ -2016,6 +2023,15 @@
 
       <!-- ========== 第二页：聊天设置 ========== -->
       <div class="settings-content cs-page">
+
+        <div class="section-label">便捷拓展栏</div>
+        <div class="settings-card">
+          <div class="auto-row">
+            <span class="auto-row-label">显示便捷拓展栏</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="quickBarOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-hint">在聊天窗口顶栏下方，快速切换这个窗口用的模型预设、预设和世界书</div>
+        </div>
 
         <div class="section-label">记忆</div>
         <div class="settings-card">

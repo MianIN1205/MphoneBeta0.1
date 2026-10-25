@@ -508,4 +508,5 @@ function applyChatRoomStyle(char) {
   crCharStyleEl.textContent = lookCss(part, '#appChatRoom') +
     (currentCrSubView === 'contacts' ? '' : (chatLook.statusCss || '')) + '\n' +
     (part.customCss || '');
+  if (typeof renderQuickBar === 'function') renderQuickBar();
 }

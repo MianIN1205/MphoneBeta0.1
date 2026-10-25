@@ -195,7 +195,7 @@ var llmToolBlock = mphoneStore.load('mphone_tool_block', {});   // { 模型名: 
 var LLM_TOOL_ROUNDS = 5;
 
 function llmToolChat(msgs, opts) {
-  var cfg = getApiCfg(), provider = llmProvider(cfg);
+  var cfg = opts.cfg || getApiCfg(), provider = llmProvider(cfg);
   var prepared = llmPrepare(msgs, cfg, llmCaps(cfg));
   var status = opts.onStatus || function() {};
   return resolveMediaParts(prepared.messages).then(function() {
@@ -256,10 +256,10 @@ function llmToolChat(msgs, opts) {
   });
 }
 
-// opts: { stream, signal, onText(全文), temperature, keepMedia（测试用：不替换媒体）, maxTokens, tools, callTool, onStatus }
+// opts: { cfg（不传 = 全局 API 设置）, stream, signal, onText(全文), temperature, keepMedia（测试用：不替换媒体）, maxTokens, tools, callTool, onStatus }
 function llmRequest(msgs, opts) {
   opts = opts || {};
-  var cfg = getApiCfg();
+  var cfg = opts.cfg || getApiCfg();
   if (!cfg.url || !cfg.key || !cfg.model) return Promise.reject(new Error('请先在设置中填写 API 地址、密钥并选择模型'));
   // 带工具（MCP）：走工具循环；模型不支持工具时改成普通回复并记住
   if (opts.tools && opts.tools.length && opts.callTool && !llmToolBlock[cfg.model]) {

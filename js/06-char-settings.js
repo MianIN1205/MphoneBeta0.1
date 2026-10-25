@@ -130,7 +130,7 @@ function clearCharForm() {
 var DEFAULT_CHAT_CFG = {
   maxMem: 50, attention: 10, autoSum: false, sumEvery: 10,
   lang: '', translate: false, replyMin: 1, replyMax: 3,
-  patOn: false, patSuffix: '', voiceId: '', vectorOn: false
+  patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false
 };
 var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusCss: '' };
 
@@ -256,6 +256,7 @@ function setChatCfgForm(c) {
   $('patSuffix').value    = c.patSuffix;
   $('voiceId').value      = c.voiceId;
   $('vectorMemOn').checked = c.vectorOn;
+  $('quickBarOn').checked = c.quickBar;
   $('memAutoSumSub').classList.toggle('open', c.autoSum);
 }
 
@@ -278,6 +279,7 @@ function readChatCfgForm() {
     patOn:     $('patOn').checked,
     patSuffix: $('patSuffix').value.trim(),
     voiceId:   $('voiceId').value.trim(),
+    quickBar:  $('quickBarOn').checked,
     vectorOn:  $('vectorMemOn').checked
   };
 }
