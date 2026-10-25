@@ -847,3 +847,12 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
 /* 外观里关掉小手机自带的状态栏时，顶栏和桌面不再给它留位置 */
 .phone.no-statusbar .settings-nav { padding-top: 16px; }
 .phone.no-statusbar .desktop { padding-top: 28px; }
+
+/* 外观 → 系统顶栏颜色 */
+.sysbar-color {
+  width: 34px; height: 26px; padding: 0; border: 1px solid rgba(200,170,175,0.55);
+  border-radius: 8px; background: none; cursor: pointer; flex-shrink: 0;
+}
+.sysbar-color::-webkit-color-swatch-wrapper { padding: 2px; }
+.sysbar-color::-webkit-color-swatch { border: none; border-radius: 6px; }
+.sysbar-reset { margin-left: auto; margin-right: 8px; font-size: 12px; color: #b08890; cursor: pointer; }

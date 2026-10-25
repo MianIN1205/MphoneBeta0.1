@@ -412,13 +412,38 @@ document.getElementById('globalCssApplyBtn').addEventListener('click', function(
 // 切换界面、改全局 / 角色 CSS 后都会重新取
 // =============================================
 var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+// iPhone 只在「添加到主屏幕」时记下状态栏样式：以前添加的是透明白字（网页铺到状态栏后面，顶部安全区大于 0），
+// 这时底色太浅就看不见字，自动加深到白字看得清；重新添加后是白底黑字，不用加深
+var safeTopProbe = document.createElement('div');
+safeTopProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
+document.body.appendChild(safeTopProbe);
+function iosWhiteStatusText() {
+  return window.navigator.standalone === true && parseFloat(getComputedStyle(safeTopProbe).paddingTop) > 0;
+}
+function colorRgb(c) {
+  safeTopProbe.style.color = '';
+  safeTopProbe.style.color = c;
+  var m = getComputedStyle(safeTopProbe).color.match(/[\d.]+/g) || [255, 255, 255];
+  return m.slice(0, 3).map(Number);
+}
+function colorLum(rgb) {
+  var l = rgb.map(function(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+  return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2];
+}
+function darkenForWhiteText(c) {
+  var rgb = colorRgb(c);
+  for (var i = 0; i < 30 && colorLum(rgb) > 0.3; i++) rgb = rgb.map(function(v) { return Math.round(v * 0.9); });
+  return 'rgb(' + rgb.join(',') + ')';
+}
 function updateSystemBarColor() {
   var screens = document.querySelectorAll('.app-screen.active, .settings-screen.active');
   var el = screens.length ? screens[screens.length - 1] : document.documentElement;
   var c = getComputedStyle(el).getPropertyValue('--system-bar-color').trim();
-  if (c && themeColorMeta.getAttribute('content') !== c) themeColorMeta.setAttribute('content', c);
-  // 全屏时界面上方让出的系统状态栏那一条也用这个颜色（较新的安卓会把网页铺到系统栏后面，露出的就是这里）
-  if (c) document.documentElement.style.setProperty('--app-top-color', c);
+  if (!c) return;
+  if (iosWhiteStatusText()) c = darkenForWhiteText(c);
+  if (themeColorMeta.getAttribute('content') !== c) themeColorMeta.setAttribute('content', c);
+  // 全屏时系统状态栏、底部操作条后面露出的那一条也用这个颜色
+  document.documentElement.style.setProperty('--app-top-color', c);
 }
 var systemBarRaf = 0;
 function scheduleSystemBarColor() {
@@ -428,3 +453,20 @@ function scheduleSystemBarColor() {
 new MutationObserver(scheduleSystemBarColor).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
 new MutationObserver(scheduleSystemBarColor).observe(document.head, { subtree: true, childList: true, characterData: true });
 updateSystemBarColor();
+
+// 外观里选的系统顶栏颜色（默认白色）；某个界面在 CSS 里单独写了 --system-bar-color 的，那个界面仍以 CSS 为准
+var sysBarColorInput = document.getElementById('sysBarColor');
+function applySysBarColor(c) {
+  document.documentElement.style.setProperty('--system-bar-color', c || '#FFFFFF');
+  sysBarColorInput.value = (c || '#ffffff').toLowerCase();
+  scheduleSystemBarColor();
+}
+applySysBarColor(mphoneStore.load('mphone_sysbar_color', ''));
+sysBarColorInput.addEventListener('input', function() {
+  mphoneStore.save('mphone_sysbar_color', this.value);
+  applySysBarColor(this.value);
+});
+document.getElementById('sysBarReset').addEventListener('click', function() {
+  mphoneStore.remove('mphone_sysbar_color');
+  applySysBarColor('');
+});
