@@ -10,13 +10,13 @@ body {
   background: #ffffff;
   font-family: system-ui, -apple-system, sans-serif;
 }
-/* 安装成桌面程序后：安全区域（系统状态栏后面）用主题粉色，不露白边；禁止整页回弹和长按选字 */
+/* 安装成桌面程序后：系统状态栏、底部操作条后面的安全区域用白色；禁止整页回弹和长按选字 */
 @media (display-mode: fullscreen), (display-mode: standalone) {
-  html, body { background: #E9A3B4; overscroll-behavior: none; }
+  html, body { background: #FFFFFF; overscroll-behavior: none; }
   body { -webkit-touch-callout: none; }
 }
-/* 全屏模式：系统状态栏那一条和当前界面顶栏同色（--app-top-color 跟着 --system-bar-color 走，见 02-screens-appearance.js） */
-html:has(body.phone-fullscreen), body.phone-fullscreen { background: var(--app-top-color, #FFF0F5) !important; }
+/* 全屏模式：系统状态栏、底部操作条那一条用 --system-bar-color（默认白色，见 02-screens-appearance.js） */
+html:has(body.phone-fullscreen), body.phone-fullscreen { background: var(--app-top-color, #FFFFFF) !important; }
 
 html {
   overflow: hidden;
@@ -712,9 +712,8 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
 .char-avatar-box::after, .chat-room-head-av::after, .feed-post-av::after { content: none; }
 
 /* 系统顶栏颜色（安卓桌面程序 / 手机浏览器地址栏）：取最上层界面的 --system-bar-color。
-   默认和各界面顶部的颜色一致；可以在全局 CSS 或某个界面上改，比如 #appChatRoom { --system-bar-color: #fff; } */
-:root { --system-bar-color: #FFF0F5; }
-.app-screen, .settings-screen { --system-bar-color: #FFE7E7; }
+   默认固定白底黑字（浅色底时系统自动用黑色文字图标）；也可以在全局 CSS 或某个界面上改，比如 #appChatRoom { --system-bar-color: #FFE7E7; } */
+:root { --system-bar-color: #FFFFFF; }
 
 /* 壁纸模糊层：只模糊 .phone 上的壁纸，桌面内容在它上面 */
 .wp-blur-layer { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; }
