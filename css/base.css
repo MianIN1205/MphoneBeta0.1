@@ -15,6 +15,8 @@ body {
   html, body { background: #E9A3B4; overscroll-behavior: none; }
   body { -webkit-touch-callout: none; }
 }
+/* 全屏模式：系统状态栏那一条和当前界面顶栏同色（--app-top-color 跟着 --system-bar-color 走，见 02-screens-appearance.js） */
+html:has(body.phone-fullscreen), body.phone-fullscreen { background: var(--app-top-color, #FFF0F5) !important; }
 
 html {
   overflow: hidden;
@@ -842,3 +844,7 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
   background: linear-gradient(135deg, #f7c9d4, #d9cdee);
 }
 .widget-preview-wrap .widget-face { pointer-events: none; }
+
+/* 外观里关掉小手机自带的状态栏时，顶栏和桌面不再给它留位置 */
+.phone.no-statusbar .settings-nav { padding-top: 16px; }
+.phone.no-statusbar .desktop { padding-top: 28px; }

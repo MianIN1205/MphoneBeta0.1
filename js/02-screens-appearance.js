@@ -106,6 +106,7 @@ var savedCustomText = '';
 // Toggle：控制状态栏显示 / 隐藏
 toggleStatusBar.addEventListener('change', function() {
   statusBar.style.display = this.checked ? 'flex' : 'none';
+  document.querySelector('.phone').classList.toggle('no-statusbar', !this.checked);
 });
 
 // 输入框实时预览（未保存，仅实时显示）
@@ -416,6 +417,8 @@ function updateSystemBarColor() {
   var el = screens.length ? screens[screens.length - 1] : document.documentElement;
   var c = getComputedStyle(el).getPropertyValue('--system-bar-color').trim();
   if (c && themeColorMeta.getAttribute('content') !== c) themeColorMeta.setAttribute('content', c);
+  // 全屏时界面上方让出的系统状态栏那一条也用这个颜色（较新的安卓会把网页铺到系统栏后面，露出的就是这里）
+  if (c) document.documentElement.style.setProperty('--app-top-color', c);
 }
 var systemBarRaf = 0;
 function scheduleSystemBarColor() {

@@ -81,6 +81,7 @@
   // 状态栏显示 / 自定义文字
   toggleStatusBar.checked = mphoneStore.load('mphone_statusbar_on', true);
   statusBar.style.display = toggleStatusBar.checked ? 'flex' : 'none';
+  document.querySelector('.phone').classList.toggle('no-statusbar', !toggleStatusBar.checked);
   toggleStatusBar.addEventListener('change', function() {
     mphoneStore.save('mphone_statusbar_on', this.checked);
   });
