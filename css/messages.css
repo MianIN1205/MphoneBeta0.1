@@ -268,3 +268,12 @@
   padding: 0 4px; font-size: 12px; color: #9a9a9a; font-style: italic;
 }
 .chat-msg-row:has(.cr-action-only) .chat-msg-avatar { visibility: hidden; height: 0; }
+
+/* 拍一拍：被拍的头像轻轻晃一下 */
+@keyframes crPatShake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-9deg); }
+  60% { transform: rotate(7deg); }
+}
+.chat-msg-avatar.cr-pat-shake { animation: crPatShake 0.36s ease; }
+.cr-pat-notice { color: #a89aa0; }

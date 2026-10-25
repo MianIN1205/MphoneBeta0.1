@@ -257,6 +257,7 @@ function msgPreviewText(m) {
   if (!m) return '暂无聊天记录';
   if (m.recalled) return m.role === 'user' ? '你撤回了一条消息' : '对方撤回了一条消息';
   if (m.action) return '[操作] ' + (typeof actionTitle === 'function' ? actionTitle(m.action) : '');
+  if (m.pat) return '[拍一拍]';
   if (m.imgSrc) return '[图片]';
   if (m.voice) return '[语音]' + (m.transcript ? ' ' + m.transcript : '');
   return String(m.content || '').replace(/〔译〕[\s\S]*$/, '').replace(/\s+/g, ' ');

@@ -447,3 +447,15 @@
 .mem-meta { font-size: 11px; color: #b0a0a6; }
 .mem-text { font-size: 13px; color: #444; line-height: 1.6; white-space: pre-wrap; margin-bottom: 7px; }
 .mem-type-chips { max-height: none; justify-content: flex-end; }
+
+/* 记忆库：关系里程碑卡片 */
+.mem-milestone {
+  background: rgba(255,255,255,0.82); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px;
+  border: 1px solid rgba(220,180,190,0.45);
+}
+.mem-milestone-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; color: #8a5a68; margin-bottom: 6px; }
+.mem-milestone-meta { font-size: 11px; font-weight: 400; color: #b9a0a8; }
+.mem-milestone-text {
+  width: 100%; box-sizing: border-box; border: 1px solid rgba(220,190,198,0.5); border-radius: 10px;
+  background: rgba(255,250,251,0.9); padding: 7px 9px; font: inherit; font-size: 12.5px; line-height: 1.7; color: #5a4650; resize: vertical;
+}

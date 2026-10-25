@@ -143,7 +143,8 @@ document.getElementById('memExportBtn').addEventListener('click', function() {
   downloadJson({
     app: 'mphone', type: 'char', version: 1, char: c,
     chat: chatHistories[char.id] || [], drama: dramaHistories[char.id] || [],
-    mems: (typeof memStore !== 'undefined' && memStore[char.id]) || []
+    mems: (typeof memStore !== 'undefined' && memStore[char.id]) || [],
+    milestone: (typeof memMilestones !== 'undefined' && memMilestones[char.id]) || null
   }, (char.charAlias || 'char') + '-记忆备份-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.json');
   showToast('✓ 已导出', 'success');
 });
@@ -161,6 +162,7 @@ document.getElementById('memRestoreBtn').addEventListener('click', function() {
         chatHistories[cur.id]  = b.chat  || [];
         dramaHistories[cur.id] = b.drama || [];
         if (Array.isArray(b.mems) && typeof memStore !== 'undefined') { memStore[cur.id] = b.mems; saveMemStore(); }
+        if (b.milestone && typeof memMilestones !== 'undefined') { memMilestones[cur.id] = b.milestone; saveMilestones(); }
         saveCharList();
         saveHistories();
         fillCharForm(restored);

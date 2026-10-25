@@ -3,7 +3,7 @@
 // =============================================
 // 状态栏面板：点顶栏的角色名展开 / 收起，面板没有底色，不挡聊天界面
 // 一次只显示一条状态（默认最新），左右滑动看最近 10 轮的历史
-// 带 HTML 的按 HTML 渲染（AI 按角色设置里的 HTML 模板输出）；只有文字的显示成一张线条本卡片
+// AI 只输出字段内容，按角色设置里的 HTML 模板画出来；没有模板时显示成一张线条本卡片
 // =============================================
 var crStatusPanel = document.getElementById('crStatusPanel');
 var STATUS_HISTORY = 10;
@@ -19,7 +19,8 @@ function statusSafeHtml(html) {
   });
   return doc.body.innerHTML;
 }
-function statusIsHtml(s) { return /<[a-z][^>]*>/i.test(s); }
+// 以前 AI 直接写的整段 HTML（开头就是标签）；字段内容里夹着的标签不算，填模板时会被转义
+function statusIsHtml(s) { return /^\s*<[a-z!]/i.test(s); }
 // 「心情：… | 位置：…」这种纯文字的状态：每个字段一行
 function statusTextHtml(s) {
   return s.split('|').map(function(x) { return x.trim(); }).filter(Boolean).map(function(x) {
@@ -27,6 +28,33 @@ function statusTextHtml(s) {
     d.textContent = x;
     return d.outerHTML;
   }).join('');
+}
+
+// AI 输出的「心情：… | 好感度：68」拆成字段；没写字段名的，按模板里字段的顺序依次填
+function parseStatusFields(s, fields) {
+  var vals = {}, loose = [];
+  String(s || '').split(/\s*[|｜\n]\s*/).forEach(function(p) {
+    p = p.trim();
+    if (!p) return;
+    var kv = p.match(/^([^:：]{1,12})[:：]\s*([\s\S]*)$/);
+    if (kv) vals[kv[1].trim()] = kv[2].trim(); else loose.push(p);
+  });
+  (fields || []).forEach(function(f) { if (vals[f] === undefined && loose.length) vals[f] = loose.shift(); });
+  return vals;
+}
+function statusEsc(s) {
+  return String(s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+}
+// 把字段内容填进模板；写在 style 里的占位符（比如进度条宽度）只取数字，免得把样式写坏
+function fillStatusTpl(tpl, vals, char) {
+  var val = function(n) { var v = vals[String(n).trim()]; return v === undefined ? '' : v; };
+  var out = fillMacros(tpl, char).replace(/style\s*=\s*"([^"]*)"/gi, function(all, css) {
+    return 'style="' + css.replace(STATUS_FIELD_RE, function(m, n) {
+      var num = String(val(n)).match(/-?\d+(\.\d+)?/);
+      return num ? num[0] : '0';
+    }) + '"';
+  });
+  return out.replace(STATUS_FIELD_RE, function(m, n) { return statusEsc(val(n)); });
 }
 
 function statusPanelOpen() { return crStatusPanel.classList.contains('open'); }
@@ -45,6 +73,7 @@ function renderStatusPanel() {
     crStatusPanel.appendChild(empty);
     return;
   }
+  var tpl = statusTplOf(look), tplFields = statusTplFields(tpl);
   var track = document.createElement('div');
   track.className = 'cr-sp-track';
   all.forEach(function(m) {
@@ -54,13 +83,15 @@ function renderStatusPanel() {
     time.className = 'cr-sp-time';
     time.textContent = m.time ? fmtMsgTime(m.time) : '';
     // 卡片内容放进 Shadow DOM：模板自带的 <style> 只管自己，不影响聊天界面
-    var s = fillMacros(m.status, char);
-    var html = statusIsHtml(s);
+    // 以前 AI 直接写的 HTML 照原样显示；字段内容按模板画出来；没有模板就是线条本卡片
+    var body, lined = false;
+    if (statusIsHtml(m.status)) body = statusSafeHtml(fillMacros(m.status, char));
+    else if (tplFields.length) body = statusSafeHtml(fillStatusTpl(tpl, parseStatusFields(m.status, tplFields), char));
+    else { body = statusTextHtml(fillMacros(m.status, char)); lined = true; }
     var card = document.createElement('div');
-    card.className = 'cr-status-card' + (html ? '' : ' cr-status-lined');
+    card.className = 'cr-status-card' + (lined ? ' cr-status-lined' : '');
     var root = card.attachShadow({ mode: 'open' });
-    root.innerHTML = '<style>:host{display:block}' + (look.statusCss || '') + '</style>' +
-      (html ? statusSafeHtml(s) : statusTextHtml(s));
+    root.innerHTML = '<style>:host{display:block}' + (look.statusCss || '') + '</style>' + body;
     item.appendChild(time);
     item.appendChild(card);
     track.appendChild(item);

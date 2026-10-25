@@ -667,22 +667,38 @@ function maybeAutoPostAfterChat(idx) {
     .then(function() { delete char._autoBusy; });
 }
 
+// 记录最后几条对方发了但还没被回复的消息（只发出去、没按 ❄️ 请求回复的文字、图片、语音、拍一拍）
+function unrepliedUserMsgs(hist) {
+  var out = [];
+  for (var i = hist.length - 1; i >= 0 && hist[i].role === 'user'; i--) {
+    if (!hist[i].recalled) out.unshift(hist[i]);
+  }
+  return out;
+}
+
 // 主动发消息：写入聊天记录；正在看这个聊天就直接显示，否则计未读
+// 对方有没回复的消息时，先回应这些，回应完再看要不要开新话题
 function autoSendMessage(idx) {
   var char = charList[idx];
   var hist = getChatHistory(idx);
   var last = hist[hist.length - 1];
+  var pending = unrepliedUserMsgs(hist);
   var gap = '';
   // 优先用最后一条消息的时间（旧记录没有时间时退回本次打开后的记录）
   var lastAt = (last && last.time) || char._lastChatAt;
   if (lastAt) {
     var mins = Math.round((Date.now() - lastAt) / 60000);
-    gap = '距离你们上次聊天大约过去了 ' + (mins >= 60 ? Math.round(mins / 60) + ' 小时' : mins + ' 分钟') + '。';
+    var ago = mins >= 60 ? Math.round(mins / 60) + ' 小时' : mins + ' 分钟';
+    gap = pending.length ? '对方最后一条消息是大约 ' + ago + '前发来的。' : '距离你们上次聊天大约过去了 ' + ago + '。';
   }
+  var ask = pending.length
+    ? '对方发来的 ' + pending.length + ' 条消息你还没有回复（就是聊天记录最后那几条，拍一拍也算）。请你以「' + charAuthor(char).name + '」的身份' +
+      '先自然地回应这些消息；回应完如果还想继续聊，再决定要不要开启新的话题。自然简短，符合人设与当前关系。只输出消息内容本身。'
+    : '请你以「' + charAuthor(char).name + '」的身份主动给对方发一条消息，' +
+      '可以是分享日常、想念、追问之前的话题等，自然简短，符合人设与当前关系' + (last && last.role === 'assistant' ? '（对方还没回复你上一条消息）' : '') + '。只输出消息内容本身。';
   var msgs = charContextMsgs(idx).concat([{
     role: 'system',
-    content: '【主动消息】现在是 ' + nowText() + '。' + gap + '请你以「' + charAuthor(char).name + '」的身份主动给对方发一条消息，' +
-             '可以是分享日常、想念、追问之前的话题等，自然简短，符合人设与当前关系' + (last && last.role === 'assistant' ? '（对方还没回复你上一条消息）' : '') + '。只输出消息内容本身。'
+    content: '【主动消息】现在是 ' + nowText() + '。' + gap + ask
   }]).concat(chatFormatRules(char));
   return callApiOnce(msgs).then(function(text) {
     text = stripQuotes(text);
@@ -735,7 +751,8 @@ function autoTick() {
     // 到点：只执行一次（关闭页面期间错过的不补发多次），然后重新排期
     autoNext[char.id] = { at: now + autoDelay(a), sig: sig };
     changed = true;
-    var doPost = a.postOn && (!a.msgOn || Math.random() < 0.3);
+    // 对方有没回复的消息时，先回消息，不去发动态
+    var doPost = a.postOn && (!a.msgOn || (!unrepliedUserMsgs(getChatHistory(idx)).length && Math.random() < 0.3));
     char._autoBusy = true;
     (doPost ? generateCharPost(idx) : autoSendMessage(idx))
       .catch(function(err) { console.warn('[Mphone] 自主活动失败:', err); })

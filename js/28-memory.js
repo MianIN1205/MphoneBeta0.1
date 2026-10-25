@@ -11,7 +11,7 @@ var memStore = mphoneStore.load('mphone_memories', {});   // { 角色id: [{ id, 
 var memEmbedModel = mphoneStore.load('mphone_mem_embed_model', '');
 var MEM_TYPE_NAME = { short: '短期', long: '长期', precious: '珍贵' };
 var MEM_TYPE_RANK = { short: 0, long: 1, precious: 2 };
-var MEM_SOURCE_NAME = { chat: '聊天', feed: '动态', self: 'TA 自己记的', user: '你加的' };
+var MEM_SOURCE_NAME = { chat: '聊天', feed: '动态', self: 'TA 自己记的', user: '你加的', diary: '日记' };
 var MEM_DAY = 86400000;
 
 function saveMemStore() { mphoneStore.save('mphone_memories', memStore); }
@@ -68,7 +68,52 @@ function memAdd(char, data) {
   if (type === 'short') m.expires = Date.now() + cfg.shortDays * MEM_DAY;
   (memStore[char.id] = memStore[char.id] || []).push(m);
   saveMemStore();
+  if (type !== 'short') setTimeout(function() { memMaybeMilestone(char); }, 0);
   return m;
+}
+
+// ---------- 关系里程碑：把零散的长期 / 珍贵记忆整理成你们关系里的重要节点，每次聊天都会想起 ----------
+// 长期和珍贵的记忆每多 10 条自动整理一次（角色设置「扩展」页可以关掉），也可以在记忆库里点「重新整理」或直接改
+var memMilestones = mphoneStore.load('mphone_mem_milestones', {});   // 角色id → { text, time, basedOn }
+var MILESTONE_EVERY = 10;
+var memMilestoneBusy = {};
+function saveMilestones() { mphoneStore.save('mphone_mem_milestones', memMilestones); }
+function memImportant(id) {
+  return memList(id).filter(function(m) { return m.type !== 'short'; }).sort(function(a, b) { return a.time - b.time; });
+}
+function memMaybeMilestone(char) {
+  var cfg = memCfgOf(char);
+  if (!char || !char.id || !cfg.on || !cfg.milestone || memMilestoneBusy[char.id]) return;
+  var ms = memMilestones[char.id] || {};
+  if (memImportant(char.id).length - (ms.basedOn || 0) < MILESTONE_EVERY) return;
+  var api = getApiCfg();
+  if (!api.url || !api.key || !api.model) return;
+  memBuildMilestone(char).catch(function(err) { console.warn('[Mphone] 整理关系里程碑失败:', err); });
+}
+function memBuildMilestone(char) {
+  var list = memImportant(char.id);
+  if (!list.length) return Promise.reject(new Error('还没有长期或珍贵的记忆'));
+  memMilestoneBusy[char.id] = true;
+  var ms = memMilestones[char.id] || {};
+  var userName = (typeof resolveCharAccount === 'function' && resolveCharAccount(char).nickname) || '用户';
+  var prompt = '你是记忆整理助手。下面是「' + memCharName(char) + '」和「' + userName + '」之间的长期记忆，请整理出他们关系里的重要节点（关系里程碑）。\n' +
+    (ms.text ? '\n之前整理过的里程碑：\n' + ms.text + '\n' : '') +
+    '\n长期记忆（按时间从早到晚）：\n' + list.map(function(m) {
+      return '· ' + memDateText(m.time).split(' ')[0] + ' ' + m.text + (m.scene === 'drama' ? '（剧情空间）' : '');
+    }).join('\n') +
+    '\n\n要求：\n- 只保留会长期影响关系的事：初次认识、确认关系、重要约定、纪念日、第一次见面、同居、吵架后和好、分手或复合等\n' +
+    '- 不写日常闲聊、一时的情绪和普通的喜好\n- 之前整理过的里程碑，没有被新的记忆推翻就保留\n' +
+    '- 发生在剧情空间的事在后面注明（剧情空间）\n- 每条一行，格式「时间 · 事件」，按时间先后，最多 12 条\n' +
+    '- 只输出里程碑本身；如果还没有这样的节点，只输出「暂无」';
+  return llmRequest([{ role: 'user', content: prompt }], { stream: false }).then(function(text) {
+    text = String(text || '').trim();
+    if (/^暂无/.test(text)) text = '';
+    memMilestones[char.id] = { text: text.slice(0, 1500), time: Date.now(), basedOn: list.length };
+    saveMilestones();
+    if (memLibChar === char.id) renderMemLib();
+    return text;
+  }).then(function(t) { delete memMilestoneBusy[char.id]; return t; },
+          function(e) { delete memMilestoneBusy[char.id]; throw e; });
 }
 
 // ---------- 想起：按相关程度挑几条 ----------
@@ -111,7 +156,18 @@ function memoryContextFor(char, hist) {
         .sort(function(a, b) { return b.time - a.time; }).slice(0, cfg.topK - rec.length)
         .forEach(function(m) { rec.push({ m: m, s: 0 }); });
     }
+    // 关系里程碑一直带着；其余按「记忆最多占用」放：超出时先少想起几条相关的，再少放几条最早的珍贵回忆
+    var msText = (memMilestones[char.id] || {}).text || '';
+    if (cfg.budget > 0 && typeof estTokens === 'function') {
+      var cost = function() {
+        return estTokens(msText) + estTokens(precious.map(function(m) { return m.text; }).join('\n')) +
+          estTokens(rec.map(function(r) { return r.m.text; }).join('\n'));
+      };
+      while (rec.length && cost() > cfg.budget) rec.pop();
+      while (precious.length > 1 && cost() > cfg.budget) precious.shift();
+    }
     var lines = [];
+    if (msText) lines.push('📌 你们关系里的重要节点：\n' + msText);
     if (precious.length) lines.push('💎 珍贵的回忆：\n' + precious.map(function(m) { return '· ' + m.text + (m.scene === 'drama' ? '（发生在剧情空间）' : ''); }).join('\n'));
     if (rec.length) lines.push('想起来的记忆：\n' + rec.map(function(r) {
       return '· ' + r.m.text + '（' + memAgo(r.m.time) + (r.m.type === 'short' ? '，最近的事' : '') + (r.m.scene === 'drama' ? '，发生在剧情空间' : '') + '）';
@@ -239,6 +295,7 @@ function openMemDetail(id) {
 function renderMemLib() {
   var char = memCharById(memLibChar);
   if (!char) { showMemHome(); return; }
+  renderMemMilestone(char);
   document.querySelectorAll('#memFilterRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.f === memLibFilter); });
   var n = memCounts(char.id), cfg = memCfgOf(char);
   document.getElementById('memStats').textContent = '珍贵 ' + n.precious + ' · 长期 ' + n.long + ' · 短期 ' + n.short +
@@ -300,6 +357,36 @@ function renderMemLib() {
 }
 document.querySelectorAll('#memFilterRow .pf-radio-btn').forEach(function(b) {
   b.addEventListener('click', function() { memLibFilter = this.dataset.f; renderMemLib(); });
+});
+// 记忆库里的关系里程碑卡片：看、改、重新整理
+function renderMemMilestone(char) {
+  var ms = memMilestones[char.id] || {};
+  document.getElementById('memMilestoneText').value = ms.text || '';
+  document.getElementById('memMilestoneMeta').textContent = ms.time ? '整理于' + memAgo(ms.time) : '';
+}
+document.getElementById('memMilestoneRebuild').addEventListener('click', function() {
+  var char = memCharById(memLibChar), btn = this;
+  if (!char || btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = '整理中…';
+  memBuildMilestone(char).then(function(t) {
+    showToast(t ? '✓ 整理好了' : '还没有能算作里程碑的事', t ? 'success' : '');
+  }).catch(function(err) {
+    showToast('✗ 没整理成：' + err.message, 'error');
+  }).then(function() {
+    btn.disabled = false;
+    btn.textContent = '重新整理';
+  });
+});
+document.getElementById('memMilestoneSave').addEventListener('click', function() {
+  var char = memCharById(memLibChar);
+  if (!char) return;
+  var old = memMilestones[char.id] || {};
+  memMilestones[char.id] = { text: document.getElementById('memMilestoneText').value.trim(), time: Date.now(),
+    basedOn: old.basedOn !== undefined ? old.basedOn : memImportant(char.id).length };
+  saveMilestones();
+  renderMemMilestone(char);
+  showToast('✓ 已保存', 'success');
 });
 document.getElementById('dockMemory').addEventListener('click', function() {
   document.getElementById('memEmbedModel').value = memEmbedModel;
@@ -403,6 +490,12 @@ function memDocxCharParas(char) {
     { text: memCharName(char) + ' 的记忆', size: 36, bold: true, color: 'C0506A', after: 60 },
     { text: '导出时间：' + memDateText(Date.now()) + '　·　按重要程度排列，同类按时间从早到晚', size: 18, color: '998888', after: 240 }
   ];
+  var msText = (memMilestones[char.id] || {}).text;
+  if (msText) {
+    paras.push({ text: '📌 关系里程碑', size: 28, bold: true, color: '5A4249', after: 120 });
+    msText.split('\n').forEach(function(l) { if (l.trim()) paras.push({ text: l.trim(), size: 22, after: 80 }); });
+    paras.push({ text: '', size: 22, after: 160 });
+  }
   var all = memList(char.id);
   ['precious', 'long', 'short'].forEach(function(type) {
     var list = all.filter(function(m) { return m.type === type; }).sort(function(a, b) { return a.time - b.time; });

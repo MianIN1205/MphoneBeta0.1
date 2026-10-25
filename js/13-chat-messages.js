@@ -11,10 +11,10 @@ function getDramaHistory(idx) { var k = charKey(idx); if (!dramaHistories[k]) dr
 function stripMsg(m) {
   var o = { role: m.role, content: m.content, imgSrc: m.imgSrc, status: m.status, time: m.time,
             quote: m.quote, recalled: m.recalled, recalledText: m.recalledText,
-            voice: m.voice, transcript: m.transcript, action: m.action };
+            voice: m.voice, transcript: m.transcript, action: m.action, recap: m.recap, pat: m.pat, patSuffix: m.patSuffix };
   if (m.alts) {
     o.alts = m.alts.map(function(group) {
-      return group.map(function(g) { return { role: g.role, content: g.content, status: g.status, time: g.time, action: g.action }; });
+      return group.map(function(g) { return { role: g.role, content: g.content, status: g.status, time: g.time, action: g.action, recap: g.recap, pat: g.pat }; });
     });
     o.altIdx = m.altIdx;
   }
@@ -92,17 +92,24 @@ function chatFormatRules(char) {
     rules.push('像发微信一样，把这次回复拆成 ' + (c.replyMin === c.replyMax ? c.replyMax : c.replyMin + '~' + c.replyMax) +
                ' 条消息，每两条之间单独一行写 |||');
   }
+  if (c.patOn) {
+    rules.push('你也可以像微信一样拍一拍用户：想拍的时候在全部消息最后另起一行写 <拍一拍/>（偶尔用，不要每次都拍）。用户拍你时，记录里会出现「（用户拍了拍你…）」。');
+  }
   // 名字下面那行小字：状态变了才写，跟着这次回复一起带回来
   rules.push('如果你此刻的状态有变化（在做什么、心情），在全部消息最后另起一行写 <签名>不超过 12 个字</签名>，' +
              '它会显示在聊天界面你名字的下面，像微信状态一样（比如「在赶地铁」「有点困了」）。现在显示的是「' +
              (char.headStatus || CHAT_SUB_DEFAULT) + '」，没变就不用写。');
-  if (look.statusOn && look.statusTpl) {
-    rules.push('在全部消息之后，另起一行用 <status></status> 包住你当前的状态。状态按下面的 HTML 模板输出：' +
-               '保留模板里的标签和样式，只把内容换成你此刻的真实状态。\n' + fillMacros(look.statusTpl, char));
-  } else if (look.statusOn) {
-    var fields = look.statusFields.split(/[,，、]/).map(function(s) { return s.trim(); }).filter(Boolean);
-    rules.push('在全部消息之后，另起一行输出你当前的状态：<status>' +
-               fields.map(function(f) { return f + '：…'; }).join(' | ') + '</status>');
+  // 状态栏：AI 只输出字段内容，小手机按模板画出来；模板里没有占位符的旧写法，仍让 AI 照模板直接写 HTML
+  if (look.statusOn) {
+    var tpl = statusTplOf(look), tplFields = statusTplFields(tpl);
+    if (tpl && !tplFields.length) {
+      rules.push('在全部消息之后，另起一行用 <status></status> 包住你当前的状态。状态按下面的 HTML 模板输出：' +
+                 '保留模板里的标签和样式，只把内容换成你此刻的真实状态。\n' + fillMacros(tpl, char));
+    } else {
+      var fields = tplFields.length ? tplFields : look.statusFields.split(/[,，、]/).map(function(s) { return s.trim(); }).filter(Boolean);
+      rules.push('在全部消息之后，另起一行输出你当前的状态（每项只写简短的内容，不写 HTML；数值只写数字，比如好感度写 68）：<status>' +
+                 fields.map(function(f) { return f + '：…'; }).join(' | ') + '</status>');
+    }
   }
   return rules.length ? [{ role: 'system', content: '【回复格式】' + rules.join('\n') }] : [];
 }
@@ -122,24 +129,54 @@ function fillMacros(text, char) {
     .replace(/\{\{\s*user\s*\}\}|<USER>/gi, userName);
 }
 
+// 剧情回复的格式要求：最后写一句隐藏的前情。聊天窗口靠它知道剧情空间发生了什么，剧情太长时也用它代替省略的原文
+function dramaFormatRules(char) {
+  return [{ role: 'system', content: '【回复格式】在回复的最后另起一行写 <前情>用一句话概括这一轮发生了什么（30 字以内，第三人称，写清楚谁做了什么）</前情>。这一行不会显示出来，只用来记住剧情。' }];
+}
+// 一个回合的前情（剧情回复里藏着的那句话）
+function roundRecap(r) {
+  return r.filter(function(m) { return m.recap; }).map(function(m) { return m.recap; }).join('；');
+}
+
+// 粗略估算 token：中日韩等宽字符一个算一个，其余每 4 个字符算一个；图片 / 语音按 300 算
+function estTokens(c) {
+  if (Array.isArray(c)) return c.reduce(function(n, p) { return n + (p && p.type === 'text' ? estTokens(p.text) : 300); }, 0);
+  var s = String(c || ''), wide = (s.match(/[⺀-鿿가-힯＀-￯]/g) || []).length;
+  return Math.ceil(wide + (s.length - wide) / 4) + 4;
+}
+function msgTokens(m) { return estTokens(msgTextForAI(m)) + (m.imgSrc || m.voice ? 300 : 0); }
+
 // 另一个窗口最近发生的事（聊天窗口带剧情空间的，剧情窗口带线上聊天的总结和最近记录），标明是在哪边发生的
+// 剧情那边有前情的回合只带那句前情，没有的（旧记录）带原文
 var CROSS_SCENE_MSGS = 12;
+var CROSS_SCENE_ROUNDS = 12;
 function crossSceneContext(idx, isDrama) {
   var char = charList[idx] || {};
   var other = isDrama ? getChatHistory(idx) : getDramaHistory(idx);
   var charName = char.charAlias || char.charName || '角色';
   var userName = resolveCharAccount(char).nickname || '用户';
-  var lines = other.filter(function(m) { return !m.action; }).slice(-CROSS_SCENE_MSGS).map(function(m) {
+  var lineOf = function(m) {
     var t = String(msgTextForAI(m)).replace(/\s+/g, ' ').trim();
+    if (!t) return '';
     if (t.length > 150) t = t.slice(0, 150) + '…';
     return (m.role === 'user' ? userName : charName) + '：' + t;
-  }).filter(function(l) { return !/：$/.test(l); });
+  };
+  var lines = [];
   if (isDrama) {
+    other.filter(function(m) { return !m.action; }).slice(-CROSS_SCENE_MSGS).forEach(function(m) {
+      var l = lineOf(m);
+      if (l) lines.push(l);
+    });
     var sums = ((char.memory || {}).summaries || []).map(function(s) { return s.text; });
     if (!sums.length && !lines.length) return '';
     return '【线上聊天的前情】以下是你们在线上聊天里的经过（那时你们隔着手机屏幕）：\n' +
       (sums.length ? sums.join('\n') + (lines.length ? '\n最近的聊天：\n' : '') : '') + lines.join('\n');
   }
+  splitRounds(other.filter(function(m) { return !m.action; })).slice(-CROSS_SCENE_ROUNDS).forEach(function(r) {
+    var rc = roundRecap(r);
+    if (rc) { lines.push('· ' + rc); return; }
+    r.forEach(function(m) { var l = lineOf(m); if (l) lines.push(l); });
+  });
   if (!lines.length) return '';
   return '【剧情空间里最近发生的事】你记得这些，但那是在剧情空间里发生的；现在你们在线上聊天，仍然隔着屏幕：\n' + lines.join('\n');
 }
@@ -170,22 +207,40 @@ function buildMsgs(idx, histOverride) {
   var history = histOverride || getActiveHistory(idx);
   var isDrama = history === getDramaHistory(idx);
 
-  // 记忆（仅聊天记录）：全部总结 + 最大记忆范围内的回合；另外提醒 AI 重点关注注意力范围内的回合
+  // 记录裁剪：聊天和剧情都按「最大记忆范围」（回合）和「上下文上限」（token）只带最近的部分；
+  // 聊天另外带全部总结，剧情省略掉的回合用各回合的前情代替；再提醒 AI 重点关注注意力范围内的回合
   var attentionNote = null;
-  var richFrom = Math.max(0, history.length - 20);   // 剧情等：最近 20 条附带真实媒体
-  if (history === getChatHistory(idx)) {
+  var richFrom = Math.max(0, history.length - 20);   // 其他记录：最近 20 条附带真实媒体
+  var isChatHist = history === getChatHistory(idx);
+  if (isChatHist || isDrama) {
     var mem = char.memory || {};
-    if (mem.summaries && mem.summaries.length) {
+    if (isChatHist && mem.summaries && mem.summaries.length) {
       msgs.push({ role: 'system', content: '【记忆总结】以下是你们之前的聊天经过：\n' +
         mem.summaries.map(function(s) { return s.text; }).join('\n') });
     }
     var cc = Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {});
-    var rounds = splitRounds(history).slice(-cc.maxMem);
+    var allRounds = splitRounds(history);
+    var rounds = allRounds.slice(-cc.maxMem);
+    if (cc.ctxTokens > 0) {
+      var total = 0;
+      rounds.forEach(function(r) { r.forEach(function(m) { total += msgTokens(m); }); });
+      while (rounds.length > 1 && total > cc.ctxTokens) {
+        rounds[0].forEach(function(m) { total -= msgTokens(m); });
+        rounds.shift();
+      }
+    }
+    if (isDrama && rounds.length < allRounds.length) {
+      var recaps = allRounds.slice(0, allRounds.length - rounds.length).map(roundRecap).filter(Boolean).slice(-40);
+      if (recaps.length) {
+        msgs.push({ role: 'system', content: '【更早的剧情】下面是更早的剧情经过（原文已省略，只留每一轮的前情）：\n' +
+          recaps.map(function(r) { return '· ' + r; }).join('\n') });
+      }
+    }
     history = [].concat.apply([], rounds);
     // 注意力范围内的消息附带真实图片 / 语音，更早的只用文字说明（省流量和费用）
     richFrom = [].concat.apply([], rounds.slice(0, Math.max(0, rounds.length - cc.attention))).length;
     if (rounds.length > cc.attention) {
-      attentionNote = { role: 'system', content: '【注意力】下面的聊天记录中，请重点关注并回应最近 ' + cc.attention +
+      attentionNote = { role: 'system', content: '【注意力】下面的记录中，请重点关注并回应最近 ' + cc.attention +
         ' 个回合的内容；更早的部分只作为背景参考，不必逐条回应。' };
     }
   }
@@ -333,6 +388,7 @@ function renderHistMsg(m, list, empty) {
     list._altTime = 0;
   }
   if (m.recalled) return renderRecallNotice(m, list, empty);
+  if (m.pat) return renderPatNotice(m, list, empty);
   if (m.action && typeof renderActionCard === 'function') return renderActionCard(m, list, empty);
   if (m.voice) {
     var vrow = createVoiceBubble(m, list, empty);
@@ -376,7 +432,7 @@ function trailingReplyGroup(hist) {
 
 function cloneGroup(group) {
   return group.map(function(g) {
-    return { role: g.role, content: g.content, status: g.status, time: g.time,
+    return { role: g.role, content: g.content, status: g.status, time: g.time, recap: g.recap, pat: g.pat,
              action: g.action ? JSON.parse(JSON.stringify(g.action)) : undefined };
   });
 }
@@ -395,6 +451,57 @@ function switchAlt(m, dir) {
   saveHistories();
   renderRoomLists(openingChatCharIdx);
 }
+
+// 拍一拍（聊天窗口，角色设置「聊天」页打开后生效）：双击头像拍一拍，中间出现一行小字；不自动请求回复，按 ❄️ 时角色就知道
+// m.pat：'char' = 你拍了拍角色，'self' = 你拍了拍自己，'user' = 角色拍了拍你；m.patSuffix = 拍的时候用的后缀
+function patNoticeText(m) {
+  var char = charList[openingChatCharIdx] || {}, name = char.charAlias || char.charName || '对方';
+  if (m.pat === 'self') return '你拍了拍自己';
+  if (m.pat === 'user') return '「' + name + '」拍了拍你';
+  return '你拍了拍「' + name + '」' + (m.patSuffix || '');
+}
+function patTextForAI(m) {
+  if (m.pat === 'self') return '（用户拍了拍自己）';
+  if (m.pat === 'user') return '（你拍了拍用户）';
+  return '（用户拍了拍你' + (m.patSuffix || '') + '）';
+}
+function renderPatNotice(m, list, empty) {
+  if (empty) empty.style.display = 'none';
+  var el = document.createElement('div');
+  el.className = 'cr-recall-notice cr-pat-notice';
+  el.textContent = patNoticeText(m);
+  el._msg = m;
+  el._extras = [];
+  list.appendChild(el);
+  list.scrollTop = list.scrollHeight;
+  return el;
+}
+function patShake(av) {
+  if (!av) return;
+  av.classList.remove('cr-pat-shake');
+  void av.offsetWidth;
+  av.classList.add('cr-pat-shake');
+  if (navigator.vibrate) { try { navigator.vibrate(20); } catch (_) {} }
+}
+// 双击头像：两次点击间隔 350ms 以内
+var patLastTap = { el: null, time: 0 };
+document.getElementById('chatMsgList').addEventListener('click', function(e) {
+  var av = e.target.closest && e.target.closest('.chat-msg-avatar');
+  if (!av) return;
+  var now = Date.now();
+  if (patLastTap.el !== av || now - patLastTap.time > 350) { patLastTap = { el: av, time: now }; return; }
+  patLastTap = { el: null, time: 0 };
+  var char = charList[openingChatCharIdx];
+  var cfg = Object.assign({}, DEFAULT_CHAT_CFG, (char && char.chatCfg) || {});
+  if (!char || !cfg.patOn) return;
+  var row = av.closest('.chat-msg-row');
+  var self = !!(row && row.classList.contains('user'));
+  var m = { role: 'user', content: '', pat: self ? 'self' : 'char', patSuffix: self ? '' : (cfg.patSuffix || ''), time: now };
+  getChatHistory(openingChatCharIdx).push(m);
+  renderHistMsg(m, document.getElementById('chatMsgList'), document.getElementById('chatRoomEmpty'));
+  saveHistories();
+  patShake(av);
+});
 
 // 撤回提示：「你撤回了一条消息 重新编辑」
 function renderRecallNotice(m, list, empty) {
@@ -432,6 +539,7 @@ function appendQuoteBlock(list, quote, role) {
 // 发给 AI / 用于总结的消息文字：撤回的只告诉它「撤回了一条消息」，引用的附上引用内容
 function msgTextForAI(m) {
   if (m.recalled) return '[用户撤回了一条消息]';
+  if (m.pat) return patTextForAI(m);
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   var c = m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
   if (m.quote) c = '「引用 ' + m.quote.author + '：' + m.quote.text + '」\n' + c;
@@ -458,9 +566,12 @@ function msgContentForAI(m, rich) {
 
 // 把角色的一次原始回复拆成多条消息（||| 分隔）并取出 <status>，写入记录并显示
 function commitAssistantReply(hist, raw, list, empty) {
-  var status = '', headStatus = '';
+  var status = '', headStatus = '', recap = '', patBack = false;
   raw = String(raw || '').replace(/<status>([\s\S]*?)<\/status>/i, function(_, s) { status = s.trim(); return ''; });
   raw = raw.replace(/<签名>([\s\S]*?)<\/签名>/g, function(_, s) { headStatus = s.replace(/\s+/g, ' ').trim().slice(0, 20); return ''; });
+  raw = raw.replace(/<拍一拍\s*\/?>(\s*<\/拍一拍>)?/g, function() { patBack = true; return ''; });
+  // 剧情回复里藏着的前情：记在这一轮最后一条消息上，不显示
+  raw = raw.replace(/<前情>([\s\S]*?)<\/前情>/g, function(_, s) { recap = s.replace(/\s+/g, ' ').trim().slice(0, 80); return ''; });
   // 内置助手的操作块（添加世界书、改样式…）单独成为确认卡片
   var actions = [];
   if (typeof extractAssistantActions === 'function') raw = extractAssistantActions(hist, raw, actions);
@@ -484,7 +595,10 @@ function commitAssistantReply(hist, raw, list, empty) {
   var now = Date.now();
   var added = parts.map(function(p) { return { role: 'assistant', content: p, time: now }; });
   if (added.length && status) added[added.length - 1].status = status;
+  if (added.length && recap) added[added.length - 1].recap = recap;
   actions.forEach(function(a) { added.push({ role: 'assistant', content: '', action: a, time: now }); });
+  var pc = charOfHistory(hist);
+  if (patBack && pc && chatHistories[pc.id] === hist && pc.chatCfg && pc.chatCfg.patOn) added.push({ role: 'assistant', content: '', pat: 'user', time: now });
   added.forEach(function(m) {
     hist.push(m);
     if (list) renderHistMsg(m, list, empty);
@@ -581,7 +695,7 @@ function sendMsg(userText, requestOnly, onDone) {
   var mcpTools = (typeof mcpActiveTools === 'function') ? mcpActiveTools() : [];
   // 开了向量记忆时先算好这次对话的向量（失败就用本地相似度）
   (typeof memPrepare === 'function' ? memPrepare(replyChar, hist) : Promise.resolve()).then(function() {
-    return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : []), {
+    return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : dramaFormatRules(charList[replyCharIdx])), {
     stream: true,
     signal: ctrl.signal,
     cfg: cfg,
@@ -594,7 +708,7 @@ function sendMsg(userText, requestOnly, onDone) {
       aiText = full;
       // 操作块不直接显示原始代码，写完后会变成确认卡片
       typing.bubble.textContent = aiText.replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
-        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').trim();
+        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '').trim();
       if (activeList) activeList.scrollTop = 999999;
     }
   });

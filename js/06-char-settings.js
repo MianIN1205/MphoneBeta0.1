@@ -130,10 +130,34 @@ function clearCharForm() {
 var DEFAULT_CHAT_CFG = {
   maxMem: 50, attention: 10, autoSum: false, sumEvery: 10,
   lang: '', translate: false, replyMin: 1, replyMax: 3,
-  patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false, actionOn: false
+  patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false, actionOn: false, ctxTokens: 16000
 };
-// 状态栏默认 HTML 模板：名字 + 时段天气标签、四个字段、好感度进度条、一句心里话（清空模板就改回按字段输出纯文字）
+// 状态栏 HTML 模板：用 {{心情}} 这样的占位符标出要填的地方，AI 只输出这些字段的内容，小手机按模板画出来
+// （清空模板就按「字段」显示成线条本卡片；模板里没有占位符的旧写法，仍让 AI 直接输出整段 HTML）
 var DEFAULT_STATUS_TPL = [
+  '<style>',
+  '.box{color:#5a4650;font-size:12px}',
+  '.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}',
+  '.nm{font-weight:700;font-size:14px;color:#c05070}',
+  '.tg{background:#ffe3ea;color:#c05070;border-radius:10px;padding:1px 8px;font-size:11px}',
+  '.row{display:flex;gap:6px;margin:4px 0}',
+  '.k{color:#a08890;width:52px;flex-shrink:0}',
+  '.bar{height:6px;border-radius:3px;background:#f3dde3;overflow:hidden;margin-top:6px}',
+  '.bar i{display:block;height:100%;background:linear-gradient(90deg,#f6a5b8,#e06b8b)}',
+  '.ft{margin-top:8px;padding-top:6px;border-top:1px dashed #e8c8d0;color:#8a6a76;font-style:italic}',
+  '</style>',
+  '<div class="box">',
+  '<div class="hd"><span class="nm">{{char}}</span><span class="tg">☁ {{天气}}</span></div>',
+  '<div class="row"><span class="k">心情</span><span>{{心情}}</span></div>',
+  '<div class="row"><span class="k">位置</span><span>{{位置}}</span></div>',
+  '<div class="row"><span class="k">在做什么</span><span>{{在做什么}}</span></div>',
+  '<div class="row"><span class="k">好感度</span><span>{{好感度}} / 100</span></div>',
+  '<div class="bar"><i style="width:{{好感度}}%"></i></div>',
+  '<div class="ft">「{{心里话}}」</div>',
+  '</div>'
+].join('\n');
+// 上一版默认模板（让 AI 直接写整段 HTML）：存着这一版的角色自动换成新模板
+var STATUS_TPL_V1 = [
   '<style>',
   '.box{color:#5a4650;font-size:12px}',
   '.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}',
@@ -156,6 +180,43 @@ var DEFAULT_STATUS_TPL = [
   '<div class="ft">「此刻的心里话」</div>',
   '</div>'
 ].join('\n');
+function statusTplOf(look) {
+  var t = (look && look.statusTpl !== undefined) ? look.statusTpl : DEFAULT_STATUS_TPL;
+  return t === STATUS_TPL_V1 ? DEFAULT_STATUS_TPL : (t || '');
+}
+// 模板里要 AI 填的字段（{{char}} / {{user}} 这类通用写法除外），按出现顺序
+var STATUS_FIELD_RE = /\{\{\s*([^{}]+?)\s*\}\}/g;
+function statusTplFields(tpl) {
+  var seen = {}, out = [];
+  String(tpl || '').replace(STATUS_FIELD_RE, function(all, n) {
+    n = n.trim();
+    if (n && !seen[n] && !/^(char|user|trim|newline)$/i.test(n) && n.indexOf('//') !== 0) {
+      seen[n] = true;
+      out.push(n);
+    }
+    return all;
+  });
+  return out;
+}
+
+// 每日日记（「扩展」页）：到点自动写一篇当天的日记，最多两个时间
+var DEFAULT_DIARY_CFG = { on: false, times: ['21:30', ''] };
+function setDiaryCfgForm(d) {
+  d = Object.assign({}, DEFAULT_DIARY_CFG, d || {});
+  document.getElementById('diaryAutoOn').checked = d.on;
+  document.getElementById('diaryTime1').value = d.times[0] || '';
+  document.getElementById('diaryTime2').value = d.times[1] || '';
+  document.getElementById('diaryAutoSub').classList.toggle('open', d.on);
+}
+function readDiaryCfgForm() {
+  return {
+    on: document.getElementById('diaryAutoOn').checked,
+    times: [document.getElementById('diaryTime1').value, document.getElementById('diaryTime2').value]
+  };
+}
+document.getElementById('diaryAutoOn').addEventListener('change', function() {
+  document.getElementById('diaryAutoSub').classList.toggle('open', this.checked);
+});
 var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '' };
 
 // 表单里暂存的 USER 账号选择与各账号印象（切换账号时不丢）
@@ -270,6 +331,7 @@ function setChatCfgForm(c) {
   var $ = function(id) { return document.getElementById(id); };
   $('memMax').value = c.maxMem;
   $('memAttention').value = c.attention;
+  $('memCtxTokens').value = c.ctxTokens;
   $('memAutoSum').checked = c.autoSum;
   $('memSumEvery').value  = c.sumEvery;
   $('chatLang').value     = c.lang;
@@ -295,6 +357,7 @@ function readChatCfgForm() {
   return {
     maxMem:    num('memMax', 50, 1, 1000),
     attention: num('memAttention', 10, 1, 1000),
+    ctxTokens: num('memCtxTokens', 16000, 0, 1000000),
     autoSum:   $('memAutoSum').checked,
     sumEvery:  num('memSumEvery', 10, 1, 200),
     lang:      $('chatLang').value.trim(),
@@ -322,7 +385,7 @@ function setLookForm(l) {
   });
   document.getElementById('statusOn').checked = l.statusOn;
   document.getElementById('statusFields').value = l.statusFields;
-  document.getElementById('statusTpl').value = l.statusTpl;
+  document.getElementById('statusTpl').value = statusTplOf(l);
   document.getElementById('statusCss').value = l.statusCss;
   document.getElementById('statusSub').classList.toggle('open', l.statusOn);
 }
@@ -430,6 +493,7 @@ function fillCharForm(char) {
   if (typeof fillAssistantForm === 'function') fillAssistantForm(char);
   fillCircleForm(char);
   fillMemCfgForm(char.memCfg);
+  setDiaryCfgForm(char.diaryCfg);
 
   csAccUid = findAccount(char.userAccountUid) ? char.userAccountUid : '';
   csImpressions = Object.assign({}, char.userImpressions || {});
@@ -450,7 +514,7 @@ function fillCharForm(char) {
 }
 
 // 扩展页 — 记忆权限：开关、读取条数、可写入的类型、短期保留天数、动态是否记入
-var DEFAULT_MEM_CFG = { on: true, read: true, topK: 6, write: true, types: { short: true, long: true, precious: true }, shortDays: 3, feed: true };
+var DEFAULT_MEM_CFG = { on: true, read: true, topK: 6, write: true, types: { short: true, long: true, precious: true }, shortDays: 3, feed: true, milestone: true, budget: 2000 };
 function fillMemCfgForm(m) {
   m = Object.assign({}, DEFAULT_MEM_CFG, m || {});
   var types = Object.assign({}, DEFAULT_MEM_CFG.types, m.types || {});
@@ -461,6 +525,8 @@ function fillMemCfgForm(m) {
   document.getElementById('memWrite').checked = m.write;
   document.getElementById('memShortDays').value = m.shortDays;
   document.getElementById('memFeed').checked = m.feed;
+  document.getElementById('memMilestone').checked = m.milestone;
+  document.getElementById('memBudget').value = m.budget;
   document.querySelectorAll('#memTypeChips .feed-visible-chip').forEach(function(c) { c.classList.toggle('on', !!types[c.dataset.type]); });
 }
 function readMemCfgForm() {
@@ -474,7 +540,9 @@ function readMemCfgForm() {
     write:     document.getElementById('memWrite').checked,
     types:     types,
     shortDays: num('memShortDays', 3, 1, 60),
-    feed:      document.getElementById('memFeed').checked
+    feed:      document.getElementById('memFeed').checked,
+    milestone: document.getElementById('memMilestone').checked,
+    budget:    num('memBudget', 2000, 0, 100000)
   };
 }
 document.getElementById('memOn').addEventListener('change', function() {
@@ -545,6 +613,7 @@ function readCharForm() {
     look:             lc.look,
     circle:           readCircleForm(),
     memCfg:           readMemCfgForm(),
+    diaryCfg:         readDiaryCfgForm(),
     assistant:        (typeof readAssistantForm === 'function') ? readAssistantForm(old) : old.assistant
   });
 }
@@ -685,7 +754,15 @@ function goCsPage(i, smooth) {
   csTabTarget = smooth === false ? null : i;
   clearTimeout(csTabTimer);
   if (csTabTarget !== null) csTabTimer = setTimeout(function() { csTabTarget = null; }, 900);
-  csPages.scrollTo({ left: i * csPages.clientWidth, behavior: smooth === false ? 'auto' : 'smooth' });
+  if (smooth === false) {
+    // 直接定位（打开设置时用）：CSS 里写了平滑滚动，这里临时关掉，标签滑块也不播动画
+    csPages.style.scrollBehavior = 'auto';
+    csPages.scrollLeft = i * csPages.clientWidth;
+    csPages.style.scrollBehavior = '';
+    setCsTab(i, false);
+    return;
+  }
+  csPages.scrollTo({ left: i * csPages.clientWidth, behavior: 'smooth' });
   setCsTab(i, true);
 }
 function csTabWidth() {

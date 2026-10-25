@@ -437,3 +437,6 @@
 /* 角色设置四页：按在滑块 / 输入框上时锁住左右翻页；一次最多翻一页 */
 .cs-pages.swipe-locked { overflow-x: hidden; }
 .cs-page { scroll-snap-stop: always; }
+
+/* 角色设置「扩展」页：每日日记的时间 */
+.diary-time { width: 96px; flex: none; }
