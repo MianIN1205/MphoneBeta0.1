@@ -1666,6 +1666,9 @@
         </div>
       </div>
 
+      <!-- 状态栏面板：点顶栏角色名展开，没有底色，不挡聊天界面 -->
+      <div class="cr-status-panel" id="crStatusPanel"></div>
+
       <div class="settings-content" id="chatRoomContent" style="display:flex;flex-direction:column;padding:0;overflow:hidden;">
         <!-- 便捷拓展栏：在顶栏阴影下，选本窗口用的模型预设 / 预设 / 世界书（角色设置「聊天」页里开关） -->
         <div class="cr-qb" id="crQuickBar">
@@ -2237,6 +2240,10 @@
               <span class="auto-row-label">字段</span>
               <input class="field-input" type="text" id="statusFields" placeholder="心情,位置,在做什么,好感度" style="flex:2;">
             </div>
+            <div class="bubble-section-label" style="margin-bottom:6px;">HTML 模板（可选）</div>
+            <textarea class="custom-css-textarea" id="statusTpl" rows="4"
+              placeholder="&lt;div class=&quot;st&quot;&gt;心情：…&lt;br&gt;位置：…&lt;/div&gt;"></textarea>
+            <div class="auto-hint" style="margin:4px 0 10px;">填了就让 AI 按这个 HTML 格式输出状态，不填就按上面的字段输出；点聊天顶栏的角色名查看</div>
             <div class="bubble-section-label" style="margin-bottom:6px;">状态栏美化（CSS，作用于 .cr-status-card）</div>
             <textarea class="custom-css-textarea" id="statusCss" rows="4"
               placeholder="/* 例：.cr-status-card { background: #fff7e6; } */"></textarea>

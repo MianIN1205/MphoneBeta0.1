@@ -80,7 +80,10 @@ function chatFormatRules(char) {
     rules.push('像发微信一样，把这次回复拆成 ' + (c.replyMin === c.replyMax ? c.replyMax : c.replyMin + '~' + c.replyMax) +
                ' 条消息，每两条之间单独一行写 |||');
   }
-  if (look.statusOn) {
+  if (look.statusOn && look.statusTpl) {
+    rules.push('在全部消息之后，另起一行用 <status></status> 包住你当前的状态。状态按下面的 HTML 模板输出：' +
+               '保留模板里的标签和样式，只把内容换成你此刻的真实状态。\n' + fillMacros(look.statusTpl, char));
+  } else if (look.statusOn) {
     var fields = look.statusFields.split(/[,，、]/).map(function(s) { return s.trim(); }).filter(Boolean);
     rules.push('在全部消息之后，另起一行输出你当前的状态：<status>' +
                fields.map(function(f) { return f + '：…'; }).join(' | ') + '</status>');
@@ -227,16 +230,6 @@ function setBubbleText(bubble, content, isAi) {
   bubble.appendChild(tr);
 }
 
-// 气泡下方的状态栏卡片
-function appendStatusCard(list, text) {
-  var card = document.createElement('div');
-  card.className = 'cr-status-card';
-  card.textContent = text.split('|').map(function(s) { return s.trim(); }).filter(Boolean).join('\n');
-  list.appendChild(card);
-  list.scrollTop = list.scrollHeight;
-  return card;
-}
-
 // 渲染一条历史消息（含图片、引用、状态栏）；行元素记住对应的记录（_msg）和附属元素（_extras），方便编辑 / 删除
 function renderHistMsg(m, list, empty) {
   list = list || getActiveMsgListEl();
@@ -268,7 +261,6 @@ function renderHistMsg(m, list, empty) {
   r.row._msg = m;
   r.row._extras = [];
   if (m.quote) r.row._extras.push(appendQuoteBlock(list, m.quote, role));
-  if (m.status) r.row._extras.push(appendStatusCard(list, m.status));
   if (m.alts && m.alts.length > 1) { r.row._extras.push(appendAltSwitch(list, m)); list._altTime = m.time || 1; }
   return r.row;
 }
@@ -349,7 +341,7 @@ function renderRecallNotice(m, list, empty) {
 function appendQuoteBlock(list, quote, role) {
   var q = document.createElement('div');
   q.className = 'cr-quote ' + (role === 'user' ? 'user' : 'ai');
-  q.textContent = quote.author + '：' + quote.text;
+  q.textContent = quote.author + '：' + fillMacros(quote.text, charList[openingChatCharIdx]);   // 以前存下的引用可能还带着 {{user}}
   list.appendChild(q);
   return q;
 }
@@ -400,6 +392,7 @@ function commitAssistantReply(hist, raw, list, empty) {
     hist.push(m);
     if (list) renderHistMsg(m, list, empty);
   });
+  if (status && typeof refreshStatusPanel === 'function') refreshStatusPanel();
   return added;
 }
 function appendImgMsg(role, imgSrc, targetListEl, targetEmptyEl) {

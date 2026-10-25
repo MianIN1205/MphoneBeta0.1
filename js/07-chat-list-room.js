@@ -509,4 +509,5 @@ function applyChatRoomStyle(char) {
     (currentCrSubView === 'contacts' ? '' : (chatLook.statusCss || '')) + '\n' +
     (part.customCss || '');
   if (typeof renderQuickBar === 'function') renderQuickBar();
+  if (typeof refreshStatusPanel === 'function') refreshStatusPanel();
 }

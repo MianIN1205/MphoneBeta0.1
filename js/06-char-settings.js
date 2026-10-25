@@ -132,7 +132,31 @@ var DEFAULT_CHAT_CFG = {
   lang: '', translate: false, replyMin: 1, replyMax: 3,
   patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false
 };
-var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusCss: '' };
+// 状态栏默认 HTML 模板：名字 + 时段天气标签、四个字段、好感度进度条、一句心里话（清空模板就改回按字段输出纯文字）
+var DEFAULT_STATUS_TPL = [
+  '<style>',
+  '.box{color:#5a4650;font-size:12px}',
+  '.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}',
+  '.nm{font-weight:700;font-size:14px;color:#c05070}',
+  '.tg{background:#ffe3ea;color:#c05070;border-radius:10px;padding:1px 8px;font-size:11px}',
+  '.row{display:flex;gap:6px;margin:4px 0}',
+  '.k{color:#a08890;width:52px;flex-shrink:0}',
+  '.bar{height:6px;border-radius:3px;background:#f3dde3;overflow:hidden;margin-top:6px}',
+  '.bar i{display:block;height:100%;background:linear-gradient(90deg,#f6a5b8,#e06b8b)}',
+  '.ft{margin-top:8px;padding-top:6px;border-top:1px dashed #e8c8d0;color:#8a6a76;font-style:italic}',
+  '</style>',
+  '<div class="box">',
+  '<div class="hd"><span class="nm">{{char}}</span><span class="tg">☁ 时段 · 天气</span></div>',
+  '<div class="row"><span class="k">心情</span><span>…</span></div>',
+  '<div class="row"><span class="k">位置</span><span>…</span></div>',
+  '<div class="row"><span class="k">在做什么</span><span>…</span></div>',
+  '<div class="row"><span class="k">好感度</span><span>… / 100</span></div>',
+  '<!-- 进度条宽度 = 好感度 -->',
+  '<div class="bar"><i style="width:50%"></i></div>',
+  '<div class="ft">「此刻的心里话」</div>',
+  '</div>'
+].join('\n');
+var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '' };
 
 // 表单里暂存的 USER 账号选择与各账号印象（切换账号时不丢）
 // csAccUid 为 '' 表示跟随主账号（「我的」里当前使用的账号）
@@ -296,6 +320,7 @@ function setLookForm(l) {
   });
   document.getElementById('statusOn').checked = l.statusOn;
   document.getElementById('statusFields').value = l.statusFields;
+  document.getElementById('statusTpl').value = l.statusTpl;
   document.getElementById('statusCss').value = l.statusCss;
   document.getElementById('statusSub').classList.toggle('open', l.statusOn);
 }
@@ -310,6 +335,7 @@ function readLookForm() {
     format:       fm ? fm.dataset.format : 'bubble',
     statusOn:     document.getElementById('statusOn').checked,
     statusFields: document.getElementById('statusFields').value.trim() || DEFAULT_LOOK.statusFields,
+    statusTpl:    document.getElementById('statusTpl').value.trim(),
     statusCss:    document.getElementById('statusCss').value
   };
 }
@@ -687,6 +713,23 @@ csPages.addEventListener('scroll', function() {
 });
 // 手指开始滑动时不再等点标签的目标页
 csPages.addEventListener('touchstart', function() { csTabTarget = null; }, { passive: true });
+
+// 滑动保护：手指按在滑块、输入框或能横向滚动的区域上时，这一下不翻页
+function csSwipeShouldLock(el) {
+  for (; el && el !== csPages; el = el.parentElement) {
+    if (el.matches('input, textarea, select, [contenteditable="true"], .no-page-swipe')) return true;
+    if (el.scrollWidth > el.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(el).overflowX)) return true;
+  }
+  return false;
+}
+csPages.addEventListener('touchstart', function(e) {
+  if (csSwipeShouldLock(e.target)) csPages.classList.add('swipe-locked');
+}, { passive: true, capture: true });
+['touchend', 'touchcancel'].forEach(function(ev) {
+  document.addEventListener(ev, function(e) {
+    if (!e.touches.length) csPages.classList.remove('swipe-locked');
+  }, { passive: true });
+});
 
 // 子选项随开关展开
 document.getElementById('memAutoSum').addEventListener('change', function() {

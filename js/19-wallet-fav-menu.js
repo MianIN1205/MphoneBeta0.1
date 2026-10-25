@@ -283,6 +283,8 @@ msgCtxMenu.addEventListener('click', function(e) {
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(function() { showToast('✓ 已复制', 'success'); }, function() { showToast('✗ 复制失败', 'error'); });
   } else if (act === 'quote') {
     var qt = t.msg.imgSrc ? '[图片]' : String(t.msg.content || '').replace(/〔译〕[\s\S]*$/, '').trim();
+    // 角色消息里的 {{user}} / {{char}} 和气泡上显示的一样换成名字
+    if (!t.isUser) qt = fillMacros(qt, charList[openingChatCharIdx]);
     setQuote({ author: t.author, text: qt.length > 60 ? qt.slice(0, 60) + '…' : qt });
   } else if (act === 'edit') {
     openMsgEdit(t);

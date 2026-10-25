@@ -13,6 +13,28 @@ var _micStream    = null;
 var _micHolding   = false;
 var _micStartX    = 0, _micStartY = 0;
 
+// 麦克风授权后一直保持连接，离开聊天窗口或切到后台才释放：在同一次聊天里只问一次权限
+// （网页拿不到永久权限；安卓选「使用应用时允许」会被浏览器记住，iPhone 会经常重新询问）
+function getMicStream() {
+  if (_micStream && _micStream.getAudioTracks().some(function(t) { return t.readyState === 'live'; })) {
+    return Promise.resolve(_micStream);
+  }
+  return navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+    _micStream = stream;
+    return stream;
+  });
+}
+function releaseMic() {
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') return;   // 正在录音时不释放
+  if (_micStream) { _micStream.getTracks().forEach(function(t) { t.stop(); }); _micStream = null; }
+}
+new MutationObserver(function() {
+  if (!appChatRoom.classList.contains('active')) releaseMic();
+}).observe(appChatRoom, { attributes: true, attributeFilter: ['class'] });
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) releaseMic();
+});
+
 // 录音浮窗 refs
 var _recOverlay    = document.getElementById('recOverlay');
 var _recTimerEl    = document.getElementById('recTimer');
@@ -307,14 +329,10 @@ crMicBtn.addEventListener('pointerdown', function(e) {
   _micHolding = false;
   _micTimer = setTimeout(function() {
     _micHolding = true;
-    navigator.mediaDevices.getUserMedia({ audio: true })
+    getMicStream()
       .then(function(stream) {
         // 等待麦克风授权期间已经松手 → 不再开始录音
-        if (!_micHolding) {
-          stream.getTracks().forEach(function(t) { t.stop(); });
-          return;
-        }
-        _micStream    = stream;
+        if (!_micHolding) return;
         _audioChunks  = [];
         _mediaRecorder= new MediaRecorder(stream);
         _mediaRecorder.ondataavailable = function(ev) {
@@ -347,7 +365,7 @@ function stopRecording() {
     // iPhone Safari 录的是 audio/mp4，其他浏览器多为 audio/webm，按录音器实际格式保存
     var type = (_mediaRecorder.mimeType || 'audio/webm').split(';')[0];
     var blob = new Blob(_audioChunks, { type: type });
-    if (_micStream) { _micStream.getTracks().forEach(function(t) { t.stop(); }); _micStream = null; }
+    if (!appChatRoom.classList.contains('active') || document.hidden) releaseMic();
     if (duration < 0.6) { showToast('录音时间太短', 'error'); return; }
     if (openingChatCharIdx === -1) return;
     var reader = new FileReader();

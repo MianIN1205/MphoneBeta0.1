@@ -469,3 +469,51 @@
 .cr-qb-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cr-qb-item-sub { flex-shrink: 0; font-size: 11px; color: #aaa; font-weight: 400; }
 .cr-qb-empty { padding: 10px; font-size: 12px; color: #aaa; text-align: center; }
+
+/* 状态栏面板：点顶栏角色名展开；面板本身透明，只有卡片有底 */
+#appChatRoom .chat-room-title-text { pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cr-status-panel {
+  position: absolute; left: 0; right: 0; z-index: 15;
+  max-height: 62%; overflow-y: auto; box-sizing: border-box;
+  padding: 8px 0 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  opacity: 0; transform: scale(0.98); transform-origin: top center;
+  pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.cr-status-panel::-webkit-scrollbar { display: none; }
+.cr-status-panel.open { opacity: 1; transform: scale(1); pointer-events: auto; }
+/* 一次一条，左右滑动翻看历史 */
+.cr-sp-track {
+  display: flex; align-items: flex-start;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+}
+.cr-sp-track::-webkit-scrollbar { display: none; }
+.cr-sp-item {
+  flex: 0 0 100%; box-sizing: border-box; padding: 0 14px;
+  scroll-snap-align: start; scroll-snap-stop: always;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.cr-sp-count { align-self: center; font-size: 10.5px; color: #b9a0a8; }
+.cr-sp-time { font-size: 10.5px; color: #b9a0a8; padding-left: 4px; flex-shrink: 0; }
+.cr-status-panel .cr-status-card {
+  margin: 0; max-width: none; align-self: stretch; white-space: normal;
+  box-shadow: 0 4px 16px rgba(200,140,150,0.16);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+/* 只有文字的状态：线条本卡片（左边一道红边线，文字落在横线上） */
+.cr-status-panel .cr-status-card.cr-status-lined {
+  background-color: rgba(255,253,247,0.94);
+  background-image:
+    linear-gradient(to right, transparent 26px, rgba(232,150,160,0.55) 26px, rgba(232,150,160,0.55) 27px, transparent 27px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 25px, rgba(150,175,205,0.38) 25px, rgba(150,175,205,0.38) 26px);
+  background-position: 0 0, 0 8px;
+  padding: 8px 12px 10px 36px;
+  font-size: 12.5px; line-height: 26px; color: #6a5560;
+  border: 1px solid rgba(220,200,190,0.55); border-radius: 8px;
+}
+.cr-sp-empty {
+  align-self: center; font-size: 12px; color: #a08890; padding: 8px 14px;
+  background: rgba(255,255,255,0.75); border-radius: 12px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
