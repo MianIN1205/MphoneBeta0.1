@@ -130,7 +130,7 @@ function clearCharForm() {
 var DEFAULT_CHAT_CFG = {
   maxMem: 50, attention: 10, autoSum: false, sumEvery: 10,
   lang: '', translate: false, replyMin: 1, replyMax: 3,
-  patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false
+  patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false, actionOn: false
 };
 // 状态栏默认 HTML 模板：名字 + 时段天气标签、四个字段、好感度进度条、一句心里话（清空模板就改回按字段输出纯文字）
 var DEFAULT_STATUS_TPL = [
@@ -281,6 +281,7 @@ function setChatCfgForm(c) {
   $('voiceId').value      = c.voiceId;
   $('vectorMemOn').checked = c.vectorOn;
   $('quickBarOn').checked = c.quickBar;
+  $('chatActionOn').checked = c.actionOn;
   $('memAutoSumSub').classList.toggle('open', c.autoSum);
 }
 
@@ -304,6 +305,7 @@ function readChatCfgForm() {
     patSuffix: $('patSuffix').value.trim(),
     voiceId:   $('voiceId').value.trim(),
     quickBar:  $('quickBarOn').checked,
+    actionOn:  $('chatActionOn').checked,
     vectorOn:  $('vectorMemOn').checked
   };
 }

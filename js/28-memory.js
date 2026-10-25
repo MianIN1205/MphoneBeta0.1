@@ -64,6 +64,7 @@ function memAdd(char, data) {
     return dup;
   }
   var m = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), type: type, text: text, time: Date.now(), source: data.source || 'chat' };
+  if (data.scene === 'drama') m.scene = 'drama';   // 在剧情空间里记下的
   if (type === 'short') m.expires = Date.now() + cfg.shortDays * MEM_DAY;
   (memStore[char.id] = memStore[char.id] || []).push(m);
   saveMemStore();
@@ -111,9 +112,9 @@ function memoryContextFor(char, hist) {
         .forEach(function(m) { rec.push({ m: m, s: 0 }); });
     }
     var lines = [];
-    if (precious.length) lines.push('💎 珍贵的回忆：\n' + precious.map(function(m) { return '· ' + m.text; }).join('\n'));
+    if (precious.length) lines.push('💎 珍贵的回忆：\n' + precious.map(function(m) { return '· ' + m.text + (m.scene === 'drama' ? '（发生在剧情空间）' : ''); }).join('\n'));
     if (rec.length) lines.push('想起来的记忆：\n' + rec.map(function(r) {
-      return '· ' + r.m.text + '（' + memAgo(r.m.time) + (r.m.type === 'short' ? '，最近的事' : '') + '）';
+      return '· ' + r.m.text + '（' + memAgo(r.m.time) + (r.m.type === 'short' ? '，最近的事' : '') + (r.m.scene === 'drama' ? '，发生在剧情空间' : '') + '）';
     }).join('\n'));
     if (lines.length) {
       // 讲清楚：这些是角色自己的记忆，「用户」指的是谁
@@ -137,11 +138,12 @@ function memoryContextFor(char, hist) {
 // 从角色输出里取出 <记忆> 并存下；返回去掉标记后的文字
 var MEM_TAG_RE = /<记忆(?:\s+类型\s*=\s*["“'「]?([^"”'」>\s]*)["”'」]?)?\s*>([\s\S]*?)<\/记忆>/g;
 var MEM_TYPE_BY_NAME = { '短期': 'short', '长期': 'long', '珍贵': 'precious' };
-function memExtractTags(char, raw) {
+// scene：'drama' = 在剧情窗口里记下的
+function memExtractTags(char, raw, scene) {
   var cfg = memCfgOf(char);
   return String(raw || '').replace(MEM_TAG_RE, function(_, t, text) {
     var type = MEM_TYPE_BY_NAME[String(t || '').trim()] || 'long';
-    if (char && cfg.on && cfg.write && cfg.types[type]) memAdd(char, { type: type, text: text, source: 'self' });
+    if (char && cfg.on && cfg.write && cfg.types[type]) memAdd(char, { type: type, text: text, source: 'self', scene: scene });
     return '';
   }).replace(/\n{3,}/g, '\n\n').trim();
 }
@@ -259,7 +261,7 @@ function renderMemLib() {
     badge.textContent = (m.type === 'precious' ? '💎 ' : '') + MEM_TYPE_NAME[m.type];
     var meta = document.createElement('span');
     meta.className = 'mem-meta';
-    meta.textContent = (MEM_SOURCE_NAME[m.source] || '') + ' · ' + memAgo(m.time) +
+    meta.textContent = (MEM_SOURCE_NAME[m.source] || '') + (m.scene === 'drama' ? ' · 剧情空间' : '') + ' · ' + memAgo(m.time) +
       (m.type === 'short' && m.expires ? ' · ' + Math.max(1, Math.ceil((m.expires - Date.now()) / MEM_DAY)) + ' 天后忘掉' : '');
     head.appendChild(badge);
     head.appendChild(meta);

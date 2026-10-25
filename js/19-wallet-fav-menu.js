@@ -210,7 +210,7 @@ function snapshotBubble(bubble) {
     return { kind: 'text', text: '[语音消息]' + (vm && vm.transcript ? '：' + vm.transcript : ''), images: [], author: author };
   }
   var tr = bubble.querySelector('.cr-translation');
-  var text = tr ? bubble.firstChild.textContent + '\n（译）' + tr.textContent : bubble.textContent;
+  var text = tr ? bubble.textContent.slice(0, bubble.textContent.length - tr.textContent.length).trim() + '\n（译）' + tr.textContent : bubble.textContent;
   return { kind: 'text', text: text, images: [], author: author };
 }
 
@@ -307,7 +307,7 @@ function deleteMsg(t) {
   var hist = histOfList(t.listId);
   var i = t.msg ? hist.indexOf(t.msg) : -1;
   if (i >= 0) hist.splice(i, 1);
-  (t.row._extras || []).forEach(function(el) { el.remove(); });
+  (t.row._extras || []).concat(t.row._actionNotes || []).forEach(function(el) { el.remove(); });
   t.row.remove();
   saveHistories();
   var list = document.getElementById(t.listId);
@@ -327,7 +327,7 @@ function recallMsg(t) {
   var list = document.getElementById(t.listId);
   var notice = renderRecallNotice(m, list, null);
   list.insertBefore(notice, t.row);
-  (t.row._extras || []).forEach(function(el) { el.remove(); });
+  (t.row._extras || []).concat(t.row._actionNotes || []).forEach(function(el) { el.remove(); });
   t.row.remove();
   saveHistories();
 }
@@ -350,7 +350,7 @@ document.getElementById('msgEditSave').addEventListener('click', function() {
   if (!text) { shakeEl(ta); return; }
   var t = msgEditTarget;
   t.msg.content = text;
-  setBubbleText(t.bubble, text, !t.isUser);
+  setBubbleText(t.bubble, text, !t.isUser, t.listId === 'chatMsgList');
   saveHistories();
   closeMsgEdit();
   showToast('✓ 已修改', 'success');

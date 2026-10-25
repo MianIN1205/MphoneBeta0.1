@@ -1477,6 +1477,12 @@
 - 暴力、恐怖、敏感话题需以文学化方式处理，不进行直白的伤害性描写。
 - 若用户明确开启了成人/深度扮演模式，则在对应范围内自由创作，无需附加警告。</textarea>
             <div class="auto-hint" style="margin:6px 2px 0;">提示词、人设、预设、世界书、开场白里都可以用 {{char}} 指角色、{{user}} 指你，发送时自动换成名字。</div>
+
+            <div class="prompt-section-label" style="margin-top:14px;">聊天窗口场景（线上）</div>
+            <textarea class="prompt-textarea" id="sceneChatTA" rows="7"></textarea>
+            <div class="prompt-section-label" style="margin-top:14px;">剧情窗口场景（剧情空间）</div>
+            <textarea class="prompt-textarea" id="sceneDramaTA" rows="7"></textarea>
+            <div class="auto-hint" style="margin:6px 2px 0;">告诉角色现在在哪个窗口：聊天窗口隔着屏幕，剧情窗口可以见面、自由发展。两边的记忆互通。清空就恢复默认。</div>
           </div>
 
           <!-- 预设（类 SillyTavern 提示词条目管理） -->
@@ -1633,7 +1639,7 @@
           <div class="chat-room-head-av" id="chatRoomHeadAv"></div>
           <div class="chat-room-title-text">
             <div class="chat-room-main-title" id="chatRoomTitle">角色名</div>
-            <div class="chat-room-sub-title">嗯嗯你说我在听</div>
+            <div class="chat-room-sub-title" id="chatRoomSubTitle">嗯嗯你说我在听</div>
           </div>
         </div>
         <div class="chat-room-right-wrap">
@@ -2082,6 +2088,11 @@
             <span class="auto-unit">~</span>
             <input class="field-input auto-num" type="number" id="replyMax" min="1" max="10" value="3">
           </div>
+          <div class="auto-row">
+            <span class="auto-row-label">线上动作描写</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="chatActionOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-hint">关闭时聊天窗口只发短句对话；开启后角色可以用 *星号* 写一小句动作或神态，显示在气泡外的灰色斜体小字。剧情窗口不受影响</div>
         </div>
 
         <div class="section-label">互动</div>

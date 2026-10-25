@@ -495,6 +495,7 @@ function applyChatRoomStyle(char) {
   if (look.headAvatar) appChatRoom.classList.add('cr-head-avatar');
   if (look.headAlign === 'left') appChatRoom.classList.add('cr-head-left');
   paintCharAvatar(document.getElementById('chatRoomHeadAv'), char);
+  if (typeof paintChatSubTitle === 'function') paintChatSubTitle(char);
 
   var bg = part.chatBg || DEFAULT_CHAT_BG;
   if (bg.image) {

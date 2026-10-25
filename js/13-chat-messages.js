@@ -67,11 +67,23 @@ function splitRounds(hist) {
   return rounds;
 }
 
+// 角色名下面那行小字：角色在聊天回复里写 <签名>…</签名> 就更新，没写过时用默认的
+var CHAT_SUB_DEFAULT = '嗯嗯你说我在听';
+function paintChatSubTitle(char) {
+  document.getElementById('chatRoomSubTitle').textContent = (char && char.headStatus) || CHAT_SUB_DEFAULT;
+}
+
 // 聊天回复的格式要求：语言 / 翻译 / 回复条数 / 状态栏（发消息和主动消息使用，动态不用）
 function chatFormatRules(char) {
   var c = Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {});
   var look = Object.assign({}, DEFAULT_LOOK, char.look || {});
   var rules = [];
+  // 线上聊天的说话方式（系统提示里关于动作、心理描写的要求只用在剧情空间）
+  if (c.actionOn) {
+    rules.push('现在是线上聊天：像发微信一样说话，用短句、口语化，以对话为主。可以偶尔用 *星号* 包住一小句你自己这边的动作或神态（比如 *盯着屏幕笑了一下*），不写长段的心理和环境描写。');
+  } else {
+    rules.push('现在是线上聊天：像发微信一样说话，用短句、口语化，一条消息一般不超过两三句。只写你发出去的聊天内容，不写动作、神态、心理和环境描写，也不要用 *星号* 或括号写旁白（系统提示里关于动作、心理描写的要求只适用于剧情空间）。');
+  }
   if (c.lang && !/^(中文|汉语|简体中文|chinese)$/i.test(c.lang)) {
     rules.push('请使用' + c.lang + '回复。');
     if (c.translate) rules.push('每条消息的外语正文后另起一行，以「〔译〕」开头给出中文翻译。');
@@ -80,6 +92,10 @@ function chatFormatRules(char) {
     rules.push('像发微信一样，把这次回复拆成 ' + (c.replyMin === c.replyMax ? c.replyMax : c.replyMin + '~' + c.replyMax) +
                ' 条消息，每两条之间单独一行写 |||');
   }
+  // 名字下面那行小字：状态变了才写，跟着这次回复一起带回来
+  rules.push('如果你此刻的状态有变化（在做什么、心情），在全部消息最后另起一行写 <签名>不超过 12 个字</签名>，' +
+             '它会显示在聊天界面你名字的下面，像微信状态一样（比如「在赶地铁」「有点困了」）。现在显示的是「' +
+             (char.headStatus || CHAT_SUB_DEFAULT) + '」，没变就不用写。');
   if (look.statusOn && look.statusTpl) {
     rules.push('在全部消息之后，另起一行用 <status></status> 包住你当前的状态。状态按下面的 HTML 模板输出：' +
                '保留模板里的标签和样式，只把内容换成你此刻的真实状态。\n' + fillMacros(look.statusTpl, char));
@@ -106,6 +122,28 @@ function fillMacros(text, char) {
     .replace(/\{\{\s*user\s*\}\}|<USER>/gi, userName);
 }
 
+// 另一个窗口最近发生的事（聊天窗口带剧情空间的，剧情窗口带线上聊天的总结和最近记录），标明是在哪边发生的
+var CROSS_SCENE_MSGS = 12;
+function crossSceneContext(idx, isDrama) {
+  var char = charList[idx] || {};
+  var other = isDrama ? getChatHistory(idx) : getDramaHistory(idx);
+  var charName = char.charAlias || char.charName || '角色';
+  var userName = resolveCharAccount(char).nickname || '用户';
+  var lines = other.filter(function(m) { return !m.action; }).slice(-CROSS_SCENE_MSGS).map(function(m) {
+    var t = String(msgTextForAI(m)).replace(/\s+/g, ' ').trim();
+    if (t.length > 150) t = t.slice(0, 150) + '…';
+    return (m.role === 'user' ? userName : charName) + '：' + t;
+  }).filter(function(l) { return !/：$/.test(l); });
+  if (isDrama) {
+    var sums = ((char.memory || {}).summaries || []).map(function(s) { return s.text; });
+    if (!sums.length && !lines.length) return '';
+    return '【线上聊天的前情】以下是你们在线上聊天里的经过（那时你们隔着手机屏幕）：\n' +
+      (sums.length ? sums.join('\n') + (lines.length ? '\n最近的聊天：\n' : '') : '') + lines.join('\n');
+  }
+  if (!lines.length) return '';
+  return '【剧情空间里最近发生的事】你记得这些，但那是在剧情空间里发生的；现在你们在线上聊天，仍然隔着屏幕：\n' + lines.join('\n');
+}
+
 // histOverride：指定使用的记录（自主活动 / 动态生成时用聊天记录），默认取当前子视图的记录
 function buildMsgs(idx, histOverride) {
   var char = charList[idx] || {};
@@ -130,6 +168,7 @@ function buildMsgs(idx, histOverride) {
   if (feedSys) msgs.push({ role: 'system', content: feedSys });
 
   var history = histOverride || getActiveHistory(idx);
+  var isDrama = history === getDramaHistory(idx);
 
   // 记忆（仅聊天记录）：全部总结 + 最大记忆范围内的回合；另外提醒 AI 重点关注注意力范围内的回合
   var attentionNote = null;
@@ -182,6 +221,10 @@ function buildMsgs(idx, histOverride) {
   var rawHist = history.map(function(m, i) {
     return { role: m.role, content: msgContentForAI(m, i >= richFrom) };
   });
+  // 聊天和剧情的记忆互通：带上另一边的前情（剧情窗口还带聊天的记忆总结），再说明现在在哪个空间
+  var cross = crossSceneContext(idx, isDrama);
+  if (cross) msgs.push({ role: 'system', content: cross });
+  if (typeof scenePrompt === 'function') msgs.push({ role: 'system', content: scenePrompt(isDrama) });
   if (attentionNote) msgs.push(attentionNote);
   // 提示词、人设、预设、世界书里的 {{char}} / {{user}} 换成名字（聊天记录本身不动）
   var fill = function(m) { return typeof m.content === 'string' ? { role: m.role, content: fillMacros(m.content, char) } : m; };
@@ -210,24 +253,64 @@ function appendMsg(role, content, isTyping, targetListEl, targetEmptyEl) {
   var bubble = document.createElement('div');
   bubble.className = 'chat-msg-bubble';
   if (isTyping) bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-  else setBubbleText(bubble, content, role !== 'user');
+  else setBubbleText(bubble, content, role !== 'user', list.id === 'chatMsgList');
   row.appendChild(bubble);
   list.appendChild(row);
+  placeActionNotes(row);
   list.scrollTop = list.scrollHeight;
   return { row: row, bubble: bubble };
 }
 
 // 气泡文字；角色消息里「〔译〕」之后的内容显示为附加翻译
-function setBubbleText(bubble, content, isAi) {
+// isChat：聊天窗口里，角色用 *星号* 包住的动作描写拿到气泡外面，显示成灰色斜体小字（气泡里只留说的话）
+function setBubbleText(bubble, content, isAi, isChat) {
   content = String(content || '');
   if (isAi) content = fillMacros(content, charList[openingChatCharIdx]);
   var i = isAi ? content.indexOf('〔译〕') : -1;
-  if (i < 0) { bubble.textContent = content; return; }
-  bubble.textContent = content.slice(0, i).trim();
-  var tr = document.createElement('span');
-  tr.className = 'cr-translation';
-  tr.textContent = content.slice(i + 3).trim();
-  bubble.appendChild(tr);
+  var main = i < 0 ? content : content.slice(0, i).trim();
+  var parts = (isAi && isChat) ? splitActions(main) : { before: [], text: main, after: [] };
+  // 只有动作、没有说话：这条就只是一行动作小字
+  var onlyAction = i < 0 && !parts.text && (parts.before.length + parts.after.length) > 0;
+  bubble.classList.toggle('cr-action-only', onlyAction);
+  if (onlyAction) parts = { before: [], text: parts.before.concat(parts.after).join(' '), after: [] };
+  bubble.textContent = parts.text;
+  bubble._actions = parts;
+  if (i >= 0) {
+    var tr = document.createElement('span');
+    tr.className = 'cr-translation';
+    tr.textContent = content.slice(i + 3).trim();
+    bubble.appendChild(tr);
+  }
+  // 编辑消息时气泡已经在列表里：重新摆放动作小字
+  if (bubble.parentNode && bubble.parentNode.parentNode) placeActionNotes(bubble.parentNode);
+}
+
+// 把 *动作* 和说的话分开：说话之前的动作放气泡上方，之后的放下方
+function splitActions(text) {
+  var out = { before: [], text: '', after: [] }, said = [];
+  text.split(/(\*[^*\n]+\*)/).forEach(function(part) {
+    if (/^\*[^*\n]+\*$/.test(part)) (said.length ? out.after : out.before).push(part.slice(1, -1).trim());
+    else if (part.trim()) said.push(part.trim());
+  });
+  out.text = said.join('\n');
+  return out;
+}
+function placeActionNotes(row) {
+  (row._actionNotes || []).forEach(function(el) { el.remove(); });
+  row._actionNotes = [];
+  var bubble = row.querySelector('.chat-msg-bubble');
+  var a = bubble && bubble._actions;
+  if (!a || !row.parentNode) return;
+  var make = function(t, pos) {
+    var n = document.createElement('div');
+    n.className = 'cr-action-note ' + pos;
+    n.textContent = t;
+    row._actionNotes.push(n);
+    return n;
+  };
+  a.before.forEach(function(t) { row.parentNode.insertBefore(make(t, 'before'), row); });
+  var next = row.nextSibling;
+  a.after.forEach(function(t) { row.parentNode.insertBefore(make(t, 'after'), next); });
 }
 
 // 渲染一条历史消息（含图片、引用、状态栏）；行元素记住对应的记录（_msg）和附属元素（_extras），方便编辑 / 删除
@@ -375,13 +458,27 @@ function msgContentForAI(m, rich) {
 
 // 把角色的一次原始回复拆成多条消息（||| 分隔）并取出 <status>，写入记录并显示
 function commitAssistantReply(hist, raw, list, empty) {
-  var status = '';
+  var status = '', headStatus = '';
   raw = String(raw || '').replace(/<status>([\s\S]*?)<\/status>/i, function(_, s) { status = s.trim(); return ''; });
+  raw = raw.replace(/<签名>([\s\S]*?)<\/签名>/g, function(_, s) { headStatus = s.replace(/\s+/g, ' ').trim().slice(0, 20); return ''; });
   // 内置助手的操作块（添加世界书、改样式…）单独成为确认卡片
   var actions = [];
   if (typeof extractAssistantActions === 'function') raw = extractAssistantActions(hist, raw, actions);
   // 角色悄悄记下的记忆：存进记忆库，不显示
-  if (typeof memExtractTags === 'function') raw = memExtractTags(charOfHistory(hist), raw);
+  if (typeof memExtractTags === 'function') {
+    var hc = charOfHistory(hist);
+    raw = memExtractTags(hc, raw, hc && dramaHistories[hc.id] === hist ? 'drama' : 'chat');
+  }
+  // 聊天窗口关了动描：新回复里 *星号* 包住的动作描写直接去掉（已经存下的消息不动）
+  var rc = charOfHistory(hist);
+  if (rc && headStatus && chatHistories[rc.id] === hist) {
+    rc.headStatus = headStatus;
+    saveCharList();
+    if (charList[openingChatCharIdx] === rc) paintChatSubTitle(rc);
+  }
+  if (rc && chatHistories[rc.id] === hist && !(rc.chatCfg && rc.chatCfg.actionOn)) {
+    raw = raw.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
+  }
   var parts = raw.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean);
   if (!parts.length && status) parts = ['…'];
   var now = Date.now();
@@ -497,7 +594,7 @@ function sendMsg(userText, requestOnly, onDone) {
       aiText = full;
       // 操作块不直接显示原始代码，写完后会变成确认卡片
       typing.bubble.textContent = aiText.replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
-        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').trim();
+        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').trim();
       if (activeList) activeList.scrollTop = 999999;
     }
   });

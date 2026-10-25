@@ -71,8 +71,10 @@
 /* =============================================
    聊天对话界面 — 顶栏双行标题与右侧控件
    ============================================= */
+/* 名字放在顶栏正中；左右各留出右侧控件（约 120px）的宽度，长名字显示省略号，不压到切换键 */
 .chat-room-title-wrap {
-  position: absolute; left: 46%; transform: translateX(-50%);
+  position: absolute; left: 50%; transform: translateX(-50%);
+  max-width: calc(100% - 256px);
   display: flex; flex-direction: row; align-items: center; gap: 7px;
   pointer-events: none;
 }

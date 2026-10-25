@@ -24,11 +24,11 @@
 }
 .chat-msg-row.ai .chat-msg-bubble {
   background: rgba(186,206,222,0.88);
-  border-radius: 4px 18px 18px 18px;
+  border-radius: 18px 18px 18px 4px;
 }
 .chat-msg-row.user .chat-msg-bubble {
   background: rgba(238,186,202,0.88);
-  border-radius: 18px 4px 18px 18px;
+  border-radius: 18px 18px 4px 18px;
 }
 .chat-msg-bubble.error {
   background: rgba(240,160,160,0.20) !important;
@@ -252,3 +252,19 @@
   font-size: 12px; color: #555; white-space: pre-wrap; word-break: break-all;
   background: rgba(0,0,0,0.04); border-radius: 10px; padding: 8px 10px; max-height: 180px; overflow-y: auto;
 }
+
+/* 聊天窗口里的动作描写（*星号* 包住的）：放在气泡外，灰色斜体小字，贴着气泡 */
+.cr-action-note {
+  align-self: flex-start; margin-left: 40px; max-width: 68%;
+  font-size: 12px; line-height: 1.5; color: #9a9a9a; font-style: italic;
+  padding: 0 4px; white-space: pre-wrap; word-break: break-word;
+}
+.cr-action-note.before { margin-bottom: -6px; }
+.cr-action-note.after  { margin-top: -6px; }
+#appChatRoom.cr-no-avatar .cr-action-note { margin-left: 0; }
+/* 只有动作、没有说话的一条：不显示气泡底色和头像 */
+.chat-msg-bubble.cr-action-only {
+  background: none !important; box-shadow: none !important; border: none !important;
+  padding: 0 4px; font-size: 12px; color: #9a9a9a; font-style: italic;
+}
+.chat-msg-row:has(.cr-action-only) .chat-msg-avatar { visibility: hidden; height: 0; }
