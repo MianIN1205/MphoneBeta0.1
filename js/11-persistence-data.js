@@ -4,10 +4,16 @@
 // 外观 / 系统提示词 持久化（默认全屏）
 // =============================================
 (function() {
-  // 手机边框 / 全屏：默认全屏
-  (mphoneStore.load('mphone_fullscreen', true) ? wpBtnFullscreen : wpBtnFrame).click();
-  wpBtnFrame.addEventListener('click',      function() { mphoneStore.save('mphone_fullscreen', false); });
-  wpBtnFullscreen.addEventListener('click', function() { mphoneStore.save('mphone_fullscreen', true); });
+  // 手机边框 / 全屏：默认全屏；同时记一份到 localStorage，下次启动时在画面出来前就用上
+  function rememberFrameMode(frame) {
+    mphoneStore.save('mphone_fullscreen', !frame);
+    try { localStorage.setItem('mphoneFrameMode', frame ? '1' : '0'); } catch (_) {}
+  }
+  var startFull = mphoneStore.load('mphone_fullscreen', true);
+  (startFull ? wpBtnFullscreen : wpBtnFrame).click();
+  rememberFrameMode(!startFull);
+  wpBtnFrame.addEventListener('click',      function() { rememberFrameMode(true); });
+  wpBtnFullscreen.addEventListener('click', function() { rememberFrameMode(false); });
 
   // 壁纸
   function setWallpaper(src) {

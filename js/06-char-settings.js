@@ -611,24 +611,43 @@ function rememberCsView() {
 
 // 角色设置 — 三页切换：点标签跳页，左右滑动时同步标签
 var csPages = document.getElementById('csPages');
+var csToggleSlider = document.getElementById('csToggleSlider');
+var csTabTarget = null;   // 点标签跳页时的目标页；滚到之前不让中间页打断滑块
+var csTabTimer = null;
 function goCsPage(i, smooth) {
+  csTabTarget = smooth === false ? null : i;
+  clearTimeout(csTabTimer);
+  if (csTabTarget !== null) csTabTimer = setTimeout(function() { csTabTarget = null; }, 900);
   csPages.scrollTo({ left: i * csPages.clientWidth, behavior: smooth === false ? 'auto' : 'smooth' });
-  setCsTab(i);
+  setCsTab(i, true);
 }
-// 高亮对应标签并移动滑块
-function setCsTab(i) {
+function csTabWidth() {
+  var tab = document.querySelector('#csTabs .cs-tab');
+  return (tab && tab.offsetWidth) || 58;
+}
+// 高亮对应标签；pos 是页码（可带小数），animate = 点标签时平滑移过去，手指滑动时直接跟手
+function setCsTab(pos, animate) {
+  var i = Math.round(pos);
   document.querySelectorAll('#csTabs .cs-tab').forEach(function(t) {
     t.classList.toggle('active', parseInt(t.dataset.page, 10) === i);
   });
-  var tab = document.querySelector('#csTabs .cs-tab');
-  document.getElementById('csToggleSlider').style.transform = 'translateX(' + (i * ((tab && tab.offsetWidth) || 58)) + 'px)';
+  csToggleSlider.style.transition = animate ? 'transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none';
+  csToggleSlider.style.transform = 'translateX(' + (pos * csTabWidth()) + 'px)';
 }
 document.querySelectorAll('#csTabs .cs-tab').forEach(function(t) {
   t.addEventListener('click', function() { goCsPage(parseInt(this.dataset.page, 10)); });
 });
 csPages.addEventListener('scroll', function() {
-  setCsTab(Math.round(csPages.scrollLeft / Math.max(1, csPages.clientWidth)));
+  var pos = csPages.scrollLeft / Math.max(1, csPages.clientWidth);
+  if (csTabTarget !== null) {
+    if (Math.abs(pos - csTabTarget) > 0.002) return;   // 还在滑向目标页
+    csTabTarget = null;
+    return;   // 已经到了，滑块本来就在目标位置
+  }
+  setCsTab(pos, false);
 });
+// 手指开始滑动时不再等点标签的目标页
+csPages.addEventListener('touchstart', function() { csTabTarget = null; }, { passive: true });
 
 // 子选项随开关展开
 document.getElementById('memAutoSum').addEventListener('change', function() {

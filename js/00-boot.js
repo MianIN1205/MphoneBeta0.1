@@ -5,6 +5,14 @@
 // 启动时把全部数据读进内存，读取是同步的；写入先改内存，再合并批量写入 IndexedDB。
 // IndexedDB 不可用时（隐私模式、静态预览等）退回 localStorage。
 // =============================================
+// 页面默认就是全屏；选过「手机边框」的，在第一次画出画面之前就换回边框（存储要异步读，所以单独记在 localStorage）
+try {
+  if (localStorage.getItem('mphoneFrameMode') === '1') {
+    document.querySelector('.phone').classList.remove('fullscreen');
+    document.body.classList.remove('phone-fullscreen');
+  }
+} catch (_) {}
+
 var mphoneStore = (function() {
   var DB_NAME = 'mphone', STORE = 'kv';
   var cache = {};          // key → 已解析的值

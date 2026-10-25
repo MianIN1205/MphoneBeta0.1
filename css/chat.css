@@ -295,7 +295,7 @@
 .cs-pages::-webkit-scrollbar { display: none; }
 .cs-page {
   flex: 0 0 100%; box-sizing: border-box;
-  scroll-snap-align: start; scroll-snap-stop: always;
+  scroll-snap-align: start;
 }
 
 /* 角色设置 — USER：主账号 / 当前会话账号 / 称呼 同一行 */
