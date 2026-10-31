@@ -14,6 +14,27 @@
   <meta name="apple-mobile-web-app-title" content="眠花糖机">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <!-- 载入页的样式直接写在这里：不用等样式文件下载，一打开就能画出来 -->
+  <style>
+    #bootSplash {
+      position: fixed; inset: 0; z-index: 99999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+      background: linear-gradient(160deg, #FFE6EF 0%, #F6E7F6 48%, #DFE7FB 100%);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    #bootSplash.hide { opacity: 0; transform: scale(1.02); pointer-events: none; }
+    #bootSplash img {
+      width: 96px; height: 96px; border-radius: 24px;
+      box-shadow: 0 8px 26px rgba(170, 140, 190, 0.28);
+      animation: bootBreath 2.4s ease-in-out infinite;
+    }
+    #bootSplash .boot-name { margin-top: 6px; font-size: 18px; font-weight: 600; letter-spacing: 3px; color: #7a6080; }
+    #bootSplash .boot-sub { font-size: 12px; letter-spacing: 1px; color: #a594b0; }
+    @keyframes bootBreath {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.03); opacity: 0.9; }
+    }
+  </style>
   <!-- 样式：按界面拆分，顺序不能乱（后面的覆盖前面的） -->
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/appearance.css">
@@ -33,6 +54,12 @@
   <link rel="stylesheet" href="css/stickers.css">
 </head>
 <body class="phone-fullscreen">
+  <!-- 载入页：脚本全部加载完后淡出（见 js/00-boot.js） -->
+  <div id="bootSplash">
+    <img src="icons/icon-512.png" alt="">
+    <div class="boot-name">眠花糖机</div>
+    <div class="boot-sub">正在醒来…</div>
+  </div>
   <div class="phone fullscreen">
 
     <!-- 状态栏 -->

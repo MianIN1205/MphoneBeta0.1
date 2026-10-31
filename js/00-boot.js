@@ -204,6 +204,18 @@ var MPHONE_SCRIPTS = [
 var mphoneReadyFns = [];
 function onMphoneReady(fn) { mphoneReadyFns.push(fn); }
 
+// 载入页：加载完淡出；至少停留一小会儿免得一闪而过，万一卡住 10 秒后也收起来
+var bootSplashStart = Date.now();
+function hideBootSplash() {
+  var el = document.getElementById('bootSplash');
+  if (!el || el.classList.contains('hide')) return;
+  setTimeout(function() {
+    el.classList.add('hide');
+    setTimeout(function() { el.remove(); }, 450);
+  }, Math.max(0, 600 - (Date.now() - bootSplashStart)));
+}
+setTimeout(hideBootSplash, 10000);
+
 mphoneStore.init().then(function() {
   MPHONE_SCRIPTS.forEach(function(src, i) {
     var s = document.createElement('script');
@@ -211,6 +223,7 @@ mphoneStore.init().then(function() {
     s.async = false;   // 动态插入的脚本按插入顺序执行
     if (i === MPHONE_SCRIPTS.length - 1) s.onload = function() {
       mphoneReadyFns.forEach(function(fn) { try { fn(); } catch (e) { console.error(e); } });
+      hideBootSplash();
     };
     document.body.appendChild(s);
   });
