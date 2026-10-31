@@ -197,7 +197,8 @@ var MPHONE_SCRIPTS = [
   "js/28-memory.js",
   "js/29-quick-bar.js",
   "js/30-status-panel.js",
-  "js/31-stickers.js"
+  "js/31-stickers.js",
+  "js/32-msg-ops.js"
 ];
 
 // 要等全部脚本执行完才能跑的初始化（会用到后面脚本里的函数），用 onMphoneReady 登记

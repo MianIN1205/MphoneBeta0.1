@@ -130,7 +130,8 @@ function clearCharForm() {
 var DEFAULT_CHAT_CFG = {
   maxMem: 50, attention: 10, autoSum: false, sumEvery: 10,
   lang: '', translate: false, replyMin: 1, replyMax: 3,
-  patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false, actionOn: false, ctxTokens: 16000
+  patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false, actionOn: false, ctxTokens: 16000,
+  recallOn: false, recallPeek: true
 };
 // 状态栏 HTML 模板：用 {{心情}} 这样的占位符标出要填的地方，AI 只输出这些字段的内容，小手机按模板画出来
 // （清空模板就按「字段」显示成线条本卡片；模板里没有占位符的旧写法，仍让 AI 直接输出整段 HTML）
@@ -344,6 +345,8 @@ function setChatCfgForm(c) {
   $('vectorMemOn').checked = c.vectorOn;
   $('quickBarOn').checked = c.quickBar;
   $('chatActionOn').checked = c.actionOn;
+  $('recallOn').checked   = c.recallOn;
+  $('recallPeek').checked = c.recallPeek;
   $('memAutoSumSub').classList.toggle('open', c.autoSum);
 }
 
@@ -369,6 +372,8 @@ function readChatCfgForm() {
     voiceId:   $('voiceId').value.trim(),
     quickBar:  $('quickBarOn').checked,
     actionOn:  $('chatActionOn').checked,
+    recallOn:  $('recallOn').checked,
+    recallPeek: $('recallPeek').checked,
     vectorOn:  $('vectorMemOn').checked
   };
 }

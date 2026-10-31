@@ -287,6 +287,7 @@ function stickerSplitParts(parts, char) {
   if (!pool.length) return parts;
   var out = [];
   parts.forEach(function(p) {
+    if (typeof p !== 'string') { out.push(p); return; }
     var last = 0, m, segs = [];
     STK_RE.lastIndex = 0;
     while ((m = STK_RE.exec(p))) {

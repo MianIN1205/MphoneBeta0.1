@@ -1207,8 +1207,11 @@
       <button data-act="quote">引用</button>
       <button data-act="edit">编辑</button>
       <button data-act="regen">重新生成</button>
+      <button data-act="regenFrom">从这里重新生成</button>
       <button data-act="recall">撤回</button>
       <button data-act="delete">删除</button>
+      <button data-act="delRound">删除本轮</button>
+      <button data-act="select">多选</button>
       <button data-act="fav">收藏</button>
       <button data-act="copy">复制</button>
     </div>
@@ -1831,6 +1834,15 @@
         </button>
       </div>
 
+      <!-- 多选消息时代替输入栏：全选 / 收藏 / 删除 / 完成 -->
+      <div class="cr-select-bar" id="crSelectBar">
+        <button class="cr-sel-btn" id="crSelAll">全选</button>
+        <span class="cr-sel-count" id="crSelCount">已选 0 条</span>
+        <button class="cr-sel-btn" id="crSelFav">收藏</button>
+        <button class="cr-sel-btn danger" id="crSelDel">删除</button>
+        <button class="cr-sel-btn" id="crSelDone">完成</button>
+      </div>
+
       <!-- 模拟微信小功能抽屉（4×2 固定一页圆角方形按钮） -->
       <div class="cr-plus-panel" id="crPlusPanel">
         <div class="cr-plus-grid">
@@ -2241,7 +2253,23 @@
             <input class="field-input" type="text" id="voiceId" placeholder="语音 API 接入后生效" style="width:140px;flex:none;">
           </div>
           <div class="auto-hint">拍一拍：打开后在聊天窗口双击头像就能拍一拍，后缀接在角色名后面（比如「的脑袋」）；TA 偶尔也会拍你。语音模型 ID 目前只保存设置</div>
+          <div class="auto-row">
+            <span class="auto-row-label">TA 会撤回消息</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="recallOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-row">
+            <span class="auto-row-label">可以偷看 TA 撤回的内容</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="recallPeek"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-hint">打开后，TA 偶尔会在聊天窗口发了又撤回（说漏嘴、发错、害羞），过两秒变成「撤回了一条消息」，TA 自己也记得撤回过什么。能偷看时，点「偷看」就能看到原文</div>
         </div>
+
+        <div class="section-label">聊天记录</div>
+        <div class="char-action-row">
+          <button class="char-action-btn char-upload-btn" id="csClearChat">清空聊天记录</button>
+          <button class="char-action-btn char-upload-btn" id="csClearDrama">清空剧情记录</button>
+        </div>
+        <div class="auto-hint" style="padding:0 4px;">清空后找不回来，可以先在下面导出备份；记忆库和记忆总结不受影响。只删几条的话，在聊天里长按消息选「多选」</div>
 
         <div class="section-label">记忆备份</div>
         <div class="char-action-row">

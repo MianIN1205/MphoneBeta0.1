@@ -220,6 +220,7 @@ function snapshotBubble(bubble) {
   list.addEventListener('pointerdown', function(e) {
     var bubble = e.target.closest('.chat-msg-bubble');
     if (!bubble || bubble.querySelector('.typing-dots')) return;
+    if (typeof msgSelecting === 'function' && msgSelecting()) return;   // 多选时点一下就是勾选
     sx = e.clientX; sy = e.clientY;
     clearTimeout(timer);
     timer = setTimeout(function() {
@@ -232,15 +233,18 @@ function snapshotBubble(bubble) {
       ctxTarget.listId = listId;
       ctxTarget.msg = row && row._msg;
       ctxTarget.isUser = !!(row && row.classList.contains('user'));
-      // 按消息类型显示可用操作：撤回只限自己的消息；图片、表情包、语音不能编辑
+      // 按消息类型显示可用操作：图片、表情包、语音不能编辑；自己和角色的消息都能撤回
       var m = ctxTarget.msg;
+      var isLatest = !!m && !ctxTarget.isUser && trailingReplyGroup(histOfList(listId)).msgs.indexOf(m) >= 0;
       var show = {
         quote:  !!m,
         edit:   !!m && !m.imgSrc && !m.sticker,
-        recall: !!m && ctxTarget.isUser,
-        // 重新生成只对最新一组回复，且当前没在生成
-        regen:  !!m && !ctxTarget.isUser && !genState && trailingReplyGroup(histOfList(listId)).msgs.indexOf(m) >= 0,
-        delete: true, fav: true, copy: true
+        recall: !!m && !m.recalled,
+        // 重新生成：最新一组回复直接重新生成（旧版本留着切换）；更早的回复要先删掉后面的消息
+        regen:     !!m && !genState && isLatest,
+        regenFrom: !!m && !genState && !ctxTarget.isUser && !isLatest,
+        delRound:  !!m && !ctxTarget.isUser,
+        delete: true, select: !!m, fav: true, copy: true
       };
       msgCtxMenu.querySelectorAll('button').forEach(function(btn) { btn.classList.toggle('hide', !show[btn.dataset.act]); });
       var r = bubble.getBoundingClientRect();
@@ -294,6 +298,12 @@ msgCtxMenu.addEventListener('click', function(e) {
     recallMsg(t);
   } else if (act === 'delete') {
     openPfEntryDel('删除这条消息？删除后 TA 也不会再看到', function() { deleteMsg(t); });
+  } else if (act === 'regenFrom') {
+    regenerateFrom(t.listId, t.msg);
+  } else if (act === 'delRound') {
+    deleteRound(t.listId, t.msg);
+  } else if (act === 'select') {
+    enterMsgSelect(t.listId, t.row);
   }
 });
 
@@ -317,11 +327,14 @@ function deleteMsg(t) {
   }
 }
 
-// 撤回：原位置换成撤回提示，保留原文供「重新编辑」，TA 只知道撤回了一条消息
+// 撤回：原位置换成撤回提示。自己的消息保留原文供「重新编辑」，TA 只知道撤回了一条消息；
+// 角色的消息由你撤回时，TA 下次回复会知道这条被撤回了（以及原本说了什么）
 function recallMsg(t) {
   var m = t.msg;
   m.recalled = true;
-  m.recalledText = (m.imgSrc || m.sticker) ? '' : m.content;
+  m.recalledBy = 'user';
+  m.recalledText = m.role === 'assistant' ? (m.imgSrc ? '[图片]' : m.voice ? '[语音]' : (m.content || ''))
+                                          : (m.imgSrc || m.sticker) ? '' : m.content;
   delete m.quote;
   delete m.status;
   var list = document.getElementById(t.listId);

@@ -10,11 +10,12 @@ function getDramaHistory(idx) { var k = charKey(idx); if (!dramaHistories[k]) dr
 // 一条消息要保存的字段；alts 是「重新生成」留下的多个版本（每个版本是一组消息）
 function stripMsg(m) {
   var o = { role: m.role, content: m.content, imgSrc: m.imgSrc, sticker: m.sticker, status: m.status, time: m.time,
-            quote: m.quote, recalled: m.recalled, recalledText: m.recalledText,
+            quote: m.quote, recalled: m.recalled, recalledText: m.recalledText, recalledBy: m.recalledBy,
             voice: m.voice, transcript: m.transcript, action: m.action, recap: m.recap, pat: m.pat, patSuffix: m.patSuffix };
   if (m.alts) {
     o.alts = m.alts.map(function(group) {
-      return group.map(function(g) { return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, action: g.action, recap: g.recap, pat: g.pat }; });
+      return group.map(function(g) { return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, action: g.action, recap: g.recap, pat: g.pat,
+                                              recalled: g.recalled, recalledText: g.recalledText, recalledBy: g.recalledBy }; });
     });
     o.altIdx = m.altIdx;
   }
@@ -91,6 +92,10 @@ function chatFormatRules(char) {
   if (c.replyMax > 1) {
     rules.push('像发微信一样，把这次回复拆成 ' + (c.replyMin === c.replyMax ? c.replyMax : c.replyMin + '~' + c.replyMax) +
                ' 条消息，每两条之间单独一行写 |||');
+  }
+  if (c.recallOn) {
+    rules.push('你也可以像微信一样撤回自己刚发的消息：偶尔说漏嘴、发错或者害羞的时候，把那一条单独写成 <撤回>这条消息的内容</撤回>，' +
+               '它会先发出去，过两秒变成「撤回了一条消息」，对方不一定看得到。很少用，不要每次都撤回。');
   }
   if (c.patOn) {
     rules.push('你也可以像微信一样拍一拍用户：想拍的时候在全部消息最后另起一行写 <拍一拍/>（偶尔用，不要每次都拍）。用户拍你时，记录里会出现「（用户拍了拍你…）」。');
@@ -390,7 +395,7 @@ function renderHistMsg(m, list, empty) {
     list.querySelectorAll('.cr-alt-switch').forEach(function(el) { el.remove(); });
     list._altTime = 0;
   }
-  if (m.recalled) return renderRecallNotice(m, list, empty);
+  if (m.recalled && !m._flash) return renderRecallNotice(m, list, empty);
   if (m.pat) return renderPatNotice(m, list, empty);
   if (m.action && typeof renderActionCard === 'function') return renderActionCard(m, list, empty);
   if (m.voice) {
@@ -406,6 +411,17 @@ function renderHistMsg(m, list, empty) {
   r.row._extras = [];
   if (m.quote) r.row._extras.push(appendQuoteBlock(list, m.quote, role));
   if (m.alts && m.alts.length > 1) { r.row._extras.push(appendAltSwitch(list, m)); list._altTime = m.time || 1; }
+  // 角色刚发就撤回的：先正常显示两秒半，再换成「撤回了一条消息」
+  if (m._flash) {
+    setTimeout(function() {
+      delete m._flash;
+      if (!r.row.parentNode) return;
+      var notice = renderRecallNotice(m, list, null);
+      list.insertBefore(notice, r.row);
+      (r.row._extras || []).concat(r.row._actionNotes || []).forEach(function(el) { el.remove(); });
+      r.row.remove();
+    }, 2500);
+  }
   return r.row;
 }
 
@@ -475,15 +491,17 @@ function appendAltSwitch(list, m) {
 // 最新一次回复的那组消息（同一次回复拆成的多条时间相同）；重新生成 / 切换版本只作用在这一组上
 function trailingReplyGroup(hist) {
   var i = hist.length, last = hist[i - 1];
-  if (!last || last.role !== 'assistant' || last.recalled || last.voice || last.imgSrc) return { start: i, msgs: [] };
+  var userRecalled = function(m) { return m.recalled && m.recalledBy !== 'char'; };
+  if (!last || last.role !== 'assistant' || userRecalled(last) || last.voice || last.imgSrc) return { start: i, msgs: [] };
   i--;
-  while (i > 0 && last.time && hist[i - 1].role === 'assistant' && !hist[i - 1].recalled && hist[i - 1].time === last.time) i--;
+  while (i > 0 && last.time && hist[i - 1].role === 'assistant' && !userRecalled(hist[i - 1]) && hist[i - 1].time === last.time) i--;
   return { start: i, msgs: hist.slice(i) };
 }
 
 function cloneGroup(group) {
   return group.map(function(g) {
     return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, recap: g.recap, pat: g.pat,
+             recalled: g.recalled, recalledText: g.recalledText, recalledBy: g.recalledBy,
              action: g.action ? JSON.parse(JSON.stringify(g.action)) : undefined };
   });
 }
@@ -555,10 +573,36 @@ document.getElementById('chatMsgList').addEventListener('click', function(e) {
 });
 
 // 撤回提示：「你撤回了一条消息 重新编辑」
+// 角色的消息：你撤回的「你撤回了 TA 的一条消息 查看」；TA 自己撤回的「TA 撤回了一条消息 偷看」（角色设置里允许偷看时）
 function renderRecallNotice(m, list, empty) {
   if (empty) empty.style.display = 'none';
   var el = document.createElement('div');
   el.className = 'cr-recall-notice';
+  if (m.role === 'assistant') {
+    var char = charList[openingChatCharIdx] || {}, name = char.charAlias || char.charName || '对方';
+    var byUser = m.recalledBy === 'user';
+    el.appendChild(document.createTextNode(byUser ? '你撤回了「' + name + '」的一条消息' : '「' + name + '」撤回了一条消息'));
+    var cfg = Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {});
+    if (m.recalledText && (byUser || cfg.recallPeek)) {
+      var peek = document.createElement('span');
+      peek.className = 'cr-recall-reedit';
+      peek.textContent = byUser ? '查看' : '偷看';
+      peek.addEventListener('click', function() {
+        var shown = el.querySelector('.cr-recall-peek-text');
+        if (shown) { shown.remove(); return; }
+        var t = document.createElement('span');
+        t.className = 'cr-recall-peek-text';
+        t.textContent = fillMacros(m.recalledText, char);
+        el.appendChild(t);
+      });
+      el.appendChild(peek);
+    }
+    el._msg = m;
+    el._extras = [];
+    list.appendChild(el);
+    list.scrollTop = list.scrollHeight;
+    return el;
+  }
   el.appendChild(document.createTextNode('你撤回了一条消息'));
   if (m.recalledText) {
     var re = document.createElement('span');
@@ -589,7 +633,11 @@ function appendQuoteBlock(list, quote, role) {
 
 // 发给 AI / 用于总结的消息文字：撤回的只告诉它「撤回了一条消息」，引用的附上引用内容
 function msgTextForAI(m) {
-  if (m.recalled) return '[用户撤回了一条消息]';
+  if (m.recalled) {
+    if (m.role !== 'assistant') return '[用户撤回了一条消息]';
+    if (m.recalledBy === 'user') return '[你的这条消息被用户撤回了，原本是：' + (m.recalledText || '') + ']';
+    return '<撤回>' + (m.recalledText || '') + '</撤回>';
+  }
   if (m.pat) return patTextForAI(m);
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   var c = m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
@@ -647,12 +695,14 @@ function commitAssistantReply(hist, raw, list, empty) {
     raw = raw.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
   }
   var parts = raw.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean);
+  // 聊天窗口：<撤回>…</撤回> 拆成单独一条，先显示两秒再变成撤回提示
+  if (rc && chatHistories[rc.id] === hist) parts = splitRecallParts(parts);
   // 聊天窗口：回复里的「[表情包：名字]」拆成单独的表情包消息（见 31-stickers.js）
   if (rc && chatHistories[rc.id] === hist && typeof stickerSplitParts === 'function') parts = stickerSplitParts(parts, rc);
   if (!parts.length && status) parts = ['…'];
   var now = Date.now();
   var added = parts.map(function(p) {
-    return typeof p === 'string' ? { role: 'assistant', content: p, time: now } : { role: 'assistant', content: p.content, sticker: p.sticker, time: now };
+    return typeof p === 'string' ? { role: 'assistant', content: p, time: now } : Object.assign({ role: 'assistant', time: now }, p);
   });
   if (added.length && status) added[added.length - 1].status = status;
   if (added.length && recap) added[added.length - 1].recap = recap;
@@ -662,10 +712,29 @@ function commitAssistantReply(hist, raw, list, empty) {
   added.forEach(function(m) {
     hist.push(m);
     if (list) renderHistMsg(m, list, empty);
+    else delete m._flash;   // 没在看这个对话：回来时直接是撤回提示
   });
   if (status && typeof refreshStatusPanel === 'function') refreshStatusPanel();
   return added;
 }
+// 角色回复里的 <撤回>内容</撤回>：拆成单独一条「刚发就撤回」的消息
+function splitRecallParts(parts) {
+  var out = [];
+  parts.forEach(function(p) {
+    if (typeof p !== 'string' || p.indexOf('<撤回>') < 0) { out.push(p); return; }
+    var last = 0, re = /<撤回>([\s\S]*?)<\/撤回>/g, m;
+    while ((m = re.exec(p))) {
+      var before = p.slice(last, m.index).trim(), text = m[1].trim();
+      if (before) out.push(before);
+      if (text) out.push({ content: text, recalled: true, recalledBy: 'char', recalledText: text, _flash: true });
+      last = re.lastIndex;
+    }
+    var rest = p.slice(last).replace(/<\/?撤回>/g, '').trim();
+    if (rest) out.push(rest);
+  });
+  return out;
+}
+
 function appendImgMsg(role, imgSrc, targetListEl, targetEmptyEl) {
   var list  = targetListEl  || getActiveMsgListEl();
   var empty = targetEmptyEl || getActiveEmptyEl();
