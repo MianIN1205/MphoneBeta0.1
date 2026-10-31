@@ -13,10 +13,10 @@
 
 ## 文件结构
 - `index.html`：只有界面结构（各个 app-screen、弹窗）。
-- `css/`：15 个样式文件，`<link>` 顺序有影响。
+- `css/`：16 个样式文件，`<link>` 顺序有影响。
 - `js/`：普通脚本（不是模块），由 `js/00-boot.js` 的 `MPHONE_SCRIPTS` 按顺序注入。所有顶层名字都是全局共享的。
   - 加载时调用后面文件里的函数会报错：用 `typeof` 判断，或者用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。
-  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v11`）。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v12`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。
 - 文件都是 CRLF 换行。Git Bash 的 `sed -i` 会悄悄改成 LF，改文件请用 Edit 工具或 node 脚本。
 
@@ -42,6 +42,7 @@
 | 28-memory | 角色记忆（短期 / 长期 / 珍贵，可选向量检索，按 token 预算注入）、关系里程碑（每 10 条长期记忆自动整理）、记忆库界面、导出 Word |
 | 29-quick-bar | 聊天窗口顶栏下的便捷拓展栏（本窗口用的模型预设 / 预设 / 世界书） |
 | 30-status-panel | 点聊天顶栏角色名展开的状态栏面板（AI 只输出字段，按 HTML 模板的 {{字段}} 占位符画出来；一次一条，左右滑看最近 10 轮；没有模板时显示成线条本卡片） |
+| 31-stickers | 表情包（图床链接导入、分类、名字辅助识别、打字联想；消息存 `[表情包：名字]` + 图片地址，打不开时显示这句文字；每个角色单独设置能不能发、能用哪些分类：`char.stickerCfg`） |
 
 ## 测试
 - 内置浏览器面板里 service worker 注册不上（控制台有 “fetching the script” 报错），这是环境问题，不是 bug。

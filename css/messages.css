@@ -181,6 +181,12 @@
   align-self: center; font-size: 11px; color: #b5a8ad;
   padding: 2px 8px; margin: 4px 0; flex-shrink: 0;
 }
+/* 双方各自最后一条消息下面的小时间 */
+.cr-msg-stamp { font-size: 10px; color: #b9a8ae; margin-top: -8px; flex-shrink: 0; line-height: 1.4; }
+.cr-msg-stamp.user { align-self: flex-end; margin-right: 44px; }
+.cr-msg-stamp.ai   { align-self: flex-start; margin-left: 44px; }
+#appChatRoom.cr-no-avatar .cr-msg-stamp.user { margin-right: 4px; }
+#appChatRoom.cr-no-avatar .cr-msg-stamp.ai { margin-left: 4px; }
 .cr-load-more { align-self: center; font-size: 11px; color: #c0b0b6; padding: 4px 0; flex-shrink: 0; }
 .cr-alt-switch {
   align-self: flex-start; margin: -6px 0 0 40px; flex-shrink: 0;

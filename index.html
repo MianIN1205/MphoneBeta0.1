@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="css/messages.css">
   <link rel="stylesheet" href="css/settings-subnav.css">
   <link rel="stylesheet" href="css/prompt-presets.css">
+  <link rel="stylesheet" href="css/stickers.css">
 </head>
 <body class="phone-fullscreen">
   <div class="phone fullscreen">
@@ -1728,6 +1729,8 @@
 
       <!-- 底部输入栏（聊天与剧情共用，剧情下将表情+语音替换为图片按钮） -->
       <!-- 引用条：长按消息选「引用」后出现在输入栏上方 -->
+      <!-- 打字时联想的表情包：输入的文字和表情包名字对得上就列在这里，点一下发出去 -->
+      <div class="stk-suggest" id="stkSuggest"></div>
       <div class="cr-quote-bar" id="crQuoteBar">
         <span class="cr-quote-bar-text" id="crQuoteText"></span>
         <button class="cr-quote-bar-close" id="crQuoteClose" aria-label="取消引用">✕</button>
@@ -1877,9 +1880,76 @@
         </div>
       </div>
 
-      <!-- 表情包抽屉（与加号抽屉同高，内容暂时留空） -->
+      <!-- 表情包抽屉（与加号抽屉同高）：上面是当前分类的表情包，下面是分类标签和导入 / 设置键 -->
       <div class="cr-plus-panel cr-emoji-panel" id="crEmojiPanel">
-        <div class="cr-emoji-panel-body"></div>
+        <div class="cr-emoji-panel-body">
+          <div class="stk-grid" id="stkGrid"></div>
+          <div class="stk-bar">
+            <div class="stk-tabs" id="stkTabs"></div>
+            <button class="stk-bar-btn" id="stkImportBtn" aria-label="导入表情包"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+            <button class="stk-bar-btn" id="stkSetBtn" aria-label="表情包设置"><svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="9" cy="7" r="2.2"></circle><circle cx="15" cy="17" r="2.2"></circle></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 表情包：用图床链接导入 -->
+      <div class="mine-acc-overlay" id="stkImportOverlay">
+        <div class="mine-acc-modal">
+          <div class="mine-acc-title">导入表情包</div>
+          <input class="mine-field-input" id="stkImportCat" type="text" placeholder="分类名，比如：日常、猫猫" maxlength="12">
+          <div class="stk-chip-row" id="stkImportCats"></div>
+          <textarea class="mine-field-textarea" id="stkImportText" rows="6" placeholder="每行一个，名字在前、链接在后，例如：&#10;开心转圈 https://xxx.gif&#10;摸摸头：https://xxx.jpg&#10;只填链接时用文件名当名字"></textarea>
+          <div class="mine-acc-actions">
+            <button class="mine-acc-btn mine-acc-btn-close" id="stkImportCancel">取消</button>
+            <button class="mine-acc-btn mine-acc-btn-add" id="stkImportOk">导入</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 表情包：长按某个表情包 → 改名字、换分类、删除 -->
+      <div class="mine-acc-overlay" id="stkEditOverlay">
+        <div class="mine-acc-modal">
+          <div class="mine-acc-title">编辑表情包</div>
+          <div class="stk-edit-preview" id="stkEditPreview"></div>
+          <input class="mine-field-input" id="stkEditName" type="text" placeholder="名字（帮 TA 认出这是什么表情）" maxlength="30">
+          <div class="stk-chip-row" id="stkEditCats"></div>
+          <div class="mine-acc-actions">
+            <button class="mine-acc-btn mine-acc-btn-close" id="stkEditDel">删除</button>
+            <button class="mine-acc-btn mine-acc-btn-close" id="stkEditCancel">取消</button>
+            <button class="mine-acc-btn mine-acc-btn-add" id="stkEditSave">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 表情包：长按分类标签 → 改名、删除分类 -->
+      <div class="mine-acc-overlay" id="stkCatOverlay">
+        <div class="mine-acc-modal">
+          <div class="mine-acc-title">编辑分类</div>
+          <input class="mine-field-input" id="stkCatName" type="text" placeholder="分类名" maxlength="12">
+          <div class="mine-acc-actions">
+            <button class="mine-acc-btn mine-acc-btn-close" id="stkCatDel">删除分类</button>
+            <button class="mine-acc-btn mine-acc-btn-close" id="stkCatCancel">取消</button>
+            <button class="mine-acc-btn mine-acc-btn-add" id="stkCatSave">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 表情包设置：当前聊天的角色能不能发表情包、能用哪些分类 -->
+      <div class="mine-acc-overlay" id="stkSetOverlay">
+        <div class="mine-acc-modal">
+          <div class="mine-acc-title" id="stkSetTitle">表情包设置</div>
+          <div class="auto-row">
+            <span class="auto-row-label">TA 能发表情包</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="stkAiOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="stk-set-label">TA 能用的分类（可以多选）</div>
+          <div class="stk-chip-row" id="stkSetCats"></div>
+          <div class="stk-hint" id="stkSetEmpty" style="display:none;">还没有分类，先点 ＋ 导入表情包吧。</div>
+          <div class="stk-hint">只把选中分类里的表情包名字告诉 TA，用来控制 TA 的风格。TA 回复里写「[表情包：名字]」就会显示成对应的表情包，不在这些分类里的只显示成文字。<br>图片打不开的表情包会显示成「[表情包：名字]」。</div>
+          <div class="mine-acc-actions">
+            <button class="mine-acc-btn mine-acc-btn-add" id="stkSetClose">好的</button>
+          </div>
+        </div>
       </div>
 
       <!-- 录音浮窗（长按麦克风时居中显示） -->

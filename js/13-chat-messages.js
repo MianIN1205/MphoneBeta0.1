@@ -9,12 +9,12 @@ function getChatHistory(idx) { var k = charKey(idx); if (!chatHistories[k]) chat
 function getDramaHistory(idx) { var k = charKey(idx); if (!dramaHistories[k]) dramaHistories[k] = []; return dramaHistories[k]; }
 // 一条消息要保存的字段；alts 是「重新生成」留下的多个版本（每个版本是一组消息）
 function stripMsg(m) {
-  var o = { role: m.role, content: m.content, imgSrc: m.imgSrc, status: m.status, time: m.time,
+  var o = { role: m.role, content: m.content, imgSrc: m.imgSrc, sticker: m.sticker, status: m.status, time: m.time,
             quote: m.quote, recalled: m.recalled, recalledText: m.recalledText,
             voice: m.voice, transcript: m.transcript, action: m.action, recap: m.recap, pat: m.pat, patSuffix: m.patSuffix };
   if (m.alts) {
     o.alts = m.alts.map(function(group) {
-      return group.map(function(g) { return { role: g.role, content: g.content, status: g.status, time: g.time, action: g.action, recap: g.recap, pat: g.pat }; });
+      return group.map(function(g) { return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, action: g.action, recap: g.recap, pat: g.pat }; });
     });
     o.altIdx = m.altIdx;
   }
@@ -280,6 +280,9 @@ function buildMsgs(idx, histOverride) {
   var cross = crossSceneContext(idx, isDrama);
   if (cross) msgs.push({ role: 'system', content: cross });
   if (typeof scenePrompt === 'function') msgs.push({ role: 'system', content: scenePrompt(isDrama) });
+  // 聊天窗口：这个角色能用的表情包名字（表情包抽屉的设置里按角色打开）
+  var stkSys = (isChatHist && typeof stickerPrompt === 'function') ? stickerPrompt(char) : '';
+  if (stkSys) msgs.push({ role: 'system', content: stkSys });
   if (attentionNote) msgs.push(attentionNote);
   // 提示词、人设、预设、世界书里的 {{char}} / {{user}} 换成名字（聊天记录本身不动）
   var fill = function(m) { return typeof m.content === 'string' ? { role: m.role, content: fillMacros(m.content, char) } : m; };
@@ -396,13 +399,61 @@ function renderHistMsg(m, list, empty) {
     return vrow;
   }
   var role = m.role === 'user' ? 'user' : 'ai';
-  var r = m.imgSrc ? appendImgMsg(role, m.imgSrc, list, empty) : appendMsg(role, m.content, false, list, empty);
+  var r = m.imgSrc ? appendImgMsg(role, m.imgSrc, list, empty)
+        : (m.sticker && typeof appendStickerMsg === 'function') ? appendStickerMsg(role, m, list, empty)
+        : appendMsg(role, m.content, false, list, empty);
   r.row._msg = m;
   r.row._extras = [];
   if (m.quote) r.row._extras.push(appendQuoteBlock(list, m.quote, role));
   if (m.alts && m.alts.length > 1) { r.row._extras.push(appendAltSwitch(list, m)); list._altTime = m.time || 1; }
   return r.row;
 }
+
+// 聊天窗口：双方各自连着发的最后一条下面写一个小时间。中间隔了时间分隔、撤回、拍一拍、操作卡片也算新的一段。
+// 消息列表一有变化就重新摆一遍（只动时间这一行）
+function refreshMsgStamps(list) {
+  var atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+  list.querySelectorAll('.cr-msg-stamp').forEach(function(el) { el.remove(); });
+  var prev = null, broken = false;
+  var stamp = function(row) {
+    var m = row._msg;
+    if (!m || !m.time) return;
+    // 放在这条消息自己的引用、版本切换、动作小字后面
+    var owned = (row._extras || []).concat(row._actionNotes || []), at = row;
+    while (at.nextSibling && owned.indexOf(at.nextSibling) >= 0) at = at.nextSibling;
+    var d = new Date(m.time), el = document.createElement('div');
+    el.className = 'cr-msg-stamp ' + (row.classList.contains('user') ? 'user' : 'ai');
+    el.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    list.insertBefore(el, at.nextSibling);
+  };
+  Array.prototype.slice.call(list.children).forEach(function(el) {
+    if (el.classList.contains('chat-msg-row')) {
+      if (!el._msg) return;   // 打字中的气泡、报错提示
+      if (prev && (broken || prev.classList.contains('user') !== el.classList.contains('user'))) stamp(prev);
+      prev = el;
+      broken = false;
+    } else if (el.matches('.cr-time-sep, .cr-recall-notice, .cr-action-card')) {
+      broken = true;
+    }
+  });
+  if (prev) stamp(prev);
+  if (atBottom) list.scrollTop = list.scrollHeight;
+}
+(function() {
+  var list = document.getElementById('chatMsgList');
+  var queued = false;
+  var obs = new MutationObserver(function() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function() {
+      queued = false;
+      obs.disconnect();
+      refreshMsgStamps(list);
+      obs.observe(list, { childList: true });
+    });
+  });
+  obs.observe(list, { childList: true });
+})();
 
 // 「重新生成」留下的多个版本：‹ 2/3 › 切换
 function appendAltSwitch(list, m) {
@@ -432,7 +483,7 @@ function trailingReplyGroup(hist) {
 
 function cloneGroup(group) {
   return group.map(function(g) {
-    return { role: g.role, content: g.content, status: g.status, time: g.time, recap: g.recap, pat: g.pat,
+    return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, recap: g.recap, pat: g.pat,
              action: g.action ? JSON.parse(JSON.stringify(g.action)) : undefined };
   });
 }
@@ -591,9 +642,13 @@ function commitAssistantReply(hist, raw, list, empty) {
     raw = raw.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
   }
   var parts = raw.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean);
+  // 聊天窗口：回复里的「[表情包：名字]」拆成单独的表情包消息（见 31-stickers.js）
+  if (rc && chatHistories[rc.id] === hist && typeof stickerSplitParts === 'function') parts = stickerSplitParts(parts, rc);
   if (!parts.length && status) parts = ['…'];
   var now = Date.now();
-  var added = parts.map(function(p) { return { role: 'assistant', content: p, time: now }; });
+  var added = parts.map(function(p) {
+    return typeof p === 'string' ? { role: 'assistant', content: p, time: now } : { role: 'assistant', content: p.content, sticker: p.sticker, time: now };
+  });
   if (added.length && status) added[added.length - 1].status = status;
   if (added.length && recap) added[added.length - 1].recap = recap;
   actions.forEach(function(a) { added.push({ role: 'assistant', content: '', action: a, time: now }); });

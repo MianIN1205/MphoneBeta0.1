@@ -232,11 +232,11 @@ function snapshotBubble(bubble) {
       ctxTarget.listId = listId;
       ctxTarget.msg = row && row._msg;
       ctxTarget.isUser = !!(row && row.classList.contains('user'));
-      // 按消息类型显示可用操作：撤回只限自己的消息；图片、语音不能编辑
+      // 按消息类型显示可用操作：撤回只限自己的消息；图片、表情包、语音不能编辑
       var m = ctxTarget.msg;
       var show = {
         quote:  !!m,
-        edit:   !!m && !m.imgSrc,
+        edit:   !!m && !m.imgSrc && !m.sticker,
         recall: !!m && ctxTarget.isUser,
         // 重新生成只对最新一组回复，且当前没在生成
         regen:  !!m && !ctxTarget.isUser && !genState && trailingReplyGroup(histOfList(listId)).msgs.indexOf(m) >= 0,
@@ -321,7 +321,7 @@ function deleteMsg(t) {
 function recallMsg(t) {
   var m = t.msg;
   m.recalled = true;
-  m.recalledText = m.imgSrc ? '' : m.content;
+  m.recalledText = (m.imgSrc || m.sticker) ? '' : m.content;
   delete m.quote;
   delete m.status;
   var list = document.getElementById(t.listId);
