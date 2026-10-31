@@ -223,6 +223,18 @@
   color: #D05858;
 }
 
+.stk-doc-btn {
+  border: 1px dashed rgba(208, 88, 88, 0.45);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  color: #b0606a;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 7px 0;
+  cursor: pointer;
+}
+.stk-doc-btn:active { background: rgba(255, 240, 242, 0.95); }
+
 .stk-edit-preview {
   align-self: center;
   width: 90px;

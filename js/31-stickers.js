@@ -328,17 +328,117 @@ var stkImportCat     = document.getElementById('stkImportCat');
 var stkImportCats    = document.getElementById('stkImportCats');
 var stkImportText    = document.getElementById('stkImportText');
 
+// 认得的写法：「名字 链接」「名字：链接」「链接 名字」；名字单独一行、下一行是链接；一行里好几组「名字 链接」；
+// Markdown 图片 / 链接 ![名字](链接)；HTML <img src alt>
+var STK_URL_RE = /(https?:\/\/[^\s"'<>()（），。、；」』】]+|data:image\/[^\s"'<>]+)/gi;
+function stkCleanName(s) {
+  return String(s || '').replace(/^\s*(?:\d+[.、)）]|[-*•·#>]+)\s*(?=\S)/, '')
+    .replace(/^[\s:：,，;；|｜\-—=>→]+|[\s:：,，;；|｜\-—=>→]+$/g, '').trim();
+}
+function stkNormalizeText(text) {
+  return String(text || '')
+    .replace(/<img\b[^>]*>/gi, function(tag) {
+      var src = (tag.match(/\bsrc\s*=\s*["']?([^"'\s>]+)/i) || [])[1];
+      var alt = (tag.match(/\b(?:alt|title)\s*=\s*["']([^"']*)["']/i) || [])[1] || '';
+      return src ? '\n' + alt + ' ' + src + '\n' : '';
+    })
+    .replace(/!?\[([^\]\n]*)\]\(\s*<?((?:https?:|data:image\/)[^)\s>]+)>?[^)]*\)/g, '\n$1 $2\n');
+}
 function stkParseLines(text) {
-  var out = [];
-  String(text || '').split(/\r?\n/).forEach(function(line) {
-    var m = line.match(/(https?:\/\/[^\s"'<>]+|data:image\/[^\s"'<>]+)/i);
-    if (!m) return;
-    var url = m[1];
-    var name = (line.slice(0, m.index) + ' ' + line.slice(m.index + url.length))
-      .replace(/^[\s:：,，|｜\-—]+|[\s:：,，|｜\-—]+$/g, '').trim();
+  var out = [], seen = {}, prevName = '';
+  var add = function(name, url) {
+    if (seen[url]) return;
+    seen[url] = true;
     out.push({ name: (name || stkNameFromUrl(url)).slice(0, 30), url: url });
+  };
+  stkNormalizeText(text).split(/\r?\n/).forEach(function(line) {
+    var urls = [], m;
+    STK_URL_RE.lastIndex = 0;
+    while ((m = STK_URL_RE.exec(line))) urls.push({ url: m[1], at: m.index, end: STK_URL_RE.lastIndex });
+    if (!urls.length) {
+      var t = stkCleanName(line);
+      prevName = t.length <= 30 ? t : '';
+      return;
+    }
+    if (urls.length === 1) {
+      var u = urls[0];
+      add(stkCleanName(line.slice(0, u.at) + ' ' + line.slice(u.end)) || prevName, u.url);
+    } else {
+      // 一行好几个链接：每个链接前面那段是它的名字
+      urls.forEach(function(u, i) {
+        add(stkCleanName(line.slice(i ? urls[i - 1].end : 0, u.at)) || (i === 0 ? prevName : ''), u.url);
+      });
+    }
+    prevName = '';
   });
   return out;
+}
+
+// json：找「名字 → 链接」或带 url / src / link 之类字段的对象
+function stkFromJson(data) {
+  var out = [];
+  var isUrl = function(v) { return typeof v === 'string' && /^(https?:\/\/|data:image\/)/i.test(v.trim()); };
+  var NAME_K = /^(name|title|desc|description|key|label|alt|meaning|text|名字|名称|描述|含义|备注)$/i;
+  var URL_K = /^(url|src|link|href|image|img|path|uri|地址|链接|图片)$/i;
+  (function walk(v, key) {
+    if (isUrl(v)) { out.push((/^\d*$/.test(key) ? '' : key) + ' ' + v.trim()); return; }
+    if (Array.isArray(v)) { v.forEach(function(x) { walk(x, ''); }); return; }
+    if (!v || typeof v !== 'object') return;
+    var ks = Object.keys(v);
+    var uk = ks.filter(function(k) { return URL_K.test(k) && isUrl(v[k]); })[0];
+    if (uk) {
+      var nk = ks.filter(function(k) { return NAME_K.test(k) && typeof v[k] === 'string'; })[0];
+      out.push((nk ? v[nk] : '') + ' ' + v[uk].trim());
+      return;
+    }
+    ks.forEach(function(k) { walk(v[k], k); });
+  })(data, '');
+  return out.join('\n');
+}
+
+// docx：正文文字，挂在文字上的超链接也把地址读出来
+function stkReadDocx(buf) {
+  var rels = {};
+  return zipReadEntry(buf, function(n) { return n === 'word/_rels/document.xml.rels'; }).then(function(b) {
+    new TextDecoder().decode(b).replace(/<Relationship\b[^>]*>/g, function(tag) {
+      var id = (tag.match(/\bId="([^"]+)"/) || [])[1], t = (tag.match(/\bTarget="([^"]+)"/) || [])[1];
+      if (id && t && /^https?:/i.test(t)) rels[id] = t.replace(/&amp;/g, '&');
+      return '';
+    });
+  }, function() {}).then(function() {
+    return zipReadEntry(buf, function(n) { return n === 'word/document.xml'; });
+  }).then(function(bytes) {
+    var text = new TextDecoder().decode(bytes)
+      .replace(/<w:hyperlink\b[^>]*r:id="([^"]+)"[^>]*>([\s\S]*?)<\/w:hyperlink>/g, function(all, id, inner) {
+        var url = rels[id];
+        return url && inner.replace(/<[^>]+>/g, '').indexOf(url) < 0 ? inner + '<w:t> ' + url + ' </w:t>' : inner;
+      })
+      .replace(/<w:tab\/>/g, '\t')
+      .replace(/<w:br[^>]*\/>/g, '\n')
+      .replace(/<\/w:p>/g, '\n')
+      .replace(/<[^>]+>/g, '');
+    var ta = document.createElement('textarea');
+    ta.innerHTML = text;   // 解码 &amp; 等实体
+    // 老式 Word 的超链接是「HYPERLINK "地址"」域代码
+    return ta.value.replace(/\bHYPERLINK\s+"?([^"\s]+)"?/g, ' $1 ');
+  });
+}
+
+// 读文档：txt 先按 UTF-8 读，读不通再按 GBK（Windows 记事本存的中文常见）
+function stkReadDocText(file) {
+  var name = file.name.toLowerCase();
+  if (/\.docx$/.test(name)) return file.arrayBuffer().then(stkReadDocx);
+  if (/\.(doc|xls|xlsx|pdf)$/.test(name)) return Promise.reject(new Error('这种文档读不了，可以另存为 docx 或 txt 再导入'));
+  return file.arrayBuffer().then(function(buf) {
+    var text;
+    try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch (_) { text = new TextDecoder('gbk').decode(buf); }
+    text = text.replace(/^\uFEFF/, '');
+    if (/\.json$/.test(name) || /^\s*[\[{]/.test(text)) {
+      try { return stkFromJson(JSON.parse(text)); } catch (_) {}
+    }
+    return text;
+  });
 }
 
 // 分类小标签：点一下选中
@@ -365,6 +465,20 @@ document.getElementById('stkImportBtn').addEventListener('click', function(e) {
   stkImportOverlay.classList.add('open');
 });
 stkImportCat.addEventListener('input', refreshImportChips);
+
+// 从文档导入：认出来的「名字 链接」先填进下面的框里，看一眼、选好分类再点「导入」
+document.getElementById('stkImportDoc').addEventListener('click', function() {
+  pickFile('.txt,.md,.csv,.json,.docx,.html,.htm,text/plain,application/json', function(file) {
+    stkReadDocText(file).then(function(text) {
+      var list = stkParseLines(text);
+      if (!list.length) { showToast('没在文档里找到图片链接', 'error'); return; }
+      var cur = stkImportText.value.trim();
+      stkImportText.value = (cur ? cur + '\n' : '') + list.map(function(x) { return x.name + ' ' + x.url; }).join('\n');
+      stkImportText.scrollTop = stkImportText.scrollHeight;
+      showToast('✓ 认出 ' + list.length + ' 个表情包，选好分类后点「导入」', 'success');
+    }).catch(function(err) { showToast('✗ ' + (err.message || '读不了这个文档'), 'error'); });
+  });
+});
 document.getElementById('stkImportCancel').addEventListener('click', function() { stkImportOverlay.classList.remove('open'); });
 
 document.getElementById('stkImportOk').addEventListener('click', function() {
