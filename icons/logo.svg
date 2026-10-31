@@ -1,0 +1,81 @@
+<!-- 眠花糖机 logo：粉色月牙 + 趴着睡觉的小仓鼠 + 蓝色小花 + 云朵（透明底） -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="moonG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FBD7E1"/>
+      <stop offset="1" stop-color="#F3B0C4"/>
+    </linearGradient>
+    <linearGradient id="cloudG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF4F7"/>
+      <stop offset="1" stop-color="#FAD6E0"/>
+    </linearGradient>
+    <mask id="moonMask">
+      <rect width="512" height="512" fill="#fff"/>
+      <circle cx="302" cy="182" r="170" fill="#000"/>
+    </mask>
+    <clipPath id="bodyClip">
+      <path id="bodyPath" d="M200 290 C196 240 240 214 292 214 C346 214 388 240 384 292 C381 336 346 352 292 352 C238 352 203 336 200 290 Z"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(-4 18)">
+
+  <!-- 月牙 -->
+  <circle cx="228" cy="236" r="192" fill="url(#moonG)" mask="url(#moonMask)"/>
+
+  <!-- 耳朵 -->
+  <g stroke="#B98B6B" stroke-width="4" stroke-linejoin="round">
+    <circle cx="236" cy="226" r="17" fill="#F5D3B5"/>
+    <circle cx="236" cy="228" r="8" fill="#F6B9C6" stroke="none"/>
+    <circle cx="350" cy="222" r="17" fill="#F5D3B5"/>
+    <circle cx="350" cy="224" r="8" fill="#F6B9C6" stroke="none"/>
+  </g>
+
+  <!-- 身体：奶白色，背上一块浅杏色（仓鼠的花色） -->
+  <use href="#bodyPath" fill="#FFF8F0"/>
+  <g clip-path="url(#bodyClip)">
+    <path d="M190 200 L400 200 L400 262 Q376 250 352 262 Q322 246 292 256 Q262 246 232 262 Q208 250 190 262 Z" fill="#F7DCC2"/>
+  </g>
+  <use href="#bodyPath" fill="none" stroke="#B98B6B" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- 闭着的眼睛 -->
+  <g fill="none" stroke="#8A6250" stroke-width="4" stroke-linecap="round">
+    <path d="M258 292 Q268 300 278 292"/>
+    <path d="M306 292 Q316 300 326 292"/>
+  </g>
+  <!-- 腮红、鼻子、嘴 -->
+  <ellipse cx="248" cy="308" rx="13" ry="7" fill="#F7B6C4" opacity="0.85"/>
+  <ellipse cx="336" cy="308" rx="13" ry="7" fill="#F7B6C4" opacity="0.85"/>
+  <ellipse cx="292" cy="303" rx="4" ry="3" fill="#E9909F"/>
+  <path d="M285 310 Q288.5 314 292 310 Q295.5 314 299 310" fill="none" stroke="#8A6250" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- 云朵：垫在仓鼠右下，伸出月牙外 -->
+  <path d="M296 372 C278 372 274 350 292 346 C294 326 322 320 334 336 C342 314 376 310 388 330 C396 304 440 306 436 340 C454 340 464 370 444 382 L304 382 C298 382 294 376 296 372 Z"
+        fill="url(#cloudG)" stroke="#F2AFC3" stroke-width="3.5" stroke-linejoin="round"/>
+
+  <!-- 小爪子 -->
+  <g fill="#FFF8F0" stroke="#B98B6B" stroke-width="3.5">
+    <ellipse cx="274" cy="346" rx="13" ry="9"/>
+    <ellipse cx="310" cy="346" rx="13" ry="9"/>
+  </g>
+
+  <!-- 蓝色小花 -->
+  <g transform="translate(330 216) rotate(14)">
+    <g fill="#9DB6F2" stroke="#7192DE" stroke-width="2.5">
+      <ellipse cx="0" cy="-14" rx="9" ry="12"/>
+      <ellipse cx="0" cy="-14" rx="9" ry="12" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-14" rx="9" ry="12" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-14" rx="9" ry="12" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-14" rx="9" ry="12" transform="rotate(288)"/>
+    </g>
+    <circle r="6.5" fill="#FFF6D8" stroke="#F2C66E" stroke-width="2"/>
+  </g>
+
+  <!-- 蓝色小星星 + zz -->
+  <path d="M432 120 Q435 138 452 141 Q435 144 432 162 Q429 144 412 141 Q429 138 432 120 Z" fill="#9DB6F2"/>
+  <path d="M466 186 Q467.5 194 476 195.5 Q467.5 197 466 205 Q464.5 197 456 195.5 Q464.5 194 466 186 Z" fill="#B9CBF5"/>
+  <g fill="none" stroke="#F2AFC3" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M378 176 L392 176 L378 190 L392 190"/>
+    <path d="M400 150 L410 150 L400 160 L410 160"/>
+  </g>
+  </g>
+</svg>

@@ -3,7 +3,7 @@
 // 只处理本站文件，AI / 语音 / 生图等外部接口请求完全不经过这里。
 
 // 文件拆分后 css/、js/ 也要预先缓存；改动这个列表时把版本号加一
-const CACHE = 'mphone-v12';
+const CACHE = 'mphone-v13';
 const CSS = ['base', 'appearance', 'chat', 'notes', 'chat-list', 'char-settings', 'chat-room', 'mine',
              'dialogs', 'char-look', 'prompt', 'image-picker', 'messages', 'settings-subnav', 'prompt-presets', 'stickers']
   .map(function (n) { return './css/' + n + '.css'; });
@@ -15,7 +15,8 @@ const JS = ['00-boot', '01-core', '02-screens-appearance', '03-chat-tabs', '04-n
             '25-mcp', '26-desk-apps', '27-widgets', '28-memory', '29-quick-bar', '30-status-panel', '31-stickers']
   .map(function (n) { return './js/' + n + '.js'; });
 const CORE = ['./', './index.html', './manifest.webmanifest',
-              './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png']
+              './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
+              './icons/icon-maskable-512.png', './icons/logo.svg']
   .concat(CSS, JS);
 
 self.addEventListener('install', function (event) {

@@ -16,8 +16,10 @@
 - `css/`：16 个样式文件，`<link>` 顺序有影响。
 - `js/`：普通脚本（不是模块），由 `js/00-boot.js` 的 `MPHONE_SCRIPTS` 按顺序注入。所有顶层名字都是全局共享的。
   - 加载时调用后面文件里的函数会报错：用 `typeof` 判断，或者用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。
-  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v12`）。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v13`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。
+  - logo 源文件是 `icons/logo.svg`（透明底，载入页直接用它）；`icon-192/512` 透明底，`apple-touch-icon` 和 `icon-maskable-512` 带粉蓝渐变底（苹果桌面图标不支持透明，会变黑底）。
+  - 载入页在 `index.html` 开头（样式内联，小字随机），`js/00-boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
 - 文件都是 CRLF 换行。Git Bash 的 `sed -i` 会悄悄改成 LF，改文件请用 Edit 工具或 node 脚本。
 
 ## 主要模块（js/）
