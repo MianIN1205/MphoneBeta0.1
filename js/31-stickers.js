@@ -2,7 +2,8 @@
 
 // =============================================
 // 数据：{ cats: [{ id, name }], items: [{ id, name, url, cat }] }
-// 每个角色能不能发、能用哪些分类：char.stickerCfg = { on, cats: [分类 id] }
+// 每个角色能不能发、能用哪些分类、能不能看到图片：char.stickerCfg = { on, cats: [分类 id], see }
+// 发给 AI 看的小图：导入时把图床图片压成小图存在 b64 里；图床不让读取（跨域）就记 b64Fail，只发名字
 // 消息里的表情包：{ content: '[表情包：名字]', sticker: { name, url } }，发给 AI 的就是 content 这一句；
 // 图片打不开时气泡也显示这一句
 // =============================================
@@ -63,6 +64,61 @@ function stkImg(url, alt, onFail) {
   return img;
 }
 
+// =============================================
+// 给 AI 看的小图：长边 256，白底 JPEG（透明图不变黑，动图取第一帧）
+// =============================================
+function stkMakeThumb(url, cb) {
+  var done = false, img = new Image();
+  var finish = function(v) { if (!done) { done = true; cb(v); } };
+  img.crossOrigin = 'anonymous';
+  img.referrerPolicy = 'no-referrer';
+  img.onload = function() {
+    try {
+      var scale = Math.min(1, 256 / Math.max(img.naturalWidth, img.naturalHeight));
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      var g = c.getContext('2d');
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      finish(c.toDataURL('image/jpeg', 0.85));
+    } catch (_) { finish(null); }
+  };
+  img.onerror = function() { finish(null); };
+  setTimeout(function() { finish(null); }, 20000);
+  img.src = url;
+}
+// 还没存小图的表情包排队去存，同时最多 3 张
+var stkBusy = {}, stkRunning = 0;
+function stkCacheQueue(onEach) {
+  var next = stkData.items.filter(function(s) { return !s.b64 && !s.b64Fail && !stkBusy[s.id]; });
+  while (stkRunning < 3 && next.length) {
+    (function(s) {
+      stkBusy[s.id] = true;
+      stkRunning++;
+      stkMakeThumb(s.url, function(v) {
+        delete stkBusy[s.id];
+        stkRunning--;
+        if (v) { s.b64 = v; delete s.b64Fail; } else s.b64Fail = true;
+        saveStickers();
+        // 读不了的在抽屉里补上小灰点（不整个重画，免得正在翻的列表跳回顶上）
+        var el = !v && stkGrid.querySelector('.stk-item[data-id="' + s.id + '"]');
+        if (el) el.classList.add('no-see');
+        if (onEach) onEach(s);
+        stkCacheQueue(onEach);
+      });
+    })(next.shift());
+  }
+}
+
+// 用户发的表情包要带给 AI 的小图（这个角色打开了「能看到表情包图片」才有）
+function stickerImageForAI(m, char) {
+  if (!m.sticker || !stkCharCfg(char).see) return '';
+  var s = stkData.items.filter(function(x) { return x.url === m.sticker.url && x.b64; })[0];
+  return s ? s.b64 : '';
+}
+
 // 点一下 / 长按
 function stkPress(el, onTap, onLong) {
   var timer = null, fired = false, sx = 0, sy = 0;
@@ -118,7 +174,8 @@ function renderStickerDrawer() {
   }
   items.forEach(function(s) {
     var item = document.createElement('button');
-    item.className = 'stk-item';
+    item.className = 'stk-item' + (s.b64Fail ? ' no-see' : '');
+    item.dataset.id = s.id;
     var box = document.createElement('div');
     box.className = 'stk-thumb';
     var img = stkImg(s.url, s.name, function() { box.classList.add('broken'); box.textContent = s.name; });
@@ -146,6 +203,8 @@ function sendSticker(s) {
 
 if (crEmojiBtn) crEmojiBtn.addEventListener('click', renderStickerDrawer);
 renderStickerDrawer();
+// 以前导入、还没存小图的，打开应用一会儿后在后台补上
+setTimeout(function() { stkCacheQueue(); }, 4000);
 
 // =============================================
 // 打字联想：输入的文字和表情包名字对得上时，输入栏上方列出来，点一下发出去并清空输入框
@@ -324,6 +383,7 @@ document.getElementById('stkImportOk').addEventListener('click', function() {
   stkCurCat = cat.id;
   renderStickerDrawer();
   stkImportOverlay.classList.remove('open');
+  stkCacheQueue();
   showToast('✓ 导入了 ' + added + ' 个' + (skipped ? '，' + skipped + ' 个已经有了' : ''), 'success');
 });
 
@@ -346,8 +406,19 @@ function openStkEdit(s) {
   var pv = document.getElementById('stkEditPreview');
   pv.innerHTML = '';
   pv.appendChild(stkImg(s.url, s.name, function() { pv.textContent = '图片打不开'; }));
+  paintStkEditSee(s);
+  // 之前图床不让读取的，打开时再试一次
+  if (s.b64Fail) {
+    delete s.b64Fail;
+    paintStkEditSee(s);
+    stkCacheQueue(function(x) { if (x === stkEditTarget) paintStkEditSee(x); });
+  }
   refreshEditChips();
   stkEditOverlay.classList.add('open');
+}
+function paintStkEditSee(s) {
+  document.getElementById('stkEditSee').textContent = s.b64 ? '✓ 已存好给 TA 看的小图' :
+    s.b64Fail ? '图床不让读取这张图，TA 只能看到名字' : '正在存给 TA 看的小图…';
 }
 function closeStkEdit() { stkEditOverlay.classList.remove('open'); stkEditTarget = null; }
 document.getElementById('stkEditCancel').addEventListener('click', closeStkEdit);
@@ -446,6 +517,12 @@ function renderStkSetCats() {
   document.getElementById('stkSetEmpty').style.display = stkData.cats.length ? 'none' : '';
   stkSetCats.classList.toggle('off', !cfg.on);
 }
+var stkSeeOn = document.getElementById('stkSeeOn');
+stkSeeOn.addEventListener('change', function() {
+  if (!stkSetChar) return;
+  stkSetCfg().see = this.checked;
+  saveCharList();
+});
 stkAiOn.addEventListener('change', function() {
   if (!stkSetChar) return;
   var cfg = stkSetCfg();
@@ -461,6 +538,7 @@ document.getElementById('stkSetBtn').addEventListener('click', function(e) {
   if (!stkSetChar) return;
   document.getElementById('stkSetTitle').textContent = '表情包设置 · ' + (stkSetChar.charAlias || stkSetChar.charName || '未命名');
   stkAiOn.checked = !!stkCharCfg(stkSetChar).on;
+  stkSeeOn.checked = !!stkCharCfg(stkSetChar).see;
   renderStkSetCats();
   stkSetOverlay.classList.add('open');
 });

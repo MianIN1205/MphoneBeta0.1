@@ -1911,6 +1911,7 @@
         <div class="mine-acc-modal">
           <div class="mine-acc-title">编辑表情包</div>
           <div class="stk-edit-preview" id="stkEditPreview"></div>
+          <div class="stk-hint stk-edit-see" id="stkEditSee"></div>
           <input class="mine-field-input" id="stkEditName" type="text" placeholder="名字（帮 TA 认出这是什么表情）" maxlength="30">
           <div class="stk-chip-row" id="stkEditCats"></div>
           <div class="mine-acc-actions">
@@ -1946,6 +1947,11 @@
           <div class="stk-chip-row" id="stkSetCats"></div>
           <div class="stk-hint" id="stkSetEmpty" style="display:none;">还没有分类，先点 ＋ 导入表情包吧。</div>
           <div class="stk-hint">只把选中分类里的表情包名字告诉 TA，用来控制 TA 的风格。TA 回复里写「[表情包：名字]」就会显示成对应的表情包，不在这些分类里的只显示成文字。<br>图片打不开的表情包会显示成「[表情包：名字]」。</div>
+          <div class="auto-row">
+            <span class="auto-row-label">TA 能看到表情包图片</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="stkSeeOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="stk-hint">需要在设置里打开识图。只有最近几个回合（注意力范围）里你发的表情包会带上图片，按图片计费；更早的只发名字。<br>导入时会给每张表情包存一份小图发给 TA，图床以后打不开也不影响。右上角有小灰点的，是图床不让读取，TA 只能看到名字。</div>
           <div class="mine-acc-actions">
             <button class="mine-acc-btn mine-acc-btn-add" id="stkSetClose">好的</button>
           </div>

@@ -45,6 +45,19 @@
 }
 .stk-item:active .stk-thumb { transform: scale(0.92); }
 
+/* 图床不让读取、TA 只能看到名字的：右上角小灰点 */
+.stk-item.no-see .stk-thumb { position: relative; }
+.stk-item.no-see .stk-thumb::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(150, 130, 136, 0.75);
+}
+
 .stk-thumb img {
   width: 100%;
   height: 100%;
@@ -237,6 +250,9 @@
 }
 /* 角色没打开表情包时，分类选择变淡 */
 .stk-chip-row.off { opacity: 0.45; }
+
+#stkSetOverlay .mine-acc-modal { overflow-y: auto; }
+.stk-edit-see { text-align: center; }
 
 .stk-hint {
   font-size: 11px;

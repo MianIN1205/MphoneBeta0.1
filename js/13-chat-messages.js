@@ -274,7 +274,7 @@ function buildMsgs(idx, histOverride) {
   }
 
   var rawHist = history.map(function(m, i) {
-    return { role: m.role, content: msgContentForAI(m, i >= richFrom) };
+    return { role: m.role, content: msgContentForAI(m, i >= richFrom, char) };
   });
   // 聊天和剧情的记忆互通：带上另一边的前情（剧情窗口还带聊天的记忆总结），再说明现在在哪个空间
   var cross = crossSceneContext(idx, isDrama);
@@ -599,9 +599,14 @@ function msgTextForAI(m) {
 
 // 发给 AI 的消息内容。rich = 是否附带真实媒体（只对注意力范围内的用户消息）：
 // 图片 → 识图格式的真实图片；语音 →「发送音频」模式下附带录音（发送前转成 WAV），否则用转写文字
-function msgContentForAI(m, rich) {
+function msgContentForAI(m, rich, char) {
   var text = msgTextForAI(m);
   if (!rich || m.role !== 'user' || m.recalled) return text;
+  // 表情包：角色打开了「能看到表情包图片」时，带上导入时存好的小图（见 31-stickers.js）
+  if (m.sticker && mediaCfg.vision && typeof stickerImageForAI === 'function') {
+    var stk = stickerImageForAI(m, char);
+    if (stk) return [{ type: 'text', text: text }, { type: 'image_url', image_url: { url: stk } }];
+  }
   // 图片前面带一句文字：有些接口（如部分 Gemini 中转）不接受只有图片、没有文字的消息
   if (m.imgSrc && mediaCfg.vision) {
     var parts = [{ type: 'text', text: (m.quote ? '「引用 ' + m.quote.author + '：' + m.quote.text + '」\n' : '') + '（我发了一张图片）' }];
