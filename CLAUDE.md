@@ -18,7 +18,7 @@
   - 加载时调用后面文件里的函数会报错：用 `typeof` 判断，或者用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。
   - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v13`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。
-  - logo 是用户提供的图（粉色月牙 + 睡觉的小熊 + 蓝色小花）抠成透明底：`icon-192/512` 透明底（载入页也用 `icon-512`），`apple-touch-icon` 和 `icon-maskable-512` 带粉蓝渐变底（苹果桌面图标不支持透明，会变黑底）。
+  - logo 是用户提供的图（粉色月牙 + 睡觉的小熊 + 蓝色小花）抠成透明底、外面加一圈白色描边：`icon-192/512` 透明底（载入页也用 `icon-512`），`apple-touch-icon` 和 `icon-maskable-512` 带粉蓝渐变底（苹果桌面图标不支持透明，会变黑底）。
   - 载入页在 `index.html` 开头（样式内联，小字随机），`js/00-boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
 - 文件都是 CRLF 换行。Git Bash 的 `sed -i` 会悄悄改成 LF，改文件请用 Edit 工具或 node 脚本。
 
