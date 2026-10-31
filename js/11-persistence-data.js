@@ -126,7 +126,7 @@
   var importRow = document.querySelector('#settingsScreen .data-icon-import').closest('.card-row');
   var importInput = document.createElement('input');
   importInput.type = 'file';
-  importInput.accept = '.json,application/json';
+  importInput.accept = '.json,.txt,application/json,text/plain';   // 安卓分享出去的备份可能是 .txt
   importInput.style.display = 'none';
   document.body.appendChild(importInput);
 
@@ -206,6 +206,8 @@
   dockSettings.addEventListener('click', function() { setTimeout(renderUsage, 50); });
 
   exportRow.addEventListener('click', function() {
+    // 有分享面板时让用户选「分享 / 下载」（见 33-backup.js）
+    if (typeof openBackupExport === 'function') { openBackupExport(); return; }
     mphoneStore.flush();
     var data = {};
     mphoneStore.keys().forEach(function(k) { data[k] = mphoneStore.load(k, null); });

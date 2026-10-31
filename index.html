@@ -535,9 +535,43 @@
           </div>
           </div>
           </div>
-          <div class="data-legend" id="dataLegend"></div>
-          <div class="data-quota" id="dataQuota"></div>
-        </div>
+          <div class="data-legend" id="dataLegend"></div>
+          <div class="data-quota" id="dataQuota"></div>
+        </div>
+
+        <div class="section-label">备份</div>
+        <div class="settings-card auto-card">
+          <div class="auto-row">
+            <span class="auto-row-label">上次备份</span>
+            <span class="backup-last" id="backupLast">还没有备份过</span>
+          </div>
+          <div class="auto-row">
+            <span class="auto-row-label">备份提醒</span>
+            <select class="field-input" id="backupRemind" style="width:110px;flex:none;">
+              <option value="3">超过 3 天</option>
+              <option value="7">超过 7 天</option>
+              <option value="14">超过 14 天</option>
+              <option value="0">不提醒</option>
+            </select>
+          </div>
+          <div class="auto-hint">超过这么多天没备份、又有新内容时，打开小手机会提醒一下。iPhone 删掉桌面图标会把小手机的数据一起清掉，换图标、换手机前记得先备份。点上面的「数据备份」可以分享到「文件」、云盘、微信，或者下载到本机。</div>
+        </div>
+
+        <div class="section-label">云端备份</div>
+        <div class="settings-card auto-card">
+          <div class="auto-row">
+            <span class="auto-row-label">自动备份到 GitHub</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="cloudOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <input class="field-input backup-field" type="password" id="cloudToken" placeholder="GitHub 令牌（只需要 gist 权限）" autocomplete="off">
+          <input class="field-input backup-field" type="password" id="cloudPass" placeholder="备份密码（恢复时要用，一定记住）" autocomplete="new-password">
+          <div class="char-action-row">
+            <button class="char-action-btn char-upload-btn" id="cloudBackupNow">立即备份</button>
+            <button class="char-action-btn char-upload-btn" id="cloudRestore">从云端恢复</button>
+          </div>
+          <div class="auto-hint backup-status" id="cloudStatus"></div>
+          <div class="auto-hint">打开后，有新内容时自动把全部数据存到你自己 GitHub 账号里的一个私密代码片段（Gist），最多半小时一次。上传前先用备份密码加密，GitHub 上只是一串乱码；令牌和密码只存在这台手机上，不会进备份文件。<br>拿令牌：GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token，只勾「gist」，有效期可以选不过期。<br>换手机或重新添加桌面图标后：填上同一个令牌和密码，点「从云端恢复」。</div>
+        </div>
 
         </div><!-- /assist 面板 -->
 
@@ -2663,6 +2697,29 @@
     </div>
 
     <!-- Prompt 条目删除确认弹窗 -->
+    <!-- 导出备份：分享（存到文件 / 云盘 / 微信）或下载 -->
+    <div class="mine-acc-overlay" id="backupExportOverlay">
+      <div class="mine-acc-modal">
+        <div class="mine-acc-title">导出备份</div>
+        <div class="stk-hint" style="text-align:center;">存一份到小手机外面，删掉桌面图标或者换手机时可以导回来</div>
+        <button class="mine-acc-btn mine-acc-btn-add" id="backupShareBtn">分享（存到文件 / 云盘 / 微信）</button>
+        <button class="mine-acc-btn mine-acc-btn-close" id="backupDownloadBtn">下载到本机</button>
+        <button class="mine-acc-btn mine-acc-btn-close" id="backupExportCancel">取消</button>
+      </div>
+    </div>
+
+    <!-- 好几天没备份时的提醒 -->
+    <div class="mine-acc-overlay" id="backupRemindOverlay">
+      <div class="mine-acc-modal">
+        <div class="mine-acc-title">备份一下吧</div>
+        <div class="stk-hint" id="backupRemindText" style="text-align:center;"></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="backupRemindLater">明天再说</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="backupRemindNow">现在备份</button>
+        </div>
+      </div>
+    </div>
+
     <div class="book-del-confirm-overlay" id="pfEntryDelOverlay">
       <div class="book-del-confirm-box">
         <div class="book-del-confirm-title" id="pfEntryDelTitle">删除此条目？</div>
