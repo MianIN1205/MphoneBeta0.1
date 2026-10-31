@@ -16,7 +16,7 @@ const JS = ['00-boot', '01-core', '02-screens-appearance', '03-chat-tabs', '04-n
   .map(function (n) { return './js/' + n + '.js'; });
 const CORE = ['./', './index.html', './manifest.webmanifest',
               './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
-              './icons/icon-maskable-512.png', './icons/logo.svg']
+              './icons/icon-maskable-512.png']
   .concat(CSS, JS);
 
 self.addEventListener('install', function (event) {
