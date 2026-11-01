@@ -11,6 +11,9 @@
   justify-items: stretch; align-items: stretch; position: relative;
 }
 .desk-grid > .dock-item { justify-content: center; align-items: center; touch-action: none; }
+/* 小组件排好之前先不显示，排好后淡入 */
+.desktop-apps.desk-grid { transition: opacity 0.25s ease; }
+.desktop-apps.desk-grid:not(.desk-ready) { opacity: 0; }
 
 /* 小组件占 2×2：面板左右和两边图标的外沿对齐，上沿对齐第一行图标，下沿对齐第二行图标；底下是名字，和图标名字在同一行 */
 .desk-widget {

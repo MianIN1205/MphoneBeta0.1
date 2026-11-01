@@ -169,6 +169,7 @@ function renderWidgets() {
   });
   // 编辑时把空格子也撑出来，方便拖过去
   deskGrid.style.minHeight = deskEditing ? (Math.max(maxRow, deskRows()) * cell) + 'px' : '';
+  deskGrid.classList.add('desk-ready');
 }
 function removeWidget(w) {
   openConfirm('移除这个小组件？', function() {
@@ -381,4 +382,9 @@ document.getElementById('wgDelete').addEventListener('click', function() {
 
 // 聊天、头像、纪念日变化后，回到桌面时刷新一下小组件
 document.querySelectorAll('.back-btn').forEach(function(b) { b.addEventListener('click', function() { setTimeout(renderWidgets, 0); }); });
-renderWidgets();
+// 第一次排好之前桌面格子先不显示（不然程序图标会先挤在小组件的位置上）；全部脚本加载完再排一次，万一第一次出错也能补上
+try { renderWidgets(); } catch (e) { console.error('[Mphone] 桌面第一次排版失败，加载完再试:', e); }
+onMphoneReady(function() {
+  try { renderWidgets(); } catch (e) { console.error('[Mphone] 桌面排版失败:', e); }
+  deskGrid.classList.add('desk-ready');
+});
