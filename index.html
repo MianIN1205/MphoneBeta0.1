@@ -1205,9 +1205,10 @@
           <span class="auto-row-label">每年都提醒（生日等）</span>
           <label class="st-toggle-wrap"><input type="checkbox" id="annivYearly"><span class="st-toggle-slider"></span></label>
         </div>
-        <div class="stk-set-label">和谁有关（不选就是只和我有关）</div>
+        <div class="stk-set-label">和谁有关</div>
         <div class="stk-chip-row" id="annivPeople"></div>
-        <div class="stk-hint">角色只看得到和自己、和你有关的日子，还有 TA 认识的人（社交圈）的；不认识的人的看不到。</div>
+        <input class="mine-field-input" id="annivNpc" type="text" placeholder="小手机外的人，比如妈妈、同事（可不填）" maxlength="30">
+        <div class="stk-hint">站在每个角色的角度：char 是 TA 自己，user 是你，其他人（小手机里的别的角色、你身边的人）都是 NPC。<br>TA 看得到：和自己、和你有关的，以及和 TA 认识的角色（社交圈）有关的；和 TA 不认识的角色有关的看不到。只和你、你身边的人有关的，所有角色都知道。</div>
         <div class="mine-acc-actions">
           <button class="mine-acc-btn mine-acc-btn-close" id="annivCancel">取消</button>
           <button class="mine-acc-btn mine-acc-btn-add" id="annivSave">保存</button>
@@ -2727,19 +2728,6 @@
     </div>
 
     <!-- Prompt 条目删除确认弹窗 -->
-    <!-- 推送到手机日历：日历文件（iPhone / 安卓的日历都认）或 Google 日历 -->
-    <div class="mine-acc-overlay" id="calPushOverlay">
-      <div class="mine-acc-modal">
-        <div class="mine-acc-title">推送到手机日历</div>
-        <div class="cal-push-info" id="calPushInfo"></div>
-        <button class="mine-acc-btn mine-acc-btn-add" id="calPushFile">打开日历文件</button>
-        <button class="mine-acc-btn mine-acc-btn-close" id="calPushShare">分享日历文件</button>
-        <button class="mine-acc-btn mine-acc-btn-close" id="calPushGoogle">用 Google 日历添加</button>
-        <button class="mine-acc-btn mine-acc-btn-close" id="calPushCancel">取消</button>
-        <div class="stk-hint">内容和提醒时间都填好了，手机弹出预览后点「添加」就行，不用再自己填。不同手机支持的方式不一样，哪个能用就用哪个；Google 日历会用它自己的默认提醒时间。</div>
-      </div>
-    </div>
-
     <!-- 导出备份：分享（存到文件 / 云盘 / 微信）或下载 -->
     <div class="mine-acc-overlay" id="backupExportOverlay">
       <div class="mine-acc-modal">

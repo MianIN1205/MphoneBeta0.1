@@ -109,7 +109,8 @@ document.querySelectorAll('#galleryFilter .pf-radio-btn').forEach(function(btn) 
 // · 置顶：在列表里排最前；外显：显示在桌面的纪念日小组件上
 // =============================================
 var annivs = mphoneStore.load('mphone_annivs', []);              // [{ id, kind: 'anniv' | 'event', title, date, time, yearly, pin, show, charIds, remind, by }]
-// charIds：和谁有关（空 = 只和用户有关）；remind：角色帮忙记的「提醒 / 闹钟 / 日程」；by：哪个角色记的
+// 和谁有关：withUser（user，默认有）、charIds（小手机里的角色）、npc（小手机外的人，文字）；
+// remind：角色帮忙记的「提醒 / 闹钟 / 日程」；by：哪个角色记的
 var annivFlags = mphoneStore.load('mphone_anniv_flags', {});     // 自动条目的置顶 / 外显：{ 'auto_角色id': { pin, show } }
 var DAY_MS = 86400000;
 function dayStart(t) { var d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
@@ -135,7 +136,7 @@ function annivEntries() {
   });
   annivs.forEach(function(a) {
     var t = parseYmd(a.date), e = { id: a.id, kind: a.kind || 'anniv', a: a, title: a.title, date: t, time: a.time || '', pin: !!a.pin, show: !!a.show,
-      charIds: a.charIds || [], remind: a.remind || '', unit: '天' };
+      charIds: a.charIds || [], remind: a.remind || '', npc: a.npc || '', withUser: a.withUser !== false, unit: '天' };
     if (e.kind === 'anniv' && a.yearly) {
       var d = new Date(t), y = new Date(today).getFullYear();
       var next = new Date(y, d.getMonth(), d.getDate()).getTime();
@@ -170,13 +171,19 @@ function calendarContextFor(char) {
   annivEntries().forEach(function(e) {
     if (e.auto) { if (e.charId === char.id) known = '今天是你们认识的第 ' + e.big + ' 天。'; return; }
     if (e.past || items.length >= 8 || !annivVisibleTo(e, char)) return;
-    var who = (e.charIds || []).map(function(id) { return id === char.id ? '你' : annivCharName(id); }).filter(Boolean);
-    var title = (e.remind ? '（' + e.remind + '）' : '') + e.title + (who.length ? '〔和' + who.join('、') + '〕' : '');
+    // 站在这个角色的角度：char = TA 自己，user = 用户，其他人（别的角色、用户身边的人）都是 NPC
+    var who = [], npcs = (e.charIds || []).filter(function(id) { return id !== char.id; }).map(annivCharName).filter(Boolean).concat(e.npc ? [e.npc] : []);
+    if (e.withUser) who.push('{{user}}');
+    if ((e.charIds || []).indexOf(char.id) >= 0) who.push('你');
+    if (npcs.length) who.push('NPC：' + npcs.join('、'));
+    var whoText = (who.length && !(who.length === 1 && e.withUser)) ? '〔和谁有关：' + who.join('，') + '〕' : '';
+    var title = (e.remind ? '（' + e.remind + '）' : '') + e.title + whoText;
     if (e.today) items.push((e.kind === 'event' ? '今天的日程：' : '今天是纪念日：') + title + (e.time ? '（' + e.time + '）' : ''));
     else if (e.note === '还有' && e.big <= 30) items.push(title + '：还有 ' + e.big + ' 天' + (e.kind === 'event' && e.time ? '（' + e.time + '）' : ''));
     else if (e.kind === 'anniv' && e.note === '已经') items.push(title + '：已经 ' + e.big + ' 天');
+    else if (e.kind === 'anniv' && e.note === '第') items.push('今天是纪念日：' + title + '（第 1 天）');
   });
-  return known + (known && items.length ? '\n' : '') + (items.length ? '{{user}}手机日历里记着的纪念日和日程：\n' + items.map(function(t) { return '· ' + t; }).join('\n') : '');
+  return known + (known && items.length ? '\n' : '') + (items.length ? '{{user}}小手机日历里记着的纪念日和日程：\n' + items.map(function(t) { return '· ' + t; }).join('\n') : '');
 }
 
 // 小组件上显示的：设了外显的；都没设就用置顶的；还没有就用排在最前的一条
@@ -214,8 +221,8 @@ function renderAnnivs() {
     t.textContent = (e.kind === 'event' ? (CAL_ICON[e.remind] || '🗓') + ' ' : '') + e.title + (e.a && e.a.yearly ? ' 🔁' : '');
     var d = document.createElement('div');
     d.className = 'anniv-date';
-    var who = (e.charIds || []).map(annivCharName).filter(Boolean);
-    d.textContent = deskDateText(e.date) + (e.time ? ' ' + e.time : '') + (who.length ? ' · 和 ' + who.join('、') : '');
+    var who = (e.charIds || []).map(annivCharName).filter(Boolean).concat(e.npc ? [e.npc] : []);
+    d.textContent = deskDateText(e.date) + (e.time ? ' ' + e.time : '') + (who.length ? ' · ' + (e.withUser ? '和 ' : '') + who.join('、') : '');
     info.appendChild(t);
     info.appendChild(d);
     var num = document.createElement('div');
@@ -238,11 +245,6 @@ function renderAnnivs() {
       acts.appendChild(b);
     });
     if (e.a) {
-      var push = document.createElement('button');
-      push.className = 'anniv-flag';
-      push.textContent = '📲 推送到手机';
-      push.addEventListener('click', function() { if (typeof openCalPush === 'function') openCalPush(e.a); });
-      acts.appendChild(push);
       var del = document.createElement('button');
       del.className = 'anniv-flag anniv-del';
       del.textContent = '删除';
@@ -267,11 +269,16 @@ function annivCharName(id) {
   var c = charList.filter(function(x) { return x.id === id; })[0];
   return c ? (c.charAlias || c.charName || '') : '';
 }
-// 和谁有关：点角色名选上 / 取消
-var annivPeople = [];
+// 和谁有关：user（默认选上）+ 点角色名选 char；NPC 在下面的输入框里写
+var annivPeople = [], annivWithUser = true;
 function renderAnnivPeople() {
   var box = document.getElementById('annivPeople');
   box.innerHTML = '';
+  var u = document.createElement('button');
+  u.className = 'stk-chip' + (annivWithUser ? ' selected' : '');
+  u.textContent = 'user';
+  u.addEventListener('click', function() { annivWithUser = !annivWithUser; renderAnnivPeople(); });
+  box.appendChild(u);
   charList.forEach(function(c) {
     var b = document.createElement('button');
     b.className = 'stk-chip' + (annivPeople.indexOf(c.id) >= 0 ? ' selected' : '');
@@ -303,6 +310,8 @@ document.getElementById('annivAddBtn').addEventListener('click', function() {
   document.getElementById('annivYearly').checked = false;
   setAnnivKind('anniv');
   annivPeople = [];
+  annivWithUser = true;
+  document.getElementById('annivNpc').value = '';
   renderAnnivPeople();
   annivOverlay.classList.add('open');
 });
@@ -316,7 +325,7 @@ document.getElementById('annivSave').addEventListener('click', function() {
     id: 'an' + Date.now().toString(36), kind: annivKind, title: titleEl.value.trim(), date: dateEl.value,
     time: annivKind === 'event' ? document.getElementById('annivTime').value : '',
     yearly: annivKind === 'anniv' && document.getElementById('annivYearly').checked, pin: false, show: false,
-    charIds: annivPeople.slice()
+    charIds: annivPeople.slice(), withUser: annivWithUser, npc: document.getElementById('annivNpc').value.trim()
   });
   saveAnnivs();
   annivOverlay.classList.remove('open');

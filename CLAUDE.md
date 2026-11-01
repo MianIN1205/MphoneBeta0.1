@@ -47,7 +47,7 @@
 | 31-stickers | 表情包（图床链接导入（也能从 txt / docx / json / md / csv 文档自动识别）、分类、名字辅助识别、打字联想；消息存 `[表情包：名字]` + 图片地址，打不开时显示这句文字；每个角色单独设置能不能发、能用哪些分类、能不能看到图片：`char.stickerCfg`；导入时把图片压成小图存 `b64` 给 AI 看，图床跨域读不了记 `b64Fail`） |
 | 32-msg-ops | 消息多选（批量删除 / 合并收藏）、删除本轮回复、从某一轮重新生成、清空聊天 / 剧情记录。撤回：`m.recalledBy` 为 `user`（你撤回的，自己或角色的消息）或 `char`（角色回复里写 `<撤回>…</撤回>`，先显示两秒再变撤回提示，角色设置可开「偷看」） |
 | 33-backup | 备份：「数据备份」弹出分享（存到文件 / 云盘 / 微信，安卓不认 .json 就用 .txt）或下载；备份提醒（`mphone_backup_meta` 记上次备份和最近改动，这一项不进备份）；自动加密备份到 GitHub Gist（PBKDF2 + AES-GCM，gzip 压缩；令牌和密码存 localStorage 的 `mphoneCloudToken` / `mphoneCloudPass`，不进备份）。iPhone 删掉桌面图标会连数据一起清掉 |
-| 34-calendar | 角色回复里的 `<日程 类型="提醒/闹钟/日程 三选一" 时间="YYYY-MM-DD HH:MM">事</日程>` 直接记进桌面「纪念日」（`annivs` 里 `remind` / `by` / `charIds`），聊天里出一张卡片；「推送到手机日历」：日历文件 .ics（带提醒）/ 分享 / Google 日历链接。纪念日按 `charIds` 决定角色看不看得到：只和用户有关的、和自己有关的、和社交圈里认识的人有关的（`annivVisibleTo`） |
+| 34-calendar | 角色回复里的 `<日程 类型="提醒/闹钟/日程 三选一" 时间="YYYY-MM-DD HH:MM">事</日程>` 直接记进桌面「纪念日」（`annivs` 里 `remind` / `by` / `charIds`），聊天里出一张卡片。只记在小手机里，不加到手机系统日历（试过 .ics / Google 日历，用户觉得麻烦，先不做）。纪念日按 `charIds` 决定角色看不看得到：只和用户有关的、和自己有关的、和社交圈里认识的人有关的（`annivVisibleTo`）。用户说的 char / user / NPC 都站在当前角色的角度：char = 这个角色本人，user = 用户，NPC = 其他所有人（小手机里别的角色 + 用户身边的人，后者存在 `npc` 文字里） |
 
 ## 测试
 - 内置浏览器面板里 service worker 注册不上（控制台有 “fetching the script” 报错），这是环境问题，不是 bug。

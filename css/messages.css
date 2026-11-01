@@ -336,5 +336,3 @@
 #appChatRoom.cr-no-avatar .cr-cal-card { margin-left: 0; }
 .cr-cal-head { font-weight: 600; color: #6a82c0; }
 .cr-cal-body { font-size: 13px; color: #555; white-space: pre-wrap; }
-.cal-push-info { white-space: pre-line; text-align: center; font-size: 13px; color: #555; line-height: 1.6; }
-#calPushOverlay .mine-acc-btn { flex: none; width: 100%; }
