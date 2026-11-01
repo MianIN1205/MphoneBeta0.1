@@ -40,7 +40,7 @@ notifyOnInput.addEventListener('change', function() {
 
 // 发一条系统通知（有后台缓存程序时用它发，安卓只认这种；直接打开本地文件时退回普通通知）
 function showSystemNotification(title, body, opts) {
-  var options = Object.assign({ body: body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' }, opts || {});
+  var options = Object.assign({ body: body, icon: 'icons/icon.png', badge: 'icons/icon.png' }, opts || {});
   var direct = function() { try { new Notification(title, options); } catch (_) {} };
   if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) { direct(); return; }
   navigator.serviceWorker.getRegistration().then(function(reg) {
@@ -51,7 +51,7 @@ function showSystemNotification(title, body, opts) {
 // 头像图片不太大时用作通知图标
 function notifyIcon(char) {
   var av = char && char.charAvatar;
-  return av && av.length < 300000 ? av : 'icons/icon-192.png';
+  return av && av.length < 300000 ? av : 'icons/icon.png';
 }
 // 角色发来的新消息（只在应用处于后台时通知）
 function notifyNewMessages(char, added) {
@@ -121,7 +121,7 @@ function startKeepAlive() {
     keepAliveAudio.setAttribute('playsinline', '');
   }
   if ('mediaSession' in navigator && window.MediaMetadata) {
-    navigator.mediaSession.metadata = new MediaMetadata({ title: '眠花糖机 后台运行中', artist: '后台保活', artwork: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] });
+    navigator.mediaSession.metadata = new MediaMetadata({ title: '眠花糖机 后台运行中', artist: '后台保活', artwork: [{ src: 'icons/icon.png', sizes: '512x512', type: 'image/png' }] });
   }
   return keepAliveAudio.play();
 }

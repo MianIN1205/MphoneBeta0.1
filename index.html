@@ -12,28 +12,24 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="眠花糖机">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon.png">
   <!-- 载入页的样式直接写在这里：不用等样式文件下载，一打开就能画出来 -->
   <style>
     #bootSplash {
       position: fixed; inset: 0; z-index: 99999;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
       background: linear-gradient(160deg, #FFE6EF 0%, #F6E7F6 48%, #DFE7FB 100%);
-      transition: opacity 0.4s ease, transform 0.4s ease;
+      transition: opacity 0.4s ease;
     }
-    #bootSplash.hide { opacity: 0; transform: scale(1.02); pointer-events: none; }
+    #bootSplash.hide { opacity: 0; pointer-events: none; }
+    /* logo 沿着轮廓发一圈柔柔的白光，再带一点淡紫的影子，和渐变背景分开层次 */
     #bootSplash img {
       width: 160px; height: 160px;
-      filter: drop-shadow(0 6px 16px rgba(170, 140, 190, 0.22));
-      animation: bootBreath 2.4s ease-in-out infinite;
+      filter: drop-shadow(0 0 4px rgba(255,255,255,0.95)) drop-shadow(0 0 12px rgba(255,255,255,0.85)) drop-shadow(0 10px 18px rgba(130,95,160,0.38));
     }
     #bootSplash .boot-name { margin-top: -4px; font-size: 18px; font-weight: 600; letter-spacing: 3px; color: #7a6080; }
     #bootSplash .boot-sub { font-size: 12px; letter-spacing: 1px; color: #a594b0; }
-    @keyframes bootBreath {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.03); opacity: 0.9; }
-    }
   </style>
   <!-- 样式：按功能分在 core / desk / settings / chat / char / prompt 文件夹里；顺序不能乱（后面的覆盖前面的） -->
   <link rel="stylesheet" href="css/core/base.css">
@@ -74,7 +70,7 @@
 <body class="phone-fullscreen">
   <!-- 载入页：脚本全部加载完后淡出（见 js/core/boot.js） -->
   <div id="bootSplash">
-    <img src="icons/icon-512.png" alt="">
+    <img src="icons/logo.png" alt="">
     <div class="boot-name">眠花糖机</div>
     <div class="boot-sub" id="bootSub">正在醒来…</div>
   </div>
