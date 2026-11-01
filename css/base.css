@@ -52,7 +52,9 @@ html {
 .phone.fullscreen .book-del-confirm-overlay,
 .phone.fullscreen .shelf-full-overlay,
 .phone.fullscreen .book-viewer-backdrop,
-.phone.fullscreen .new-chat-overlay {
+.phone.fullscreen .new-chat-overlay,
+.phone.fullscreen .mine-acc-overlay,
+.phone.fullscreen .img-picker-overlay {
   border-radius: 0 !important;
 }
 
