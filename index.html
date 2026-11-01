@@ -83,6 +83,15 @@
   </script>
   <div class="phone fullscreen">
 
+    <!-- 小手机里的消息横幅：在小手机里、但没在看这个对话时收到消息，从顶部弹出（见 js/settings/assist.js showInAppNotice） -->
+    <div class="inapp-notice" id="inappNotice">
+      <div class="chat-msg-avatar inapp-av"></div>
+      <div class="inapp-body">
+        <div class="inapp-head"><span class="inapp-name"></span><span class="inapp-time">刚刚</span></div>
+        <div class="inapp-text"></div>
+      </div>
+    </div>
+
     <!-- 状态栏 -->
     <div class="status-bar" id="statusBar">
       <div class="status-left" style="display:flex;align-items:center;">

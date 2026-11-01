@@ -279,11 +279,11 @@ function showToast(msg, type) {
     'top:60px',
     'left:50%',
     'transform:translateX(-50%)',
-    // 半透明 + 毛玻璃：后面的内容隐约透出来，字还看得清
-    'background:' + (type === 'success' ? 'rgba(56,168,90,0.72)' : 'rgba(210,60,60,0.72)'),
+    // 半透明 + 毛玻璃：后面的内容隐约透出来，字还看得清；type 为 'plain' 时是白色底、深灰字（新动态这类普通消息）
+    'background:' + (type === 'success' ? 'rgba(56,168,90,0.72)' : type === 'plain' ? 'rgba(255,255,255,0.72)' : 'rgba(210,60,60,0.72)'),
     'backdrop-filter:blur(10px)',
     '-webkit-backdrop-filter:blur(10px)',
-    'color:#fff',
+    'color:' + (type === 'plain' ? '#5a4a52' : '#fff'),
     'padding:7px 20px',
     'border-radius:20px',
     'font-size:13px',

@@ -112,7 +112,8 @@ function autoSendMessage(idx) {
     if (!viewing) {
       chatUnread[char.id] = (chatUnread[char.id] || 0) + added.length;
       mphoneStore.save('mphone_unread', chatUnread);
-      showToast('「' + charAuthor(char).name + '」给你发来一条消息', 'success');
+      if (typeof showInAppNotice === 'function') showInAppNotice(char, added);
+      else showToast('「' + charAuthor(char).name + '」给你发来一条消息', 'success');
     }
     if (typeof notifyNewMessages === 'function') notifyNewMessages(char, added);
     renderChatCharList();

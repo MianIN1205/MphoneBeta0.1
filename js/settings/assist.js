@@ -67,6 +67,75 @@ function notifyFeedPost(char, post) {
     { icon: notifyIcon(char), tag: 'feed', renotify: true, data: { open: 'feed' } });
 }
 
+// 小手机里的消息横幅：在小手机里、但没在看这个对话时收到消息，从顶部弹出（头像、名字、内容），点一下进对话，4 秒后收起
+// 往上滑可以收起；滑掉以后同一个角色的这一轮回复不再弹（下一轮、别的角色照常弹）。小手机在后台时不弹（那时走系统通知）
+var inappNotice = document.getElementById('inappNotice');
+var inappTimer = null;
+var inappDismissed = {};   // 角色 id → 滑掉的那一轮回复的时间
+function hideInAppNotice() {
+  clearTimeout(inappTimer);
+  inappNotice.classList.remove('show');
+  inappNotice.style.transform = '';
+  inappNotice.style.opacity = '';
+}
+function showInAppNotice(char, added) {
+  if (!char || !added || !added.length || document.visibilityState !== 'visible') return;
+  var round = added[0].time || 0;
+  if (round && inappDismissed[char.id] === round) return;
+  inappNotice._round = round;
+  paintCharAvatar(inappNotice.querySelector('.inapp-av'), char);
+  inappNotice.querySelector('.inapp-name').textContent = char.charAlias || char.charName || '新消息';
+  var last = added[added.length - 1];
+  inappNotice.querySelector('.inapp-text').textContent = fillMacros(msgPreviewText(last), char) + (added.length > 1 ? '（共 ' + added.length + ' 条）' : '');
+  inappNotice._charId = char.id;
+  inappNotice.classList.add('show');
+  clearTimeout(inappTimer);
+  inappTimer = setTimeout(hideInAppNotice, 4000);
+}
+// 手指跟着往上推，推过一段就收起；几乎没动就算点一下
+var inappDrag = null;
+inappNotice.addEventListener('pointerdown', function(e) {
+  inappDrag = { y: e.clientY, dy: 0 };
+  clearTimeout(inappTimer);
+  inappNotice.style.transition = 'none';
+  try { inappNotice.setPointerCapture(e.pointerId); } catch (_) {}
+});
+inappNotice.addEventListener('pointermove', function(e) {
+  if (!inappDrag) return;
+  inappDrag.dy = Math.min(0, e.clientY - inappDrag.y);
+  inappNotice.style.transform = 'translateY(' + inappDrag.dy + 'px)';
+  inappNotice.style.opacity = String(Math.max(0.2, 1 + inappDrag.dy / 80));
+});
+function endInAppDrag() {
+  if (!inappDrag) return;
+  var dy = inappDrag.dy;
+  inappDrag = null;
+  inappNotice.style.transition = '';
+  if (dy < -25) {
+    // 滑掉：这一轮回复记下来，不再弹
+    inappDismissed[inappNotice._charId] = inappNotice._round;
+    inappNotice.style.transform = 'translateY(-30px)';
+    inappNotice.style.opacity = '0';
+    setTimeout(hideInAppNotice, 220);
+    return;
+  }
+  inappNotice.style.transform = '';
+  inappNotice.style.opacity = '';
+  if (dy > -6) openFromInAppNotice();
+  else inappTimer = setTimeout(hideInAppNotice, 4000);
+}
+inappNotice.addEventListener('pointerup', endInAppDrag);
+inappNotice.addEventListener('pointercancel', function() { if (inappDrag) { inappDrag.dy = 0; inappDrag = null; inappNotice.style.transition = ''; inappNotice.style.transform = ''; inappNotice.style.opacity = ''; inappTimer = setTimeout(hideInAppNotice, 4000); } });
+function openFromInAppNotice() {
+  var id = inappNotice._charId;
+  hideInAppNotice();
+  // 先收起正开着的别的界面（设置、外观、角色设置…），再进对话
+  document.querySelectorAll('.app-screen.active, .settings-screen.active').forEach(function(s) {
+    if (s.id !== 'appChat' && s.id !== 'appChatRoom') s.classList.remove('active');
+  });
+  openFromNotification({ open: 'chat', charId: id });
+}
+
 // 点通知：打开对应的对话 / 动态
 function openFromNotification(data) {
   data = data || {};

@@ -468,7 +468,7 @@ function generateCharPost(idx) {
     });
     saveFeed();
     renderFeed();
-    showToast('「' + charAuthor(char).name + '」发布了新动态', 'success');
+    showToast('「' + charAuthor(char).name + '」发布了新动态', 'plain');
     memLogFeed(char, '我在动态里发了：' + feedPosts[0].text.slice(0, 80));
     if (typeof notifyFeedPost === 'function') notifyFeedPost(char, feedPosts[0]);
   });

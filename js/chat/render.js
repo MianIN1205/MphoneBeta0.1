@@ -87,6 +87,13 @@ function placeActionNotes(row) {
 function renderHistMsg(m, list, empty) {
   list = list || getActiveMsgListEl();
   empty = empty || getActiveEmptyEl();
+  // 以前角色忘了写 </status>，状态原样留在了消息文字里：拿出来放回状态栏
+  if (m.role === 'assistant' && typeof m.content === 'string' && /<status>/i.test(m.content) && typeof takeStatus === 'function') {
+    var st = takeStatus(m.content);
+    m.content = st.text;
+    if (st.status && !m.status) m.status = st.status;
+    if (typeof saveHistories === 'function') setTimeout(saveHistories, 0);
+  }
   // 和上一条相隔 5 分钟以上（或是这一屏第一条）时，先插一条居中的时间
   if (m.time) {
     if (!list._lastTime || m.time - list._lastTime >= 5 * 60000) {

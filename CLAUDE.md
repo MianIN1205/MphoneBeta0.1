@@ -28,7 +28,7 @@
 | 文件 | 内容 |
 |---|---|
 | boot | `mphoneStore`（IndexedDB 键值存储，键名都以 `mphone_` 开头）、载入页、脚本加载清单 `MPHONE_SCRIPTS` |
-| utils | 公共工具：`openConfirm` 确认弹窗（全站共用）、`closeOnBackdrop` 点遮罩关闭、`bindPress` 点一下 / 长按、`downloadBlob` / `shareOrDownload` 保存文件、`zipReadEntry` / `readDocxText` 读 zip 和 docx、时间格式（`fmtMsgTime` / `fmtListTime` / `fmtAgo` / `durText`）、左滑操作 `bindSwipeActions`、`showToast` |
+| utils | 公共工具：`openConfirm` 确认弹窗（全站共用）、`closeOnBackdrop` 点遮罩关闭、`bindPress` 点一下 / 长按、`downloadBlob` / `shareOrDownload` 保存文件、`zipReadEntry` / `readDocxText` 读 zip 和 docx、时间格式（`fmtMsgTime` / `fmtListTime` / `fmtAgo` / `durText`）、左滑操作 `bindSwipeActions`、`showToast(msg, type)`（半透明：success 绿、error 红、plain 白底深灰字） |
 | api-errors | 接口报错记录（不记密钥），供 MianIN 答疑 |
 | llm | `llmRequest` 统一调用各家模型（Claude 原生接口，其余走 OpenAI 兼容），以及工具调用循环 |
 | mcp | MCP 客户端（Streamable HTTP） |
@@ -50,7 +50,7 @@
 |---|---|
 | api / api-restore | 设置页本身、主 API、API 预设和字体预设、温度；启动时恢复主 API |
 | media-api | 语音 API（TTS）与生图 API |
-| assist | 辅助功能：通知、后台保活 |
+| assist | 辅助功能：系统通知（小手机在后台时）、小手机里的消息横幅 `showInAppNotice`（在小手机里但没在看那个对话时，代替以前的绿色提示；点一下进对话，往上滑收起，滑掉后同一角色的这一轮回复不再弹）、后台保活 |
 | data | 数据管理：占用圆环、导入备份；末尾还有一句启动时画聊天列表（保持原来的时机） |
 | backup | 导出（分享 / 下载，安卓不认 .json 就用 .txt）、备份提醒（`mphone_backup_meta` 不进备份）、自动加密备份到 GitHub Gist（PBKDF2 + AES-GCM，gzip；令牌和密码在 localStorage 的 `mphoneCloudToken` / `mphoneCloudPass`，不进备份）。iPhone 删掉桌面图标会连数据一起清掉 |
 
@@ -62,7 +62,7 @@
 | history | 聊天 / 剧情记录的存取（`stripMsg` 决定存哪些字段）、当前窗口用哪份记录、`getApiCfg(char)` |
 | prompt | 拼给 AI 的内容：`buildMsgs`（聊天 / 剧情都按回合 + token 上限裁剪，剧情省略部分用隐藏的 `<前情>` 代替）、`chatFormatRules` 回复格式、`fillMacros`（{{char}} / {{user}}）、`realWorldContext` 现实感知（现在几点按角色时区、隔了多久没说话、真实电量、纪念日和日程，只放聊天窗口）、`lastStatusOf` 接上一次状态栏、`msgTextForAI` |
 | render | 消息显示：气泡、动作小字、引用、小时间（`refreshMsgStamps`）、版本切换、拍一拍、撤回提示 |
-| reply | 收到回复：`commitAssistantReply` 拆成多条（|||、`<撤回>`、表情包、`<日程>`）、`sendMsg`、重新生成 |
+| reply | 收到回复：`takeStatus` 取出状态（角色忘写 `</status>` 也认）、`commitAssistantReply` 拆成多条（|||、`<撤回>`、表情包、`<日程>`）、`sendMsg`、重新生成 |
 | input / voice / media-send | 输入栏（回车只发自己的、↵ 换行、引用、❄️）；语音录音和转写；识图与语音发给 AI |
 | msg-menu / msg-ops | 长按菜单；多选（批量删除 / 合并收藏）、删除本轮、从这里重新生成、清空记录。撤回：`m.recalledBy` 为 `user`（你撤回的，自己或角色的消息）或 `char`（角色写 `<撤回>…</撤回>`，先显示两秒再变撤回提示，角色设置可开「偷看」） |
 | feed / mine / wallet-fav | 动态（朋友圈）和社交圈、「我的」账号、钱包和收藏 |

@@ -1,9 +1,18 @@
 // 眠花糖机 — 收到回复：拆成多条（|||、撤回、表情包、日程）、发送和生成中的 ⏹、重新生成
 
+// 取出 <status>…</status>。角色有时忘了写结尾：遇到 |||、别的标记或者到结尾，就算状态结束
+var STATUS_RE = /<status>([\s\S]*?)(?:<\/status>|(?=\|\|\||<\/?(?:签名|拍一拍|前情|记忆|日程|提醒|闹钟|撤回)[\s>\/])|$)/i;
+function takeStatus(text) {
+  var status = '';
+  text = String(text || '').replace(STATUS_RE, function(_, s) { status = s.trim(); return ''; });
+  return { text: text.replace(/\s+$/, ''), status: status };
+}
+
 // 把角色的一次原始回复拆成多条消息（||| 分隔）并取出 <status>，写入记录并显示
 function commitAssistantReply(hist, raw, list, empty) {
   var status = '', headStatus = '', recap = '', patBack = false;
-  raw = String(raw || '').replace(/<status>([\s\S]*?)<\/status>/i, function(_, s) { status = s.trim(); return ''; });
+  var st = takeStatus(raw);
+  raw = st.text; status = st.status;
   raw = raw.replace(/<签名>([\s\S]*?)<\/签名>/g, function(_, s) { headStatus = s.replace(/\s+/g, ' ').trim().slice(0, 20); return ''; });
   raw = raw.replace(/<拍一拍\s*\/?>(\s*<\/拍一拍>)?/g, function() { patBack = true; return ''; });
   // 剧情回复里藏着的前情：记在这一轮最后一条消息上，不显示
@@ -115,6 +124,7 @@ function sendMsg(userText, requestOnly, onDone) {
     if (!showing && added.length && replyChar) {
       chatUnread[replyChar.id] = (chatUnread[replyChar.id] || 0) + added.length;
       mphoneStore.save('mphone_unread', chatUnread);
+      if (typeof showInAppNotice === 'function') showInAppNotice(replyChar, added);
     }
     saveHistories();
     renderChatCharList();
@@ -156,7 +166,8 @@ function sendMsg(userText, requestOnly, onDone) {
       aiText = full;
       // 操作块不直接显示原始代码，写完后会变成确认卡片
       typing.bubble.textContent = aiText.replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
-        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '').trim();
+        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+        .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, '').trim();
       if (activeList) activeList.scrollTop = 999999;
     }
   });
