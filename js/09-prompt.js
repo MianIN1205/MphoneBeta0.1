@@ -135,7 +135,7 @@ function renderWbList() {
       delBtn.textContent = '删除';
       delBtn.addEventListener('click', function(e) {
         e.stopPropagation();
-        openPfEntryDel('删除文件夹「' + g.name + '」？里面的条目会移到未分类', function() {
+        openConfirm('删除文件夹「' + g.name + '」？里面的条目会移到未分类', function() {
           wbFolders = wbFolders.filter(function(f) { return f.id !== g.id; });
           wbEntries.forEach(function(en) { if (en.folderId === g.id) en.folderId = WB_NONE; });
           saveWbEntries();
@@ -271,38 +271,6 @@ wbDetailSave.addEventListener('click', function() {
   wbDetailView.classList.remove('open');
 });
 
-// =============================================
-// Prompt — 世界书 条目删除弹窗
-// =============================================
-var pfEntryDelOverlay = document.getElementById('pfEntryDelOverlay');
-var pfEntryDelTitle   = document.getElementById('pfEntryDelTitle');
-var pfEntryDelOk      = document.getElementById('pfEntryDelOk');
-var pfEntryDelCancel  = document.getElementById('pfEntryDelCancel');
-var _pfDelCallback    = null;   // 确认后执行的删除回调
-
-function openPfEntryDel(title, onConfirm) {
-  pfEntryDelTitle.textContent = title || '删除此条目？';
-  _pfDelCallback = onConfirm;
-  pfEntryDelOverlay.classList.add('open');
-}
-
-pfEntryDelCancel.addEventListener('click', function() {
-  pfEntryDelOverlay.classList.remove('open');
-  _pfDelCallback = null;
-});
-
-pfEntryDelOk.addEventListener('click', function() {
-  pfEntryDelOverlay.classList.remove('open');
-  if (_pfDelCallback) { _pfDelCallback(); _pfDelCallback = null; }
-});
-
-pfEntryDelOverlay.addEventListener('click', function(e) {
-  if (e.target === pfEntryDelOverlay) {
-    pfEntryDelOverlay.classList.remove('open');
-    _pfDelCallback = null;
-  }
-});
-
 // 世界书 — 删除按钮
 wbDetailDelete.addEventListener('click', function() {
   if (!wbEditingId) {
@@ -310,7 +278,7 @@ wbDetailDelete.addEventListener('click', function() {
     return;
   }
   var delId = wbEditingId;
-  openPfEntryDel('删除此世界书条目？', function() {
+  openConfirm('删除此世界书条目？', function() {
     wbEntries = wbEntries.filter(function(e) { return e.id !== delId; });
     saveWbEntries();
     renderWbList();
@@ -587,7 +555,7 @@ stPresetDelBtn.addEventListener('click', function(e) {
     return;
   }
   var cur = stPresets[stActivePresetIdx];
-  openPfEntryDel('删除预设「' + (cur ? cur.name : '') + '」？', function() {
+  openConfirm('删除预设「' + (cur ? cur.name : '') + '」？', function() {
     stPresets.splice(stActivePresetIdx, 1);
     if (stActivePresetIdx >= stPresets.length) {
       stActivePresetIdx = stPresets.length - 1;
@@ -669,7 +637,7 @@ stEntryDetailDelete.addEventListener('click', function() {
     stEntryDetailView.classList.remove('open');
     return;
   }
-  openPfEntryDel('删除此提示词条目？', function() {
+  openConfirm('删除此提示词条目？', function() {
     cur.entries.splice(stEditingEntryIdx, 1);
     saveStPresetsToStorage();
     renderStEntryList();

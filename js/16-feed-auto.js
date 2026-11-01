@@ -148,7 +148,7 @@ function renderFeedPost(post, me) {
   del.className = 'feed-post-del';
   del.textContent = '删除';
   del.addEventListener('click', function() {
-    openPfEntryDel('删除这条动态？', function() {
+    openConfirm('删除这条动态？', function() {
       feedPosts = feedPosts.filter(function(p) { return p !== post; });
       saveFeed();
       renderFeed();
@@ -342,9 +342,7 @@ feedComposeImgAdd.addEventListener('click', function() {
 document.getElementById('feedComposeCancel').addEventListener('click', function() {
   feedComposeOverlay.classList.remove('open');
 });
-feedComposeOverlay.addEventListener('click', function(e) {
-  if (e.target === feedComposeOverlay) feedComposeOverlay.classList.remove('open');
-});
+closeOnBackdrop(feedComposeOverlay);
 document.getElementById('feedComposeSend').addEventListener('click', function() {
   var text = feedComposeText.value.trim();
   if (!text && !feedComposeImages.length && !feedComposeTextImgs.length) { shakeEl(feedComposeText); return; }
@@ -395,9 +393,7 @@ document.getElementById('feedBtnCharPost').addEventListener('click', function(e)
 document.getElementById('feedCharPickCancel').addEventListener('click', function() {
   feedCharPickOverlay.classList.remove('open');
 });
-feedCharPickOverlay.addEventListener('click', function(e) {
-  if (e.target === feedCharPickOverlay) feedCharPickOverlay.classList.remove('open');
-});
+closeOnBackdrop(feedCharPickOverlay);
 
 // ---------- 评论 ----------
 function openFeedComment(post, replyTo) {

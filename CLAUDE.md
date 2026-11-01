@@ -26,7 +26,7 @@
 | 文件 | 内容 |
 |---|---|
 | 00-boot | `mphoneStore`（IndexedDB 键值存储，键名都以 `mphone_` 开头）、脚本加载 |
-| 01-core | 公共工具、API 报错记录 |
+| 01-core | 公共工具（开头一段）：`openConfirm` 确认弹窗（全站共用）、`closeOnBackdrop` 点遮罩关闭、`bindPress` 点一下 / 长按、`downloadBlob` / `shareOrDownload` 保存文件、`zipReadEntry` / `readDocxText` 读 zip 和 docx、时间格式（`fmtMsgTime` / `fmtListTime` / `fmtAgo` / `durText`）；还有设置页、API 报错记录 |
 | 02 / 03 / 07 | 界面切换与外观、Chat 标签页、聊天列表与聊天室 |
 | 04-notes | 书架（日记 / 相册是系统书） |
 | 06 / 08 | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）、聊天与剧情两套美化 |

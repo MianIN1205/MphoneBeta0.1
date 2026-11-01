@@ -88,12 +88,10 @@ bookDelOkBtn.addEventListener('click', function() {
   syncShelves();
 });
 
-bookDelConfirmOverlay.addEventListener('click', function(e) {
-  if (e.target === bookDelConfirmOverlay) {
-    clearInterval(delCountdownTimer);
-    bookDelConfirmOverlay.classList.remove('open');
-    pendingDelSlot = null;
-  }
+closeOnBackdrop(bookDelConfirmOverlay, function() {
+  clearInterval(delCountdownTimer);
+  bookDelConfirmOverlay.classList.remove('open');
+  pendingDelSlot = null;
 });
 
 // =============================================
@@ -185,9 +183,7 @@ document.getElementById('bookNewCancel').addEventListener('click', function() {
   bookNewOverlay.classList.remove('open');
 });
 
-bookNewOverlay.addEventListener('click', function(e) {
-  if (e.target === bookNewOverlay) bookNewOverlay.classList.remove('open');
-});
+closeOnBackdrop(bookNewOverlay);
 
 document.getElementById('bookNewSave').addEventListener('click', function() {
   var name  = bookNewName.value.trim() || '-不知名-';
@@ -335,9 +331,7 @@ var shelfFullOverlay = document.getElementById('shelfFullOverlay');
 document.getElementById('shelfFullBtn').addEventListener('click', function() {
   shelfFullOverlay.classList.remove('open');
 });
-shelfFullOverlay.addEventListener('click', function(e) {
-  if (e.target === shelfFullOverlay) shelfFullOverlay.classList.remove('open');
-});
+closeOnBackdrop(shelfFullOverlay);
 
 // =============================================
 // 笔记界面 — 书本跨书架漂浮拖拽
@@ -619,9 +613,7 @@ function closeBookViewer() {
 }
 
 // 点击背景关闭
-bookViewerBackdrop.addEventListener('click', function(e) {
-  if (e.target === bookViewerBackdrop) closeBookViewer();
-});
+closeOnBackdrop(bookViewerBackdrop, closeBookViewer);
 
 // 上一页
 bvPrevBtn.addEventListener('click', function(e) {

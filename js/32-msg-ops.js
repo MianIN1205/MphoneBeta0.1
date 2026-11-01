@@ -17,7 +17,7 @@ function deleteRound(listId, m) {
   var hist = histOfList(listId), g = replyGroupOf(hist, m);
   if (!g) return;
   var n = g.end - g.start + 1;
-  openPfEntryDel('删除这一轮回复（' + n + ' 条）？删除后 TA 也不会再看到', function() {
+  openConfirm('删除这一轮回复（' + n + ' 条）？删除后 TA 也不会再看到', function() {
     hist.splice(g.start, n);
     saveHistories();
     renderRoomLists(openingChatCharIdx);
@@ -30,7 +30,7 @@ function regenerateFrom(listId, m) {
   var hist = histOfList(listId), g = replyGroupOf(hist, m);
   if (!g) return;
   var after = hist.length - g.start;
-  openPfEntryDel('从这一轮重新生成？这一轮回复和之后的 ' + after + ' 条消息都会删掉', function() {
+  openConfirm('从这一轮重新生成？这一轮回复和之后的 ' + after + ' 条消息都会删掉', function() {
     hist.splice(g.start);
     saveHistories();
     renderRoomLists(openingChatCharIdx);
@@ -114,7 +114,7 @@ document.getElementById('crSelDone').addEventListener('click', exitMsgSelect);
 document.getElementById('crSelDel').addEventListener('click', function() {
   if (!msgSel || !msgSel.picked.length) return;
   var sel = msgSel, n = sel.picked.length;
-  openPfEntryDel('删除选中的 ' + n + ' 条消息？删除后 TA 也不会再看到', function() {
+  openConfirm('删除选中的 ' + n + ' 条消息？删除后 TA 也不会再看到', function() {
     var hist = histOfList(sel.listId);
     sel.picked.forEach(function(el) {
       var i = hist.indexOf(el._msg);
@@ -164,7 +164,7 @@ function clearCharHistory(kind) {
   var n = (store[char.id] || []).length;
   var label = kind === 'drama' ? '剧情' : '聊天';
   if (!n) { showToast('还没有' + label + '记录', 'success'); return; }
-  openPfEntryDel('清空和「' + (char.charAlias || char.charName || '这个角色') + '」的全部' + label + '记录（' + n + ' 条）？清空后找不回来', function() {
+  openConfirm('清空和「' + (char.charAlias || char.charName || '这个角色') + '」的全部' + label + '记录（' + n + ' 条）？清空后找不回来', function() {
     store[char.id] = [];
     saveHistories();
     if (openingChatCharIdx === editingCharIndex) { exitMsgSelect(); renderRoomLists(openingChatCharIdx); }

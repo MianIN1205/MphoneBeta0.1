@@ -80,7 +80,7 @@ function renderMemSummaries(char) {
     var del = document.createElement('button');
     del.textContent = '删除';
     del.addEventListener('click', function() {
-      openPfEntryDel('删除这段总结？', function() {
+      openConfirm('删除这段总结？', function() {
         mem.summaries.splice(i, 1);
         // 删的是最后一段：这些回合重新按原文发送，之后可再次总结
         if (i === mem.summaries.length) mem.upTo = s.from;
@@ -117,13 +117,7 @@ document.getElementById('memSumNowBtn').addEventListener('click', function() {
 
 // ---------- 记忆备份：单个角色的设置 + 记录 + 总结 ----------
 function downloadJson(obj, name) {
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' }));
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+  downloadBlob(new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' }), name);
 }
 
 function pickFile(accept, cb) {
@@ -155,7 +149,7 @@ document.getElementById('memRestoreBtn').addEventListener('click', function() {
     file.text().then(function(t) {
       var b = JSON.parse(t);
       if (!b || b.app !== 'mphone' || b.type !== 'char' || !b.char) throw new Error('bad');
-      openPfEntryDel('用备份覆盖当前角色？', function() {
+      openConfirm('用备份覆盖当前角色？', function() {
         var cur = charList[editingCharIndex];
         var restored = Object.assign({}, b.char, { id: cur.id, inChat: cur.inChat });
         charList[editingCharIndex] = restored;
@@ -298,20 +292,6 @@ function readPngCard(buf) {
   } catch (_) {
     return raw;   // 少数卡直接存 JSON 文本
   }
-}
-
-// 解压 docx（zip）里的 word/document.xml 并提取段落文字
-function readDocxText(buf) {
-  return zipReadEntry(buf, function(name) { return name === 'word/document.xml'; }).then(function(bytes) {
-    var text = new TextDecoder().decode(bytes)
-      .replace(/<w:tab\/>/g, '\t')
-      .replace(/<w:br[^>]*\/>/g, '\n')
-      .replace(/<\/w:p>/g, '\n')
-      .replace(/<[^>]+>/g, '');
-    var ta = document.createElement('textarea');
-    ta.innerHTML = text;   // 解码 &amp; 等实体
-    return ta.value.replace(/\n{3,}/g, '\n\n');
-  });
 }
 
 // ---------- 桌面：记忆库（界面和记忆系统在 28-memory.js） ----------

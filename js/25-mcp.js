@@ -309,7 +309,7 @@ function renderMcpServers() {
     del.className = 'action-btn btn-apply';
     del.textContent = '删除';
     del.addEventListener('click', function() {
-      openPfEntryDel('删除服务器「' + sv.name + '」？', function() {
+      openConfirm('删除服务器「' + sv.name + '」？', function() {
         mcpServers = mcpServers.filter(function(x) { return x !== sv; });
         delete mcpSessions[sv.id];
         saveMcpServers();

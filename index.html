@@ -2751,13 +2751,14 @@
       </div>
     </div>
 
-    <div class="book-del-confirm-overlay" id="pfEntryDelOverlay">
+    <!-- 确认弹窗（全站共用，见 js/01-core.js openConfirm） -->
+    <div class="book-del-confirm-overlay" id="confirmOverlay">
       <div class="book-del-confirm-box">
-        <div class="book-del-confirm-title" id="pfEntryDelTitle">删除此条目？</div>
+        <div class="book-del-confirm-title" id="confirmTitle">删除此条目？</div>
         <div class="book-del-confirm-desc">删除后无法恢复</div>
         <div class="book-del-confirm-btns">
-          <button class="book-del-confirm-btn book-del-cancel-btn" id="pfEntryDelCancel">取消</button>
-          <button class="book-del-confirm-btn book-del-ok-btn" id="pfEntryDelOk">确认删除</button>
+          <button class="book-del-confirm-btn book-del-cancel-btn" id="confirmCancel">取消</button>
+          <button class="book-del-confirm-btn book-del-ok-btn" id="confirmOk">确认删除</button>
         </div>
       </div>
     </div>

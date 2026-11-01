@@ -43,9 +43,7 @@ function closeImgPicker() {
 
 imgPickerCancel.addEventListener('click', closeImgPicker);
 
-imgPickerOverlay.addEventListener('click', function(e) {
-  if (e.target === imgPickerOverlay) closeImgPicker();
-});
+closeOnBackdrop(imgPickerOverlay, closeImgPicker);
 
 imgPickerUrlConfirm.addEventListener('click', function() {
   var url = imgPickerUrlInput.value.trim();

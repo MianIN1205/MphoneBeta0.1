@@ -20,6 +20,145 @@ function shakeEl(el) {
   if (el.focus) el.focus();
 }
 
+// =============================================
+// 通用界面工具：确认弹窗、点遮罩关闭、点一下 / 长按
+// =============================================
+// 确认弹窗（全站共用）：「确认」后执行 onOk；点取消或弹窗外面就算了
+var confirmOverlay = document.getElementById('confirmOverlay');
+var confirmCallback = null;
+function openConfirm(title, onOk) {
+  document.getElementById('confirmTitle').textContent = title || '删除此条目？';
+  confirmCallback = onOk;
+  confirmOverlay.classList.add('open');
+}
+function closeConfirm() { confirmOverlay.classList.remove('open'); confirmCallback = null; }
+document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
+document.getElementById('confirmOk').addEventListener('click', function() {
+  var fn = confirmCallback;
+  closeConfirm();
+  if (fn) fn();
+});
+
+// 点弹窗外面（遮罩本身）时关掉；onClose 不传就是去掉 open
+function closeOnBackdrop(overlay, onClose) {
+  overlay.addEventListener('click', function(e) {
+    if (e.target !== overlay) return;
+    if (onClose) onClose(); else overlay.classList.remove('open');
+  });
+}
+closeOnBackdrop(confirmOverlay, closeConfirm);
+
+// 点一下 / 长按（按住半秒），长按后松手不算点一下
+function bindPress(el, onTap, onLong) {
+  var timer = null, fired = false, sx = 0, sy = 0;
+  el.addEventListener('pointerdown', function(e) {
+    fired = false; sx = e.clientX; sy = e.clientY;
+    clearTimeout(timer);
+    timer = setTimeout(function() {
+      timer = null; fired = true;
+      if (navigator.vibrate) navigator.vibrate(15);
+      onLong();
+    }, 500);
+  });
+  el.addEventListener('pointermove', function(e) {
+    if (timer && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) { clearTimeout(timer); timer = null; }
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function(ev) {
+    el.addEventListener(ev, function() { clearTimeout(timer); timer = null; });
+  });
+  el.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (fired) { fired = false; return; }
+    onTap();
+  });
+  el.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+}
+
+// =============================================
+// 文件工具：保存 / 分享文件、读 zip 和 docx
+// =============================================
+// 下载文件
+function downloadBlob(blob, name) {
+  var url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 10000);
+}
+// 手机上走系统分享（可以存到「文件」），电脑上直接下载
+function shareOrDownload(blob, name) {
+  var file = new File([blob], name, { type: blob.type });
+  var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  if (touch && navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file] }).catch(function() {});
+  downloadBlob(blob, name);
+  return Promise.resolve();
+}
+
+// 读取 zip 里第一个符合条件的文件（docx 导入、NovelAI 生图结果共用）
+function zipReadEntry(buf, match) {
+  var v = new DataView(buf), u8 = new Uint8Array(buf);
+  var eocd = -1;
+  for (var i = u8.length - 22; i >= Math.max(0, u8.length - 66000); i--) {
+    if (v.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) return Promise.reject(new Error('不是有效的压缩文件'));
+  var count = v.getUint16(eocd + 10, true), cd = v.getUint32(eocd + 16, true);
+  var entry = null;
+  for (var n = 0; n < count; n++) {
+    if (v.getUint32(cd, true) !== 0x02014b50) break;
+    var nl = v.getUint16(cd + 28, true), el = v.getUint16(cd + 30, true), cl = v.getUint16(cd + 32, true);
+    var fname = new TextDecoder().decode(u8.subarray(cd + 46, cd + 46 + nl));
+    if (match(fname)) {
+      entry = { method: v.getUint16(cd + 10, true), csize: v.getUint32(cd + 20, true), off: v.getUint32(cd + 42, true) };
+      break;
+    }
+    cd += 46 + nl + el + cl;
+  }
+  if (!entry) return Promise.reject(new Error('压缩文件里没有需要的内容'));
+  var lo = entry.off;
+  var start = lo + 30 + v.getUint16(lo + 26, true) + v.getUint16(lo + 28, true);
+  var comp = u8.subarray(start, start + entry.csize);
+  if (entry.method === 0) return Promise.resolve(comp);
+  if (entry.method !== 8 || !window.DecompressionStream) return Promise.reject(new Error('浏览器不支持解压'));
+  var stream = new Blob([comp]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Response(stream).arrayBuffer().then(function(b) { return new Uint8Array(b); });
+}
+
+// docx 的正文文字。opts.links：挂在文字上的超链接也把地址读出来（导入表情包用）
+function readDocxText(buf, opts) {
+  var links = opts && opts.links, rels = {};
+  var relsDone = !links ? Promise.resolve() : zipReadEntry(buf, function(n) { return n === 'word/_rels/document.xml.rels'; }).then(function(b) {
+    new TextDecoder().decode(b).replace(/<Relationship\b[^>]*>/g, function(tag) {
+      var id = (tag.match(/\bId="([^"]+)"/) || [])[1], t = (tag.match(/\bTarget="([^"]+)"/) || [])[1];
+      if (id && t && /^https?:/i.test(t)) rels[id] = t.replace(/&amp;/g, '&');
+      return '';
+    });
+  }, function() {});
+  return relsDone.then(function() {
+    return zipReadEntry(buf, function(name) { return name === 'word/document.xml'; });
+  }).then(function(bytes) {
+    var xml = new TextDecoder().decode(bytes);
+    if (links) {
+      xml = xml.replace(/<w:hyperlink\b[^>]*r:id="([^"]+)"[^>]*>([\s\S]*?)<\/w:hyperlink>/g, function(all, id, inner) {
+        var url = rels[id];
+        return url && inner.replace(/<[^>]+>/g, '').indexOf(url) < 0 ? inner + '<w:t> ' + url + ' </w:t>' : inner;
+      });
+    }
+    var text = xml
+      .replace(/<w:tab\/>/g, '\t')
+      .replace(/<w:br[^>]*\/>/g, '\n')
+      .replace(/<\/w:p>/g, '\n')
+      .replace(/<[^>]+>/g, '');
+    var ta = document.createElement('textarea');
+    ta.innerHTML = text;   // 解码 &amp; 等实体
+    text = ta.value.replace(/\n{3,}/g, '\n\n');
+    // 老式 Word 的超链接是「HYPERLINK "地址"」域代码
+    return links ? text.replace(/\bHYPERLINK\s+"?([^"\s]+)"?/g, ' $1 ') : text;
+  });
+}
+
 // ---------- 时间显示 ----------
 // 两个时间戳相差几个自然日（按本地日期算）
 function daysAgo(t) {
@@ -45,6 +184,23 @@ function fmtListTime(t) {
   var md = (d.getMonth() + 1) + '/' + d.getDate();
   return d.getFullYear() === new Date().getFullYear() ? md : d.getFullYear() + '/' + md;
 }
+// 多久以前：刚刚 / 5 分钟前 / 3 小时前 / 2 天前
+function fmtAgo(t) {
+  if (!t) return '';
+  var m = Math.floor((Date.now() - t) / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return m + ' 分钟前';
+  if (m < 1440) return Math.floor(m / 60) + ' 小时前';
+  return Math.floor(m / 1440) + ' 天前';
+}
+// 一段时长：25 分钟 / 3 小时 / 2 天
+function durText(ms) {
+  var m = Math.round(ms / 60000);
+  if (m < 60) return m + ' 分钟';
+  var h = Math.round(m / 60);
+  return h < 48 ? h + ' 小时' : Math.round(h / 24) + ' 天';
+}
+
 
 // ---------- 通用左滑操作 ----------
 // row 是 position:relative 的容器，front 是可点击的内容，acts 是右侧按钮组（宽 width）。
@@ -449,9 +605,7 @@ modalConfirm.addEventListener('click', function() {
   presetModal.classList.remove('open');
 });
 
-presetModal.addEventListener('click', function(e) {
-  if (e.target === presetModal) presetModal.classList.remove('open');
-});
+closeOnBackdrop(presetModal);
 
 // 预设卡片折叠
 const presetHeader = document.getElementById('presetHeader');

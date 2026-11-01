@@ -343,7 +343,7 @@ function renderMemLib() {
     });
     btn('编辑', false, function() { openMemEdit(char, m); });
     btn('删除', false, function() {
-      openPfEntryDel('删除这条记忆？', function() {
+      openConfirm('删除这条记忆？', function() {
         memStore[char.id] = memList(char.id).filter(function(x) { return x !== m; });
         saveMemStore();
         renderMemLib();
@@ -419,7 +419,7 @@ document.getElementById('memAskBtn').addEventListener('click', function() {
   });
 });
 document.getElementById('memAskClose').addEventListener('click', function() { memAskOverlay.classList.remove('open'); });
-memAskOverlay.addEventListener('click', function(e) { if (e.target === memAskOverlay) memAskOverlay.classList.remove('open'); });
+closeOnBackdrop(memAskOverlay);
 
 // ---------- 导出为 Word（.docx）：按重要程度（珍贵 → 长期 → 短期）分组，组内按时间从早到晚 ----------
 var MEM_CRC_TABLE = (function() {
@@ -509,19 +509,6 @@ function memDocxCharParas(char) {
   });
   return paras;
 }
-// 保存文件：手机上走系统分享（可存到文件），电脑上直接下载
-function memSaveFile(blob, name) {
-  var file = new File([blob], name, { type: blob.type });
-  var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file] }).catch(function() {});
-    return;
-  }
-  var url = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = url; a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(function() { URL.revokeObjectURL(url); }, 10000);
-}
 function memExportDocx(chars) {
   var paras = [];
   chars.forEach(function(c, i) {
@@ -529,7 +516,7 @@ function memExportDocx(chars) {
     paras = paras.concat(memDocxCharParas(c));
   });
   var d = new Date(), stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-  memSaveFile(memBuildDocx(paras), (chars.length === 1 ? memCharName(chars[0]) + '的记忆_' : '全部角色的记忆_') + stamp + '.docx');
+  shareOrDownload(memBuildDocx(paras), (chars.length === 1 ? memCharName(chars[0]) + '的记忆_' : '全部角色的记忆_') + stamp + '.docx');
   showToast('✓ 已导出 Word 文档', 'success');
 }
 document.getElementById('memLibExport').addEventListener('click', function() {
@@ -562,7 +549,7 @@ document.getElementById('memAddBtn').addEventListener('click', function() {
   if (char) openMemEdit(char, null);
 });
 document.getElementById('memEditCancel').addEventListener('click', function() { memEditOverlay.classList.remove('open'); });
-memEditOverlay.addEventListener('click', function(e) { if (e.target === memEditOverlay) memEditOverlay.classList.remove('open'); });
+closeOnBackdrop(memEditOverlay);
 document.getElementById('memEditSave').addEventListener('click', function() {
   var ta = document.getElementById('memEditText'), text = ta.value.trim();
   if (!text) { shakeEl(ta); return; }

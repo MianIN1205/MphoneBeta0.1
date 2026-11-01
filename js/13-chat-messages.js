@@ -215,12 +215,6 @@ function zoneTimeText(t, tz) {
 function charTimeZone(char) { return ((char && char.chatCfg) || {}).timeZone || ''; }
 // 角色那边的「现在」（主动消息、动态、日记里用）
 function charNowText(char) { return zoneTimeText(Date.now(), charTimeZone(char)); }
-function durText(ms) {
-  var m = Math.round(ms / 60000);
-  if (m < 60) return m + ' 分钟';
-  var h = Math.round(m / 60);
-  return h < 48 ? h + ' 小时' : Math.round(h / 24) + ' 天';
-}
 function zoneLabel(tz) {
   var o = document.querySelector('#timeZone option[value="' + tz + '"]');
   return o ? o.textContent : tz;

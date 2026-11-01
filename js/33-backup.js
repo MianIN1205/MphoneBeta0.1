@@ -30,14 +30,6 @@ function backupFileName(ext) {
   var d = new Date();
   return 'mphone-backup-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.' + ext;
 }
-function fmtAgo(t) {
-  if (!t) return '';
-  var m = Math.floor((Date.now() - t) / 60000);
-  if (m < 1) return '刚刚';
-  if (m < 60) return m + ' 分钟前';
-  if (m < 1440) return Math.floor(m / 60) + ' 小时前';
-  return Math.floor(m / 1440) + ' 天前';
-}
 function paintBackupLast() {
   var parts = [];
   if (backupMeta.lastLocal) parts.push('本地 ' + fmtAgo(backupMeta.lastLocal));
@@ -66,13 +58,7 @@ function shareBackupFiles(json) {
   return null;
 }
 function downloadBackup(json) {
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-  a.download = backupFileName('json');
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+  downloadBlob(new Blob([json], { type: 'application/json' }), backupFileName('json'));
   markLocalBackup();
   showToast('✓ 已导出备份', 'success');
 }
@@ -312,7 +298,7 @@ document.getElementById('cloudRestore').addEventListener('click', function() {
   }).then(function(res) {
     var parsed = JSON.parse(res.json);
     if (!parsed || parsed.app !== 'mphone' || typeof parsed.data !== 'object') throw new Error('云端的备份格式不对');
-    openPfEntryDel('找到 ' + fmtAgo(res.time) + '的云端备份。恢复会覆盖现在的全部数据，确定继续吗？', function() {
+    openConfirm('找到 ' + fmtAgo(res.time) + '的云端备份。恢复会覆盖现在的全部数据，确定继续吗？', function() {
       var data = parsed.data;
       data[BACKUP_META_KEY] = Object.assign({}, backupMeta, { lastCloud: res.time, lastChange: res.time, snooze: 0 });
       mphoneStore.replaceAll(data).then(function() {
@@ -325,7 +311,7 @@ document.getElementById('cloudRestore').addEventListener('click', function() {
 
 // 点弹窗外面关掉
 [backupExportOverlay, backupRemindOverlay].forEach(function(ov) {
-  ov.addEventListener('click', function(e) { if (e.target === ov) ov.classList.remove('open'); });
+  closeOnBackdrop(ov);
 });
 
 // 打开设置时刷新「上次备份」；启动后看要不要提醒、要不要补一次云备份

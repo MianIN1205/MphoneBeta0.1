@@ -249,7 +249,7 @@ function renderAnnivs() {
       del.className = 'anniv-flag anniv-del';
       del.textContent = '删除';
       del.addEventListener('click', function() {
-        openPfEntryDel('删除「' + e.a.title + '」？', function() {
+        openConfirm('删除「' + e.a.title + '」？', function() {
           annivs = annivs.filter(function(x) { return x !== e.a; });
           saveAnnivs();
           renderAnnivs();
@@ -316,7 +316,7 @@ document.getElementById('annivAddBtn').addEventListener('click', function() {
   annivOverlay.classList.add('open');
 });
 document.getElementById('annivCancel').addEventListener('click', function() { annivOverlay.classList.remove('open'); });
-annivOverlay.addEventListener('click', function(e) { if (e.target === annivOverlay) annivOverlay.classList.remove('open'); });
+closeOnBackdrop(annivOverlay);
 document.getElementById('annivSave').addEventListener('click', function() {
   var titleEl = document.getElementById('annivTitle'), dateEl = document.getElementById('annivDate');
   if (!titleEl.value.trim()) { shakeEl(titleEl); return; }
@@ -390,7 +390,7 @@ function openDiary(d) {
   diaryReadOverlay.classList.add('open');
 }
 document.getElementById('diaryReadClose').addEventListener('click', function() { diaryReadOverlay.classList.remove('open'); });
-diaryReadOverlay.addEventListener('click', function(e) { if (e.target === diaryReadOverlay) diaryReadOverlay.classList.remove('open'); });
+closeOnBackdrop(diaryReadOverlay);
 // 删除要点两次，免得误删
 diaryDelBtn.addEventListener('click', function() {
   if (this.textContent !== '确认删除') { this.textContent = '确认删除'; return; }

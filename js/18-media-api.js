@@ -334,36 +334,6 @@ function bytesToDataUrl(bytes, type) {
   });
 }
 
-// 读取 zip 里第一个符合条件的文件（docx 导入、NovelAI 结果共用）
-function zipReadEntry(buf, match) {
-  var v = new DataView(buf), u8 = new Uint8Array(buf);
-  var eocd = -1;
-  for (var i = u8.length - 22; i >= Math.max(0, u8.length - 66000); i--) {
-    if (v.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
-  }
-  if (eocd < 0) return Promise.reject(new Error('不是有效的压缩文件'));
-  var count = v.getUint16(eocd + 10, true), cd = v.getUint32(eocd + 16, true);
-  var entry = null;
-  for (var n = 0; n < count; n++) {
-    if (v.getUint32(cd, true) !== 0x02014b50) break;
-    var nl = v.getUint16(cd + 28, true), el = v.getUint16(cd + 30, true), cl = v.getUint16(cd + 32, true);
-    var fname = new TextDecoder().decode(u8.subarray(cd + 46, cd + 46 + nl));
-    if (match(fname)) {
-      entry = { method: v.getUint16(cd + 10, true), csize: v.getUint32(cd + 20, true), off: v.getUint32(cd + 42, true) };
-      break;
-    }
-    cd += 46 + nl + el + cl;
-  }
-  if (!entry) return Promise.reject(new Error('压缩文件里没有需要的内容'));
-  var lo = entry.off;
-  var start = lo + 30 + v.getUint16(lo + 26, true) + v.getUint16(lo + 28, true);
-  var comp = u8.subarray(start, start + entry.csize);
-  if (entry.method === 0) return Promise.resolve(comp);
-  if (entry.method !== 8 || !window.DecompressionStream) return Promise.reject(new Error('浏览器不支持解压'));
-  var stream = new Blob([comp]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  return new Response(stream).arrayBuffer().then(function(b) { return new Uint8Array(b); });
-}
-
 // 按当前服务商生成图片，返回可直接用作 src 的地址（url 或 dataURL）
 function imageGenerate(prompt, cfg) {
   cfg = cfg || imgCfg;

@@ -225,7 +225,7 @@
   // 删除：确认后删除；单独使用这个账号的聊天恢复为跟随主账号
   function deleteAccount(idx) {
     var acc = mineAccounts[idx];
-    openPfEntryDel('删除账号「' + nickOf(acc) + '」？使用它的聊天会恢复为主账号', function() {
+    openConfirm('删除账号「' + nickOf(acc) + '」？使用它的聊天会恢复为主账号', function() {
       mineAccounts.splice(idx, 1);
       if (idx < mineActiveIdx) mineActiveIdx--;
       var changed = false;
@@ -291,9 +291,7 @@
     });
   });
   mineEditCancelBtn.addEventListener('click', closeMineEdit);
-  mineEditOverlay.addEventListener('click', function(e) {
-    if (e.target === mineEditOverlay) closeMineEdit();
-  });
+  closeOnBackdrop(mineEditOverlay, closeMineEdit);
 
   mineEditSaveBtn.addEventListener('click', function() {
     var nickname = mineNicknameInput.value.trim();

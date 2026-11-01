@@ -90,9 +90,7 @@ newChatConfirm.addEventListener('click', function() {
   if (card) card.click();
 });
 
-newChatOverlay.addEventListener('click', function(e) {
-  if (e.target === newChatOverlay) closeNewChatModal();
-});
+closeOnBackdrop(newChatOverlay, closeNewChatModal);
 
 // 返回（不保存）：撤销「应用」的预览样式
 backCharSetting.addEventListener('click', function() {
@@ -230,11 +228,9 @@ charDelOkBtn.addEventListener('click', function() {
   openingChatCharIdx = -1;
 });
 
-charDelConfirmOverlay.addEventListener('click', function(e) {
-  if (e.target === charDelConfirmOverlay) {
-    clearInterval(charDelTimer);
-    charDelConfirmOverlay.classList.remove('open');
-  }
+closeOnBackdrop(charDelConfirmOverlay, function() {
+  clearInterval(charDelTimer);
+  charDelConfirmOverlay.classList.remove('open');
 });
 
 // =============================================
@@ -399,9 +395,7 @@ function closeSessionDelete() {
   document.getElementById('sessionDelOverlay').classList.remove('open');
 }
 document.getElementById('sessionDelCancel').addEventListener('click', closeSessionDelete);
-document.getElementById('sessionDelOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeSessionDelete();
-});
+closeOnBackdrop(document.getElementById('sessionDelOverlay'), closeSessionDelete);
 document.getElementById('sessionDelHide').addEventListener('click', function() {
   var char = sessionDelTarget;
   if (!char) return;

@@ -171,7 +171,7 @@ function renderWidgets() {
   deskGrid.style.minHeight = deskEditing ? (Math.max(maxRow, deskRows()) * cell) + 'px' : '';
 }
 function removeWidget(w) {
-  openPfEntryDel('移除这个小组件？', function() {
+  openConfirm('移除这个小组件？', function() {
     deskWidgets = deskWidgets.filter(function(x) { return x !== w; });
     saveWidgets();
     renderWidgets();
@@ -317,7 +317,7 @@ document.getElementById('deskAddWidget').addEventListener('click', function() {
   widgetAddOverlay.classList.add('open');
 });
 document.getElementById('widgetAddCancel').addEventListener('click', function() { widgetAddOverlay.classList.remove('open'); });
-widgetAddOverlay.addEventListener('click', function(e) { if (e.target === widgetAddOverlay) widgetAddOverlay.classList.remove('open'); });
+closeOnBackdrop(widgetAddOverlay);
 
 // ---------- 编辑小组件：样式、和谁、图片、Emoji（改了立刻生效） ----------
 var widgetEditOverlay = document.getElementById('widgetEditOverlay');
@@ -368,7 +368,7 @@ document.getElementById('wgEmoji').addEventListener('input', function() {
   pv.appendChild(buildWidget(wgEditing));
 });
 document.getElementById('wgDone').addEventListener('click', function() { widgetEditOverlay.classList.remove('open'); });
-widgetEditOverlay.addEventListener('click', function(e) { if (e.target === widgetEditOverlay) widgetEditOverlay.classList.remove('open'); });
+closeOnBackdrop(widgetEditOverlay);
 // 删除要点两次
 document.getElementById('wgDelete').addEventListener('click', function() {
   if (this.textContent !== '确认删除') { this.textContent = '确认删除'; return; }

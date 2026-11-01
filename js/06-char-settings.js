@@ -122,10 +122,6 @@ function readBubbleForm() {
   };
 }
 
-function clearCharForm() {
-  fillCharForm({});
-}
-
 // 聊天设置默认值（第二页）与外观默认值（第三页）
 var DEFAULT_CHAT_CFG = {
   maxMem: 50, attention: 10, autoSum: false, sumEvery: 10,

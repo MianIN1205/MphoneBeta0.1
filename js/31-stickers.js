@@ -119,32 +119,6 @@ function stickerImageForAI(m, char) {
   return s ? s.b64 : '';
 }
 
-// 点一下 / 长按
-function stkPress(el, onTap, onLong) {
-  var timer = null, fired = false, sx = 0, sy = 0;
-  el.addEventListener('pointerdown', function(e) {
-    fired = false; sx = e.clientX; sy = e.clientY;
-    clearTimeout(timer);
-    timer = setTimeout(function() {
-      timer = null; fired = true;
-      if (navigator.vibrate) navigator.vibrate(15);
-      onLong();
-    }, 500);
-  });
-  el.addEventListener('pointermove', function(e) {
-    if (timer && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) { clearTimeout(timer); timer = null; }
-  });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function(ev) {
-    el.addEventListener(ev, function() { clearTimeout(timer); timer = null; });
-  });
-  el.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (fired) { fired = false; return; }
-    onTap();
-  });
-  el.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-}
-
 // =============================================
 // 抽屉
 // =============================================
@@ -158,7 +132,7 @@ function renderStickerDrawer() {
     var b = document.createElement('button');
     b.className = 'stk-tab' + (c.id === stkCurCat ? ' active' : '');
     b.textContent = c.name;
-    stkPress(b, function() { stkCurCat = c.id; renderStickerDrawer(); }, function() { openStkCat(c); });
+    bindPress(b, function() { stkCurCat = c.id; renderStickerDrawer(); }, function() { openStkCat(c); });
     stkTabs.appendChild(b);
   });
   stkGrid.innerHTML = '';
@@ -186,7 +160,7 @@ function renderStickerDrawer() {
     name.textContent = s.name;
     item.appendChild(box);
     item.appendChild(name);
-    stkPress(item, function() { sendSticker(s); }, function() { openStkEdit(s); });
+    bindPress(item, function() { sendSticker(s); }, function() { openStkEdit(s); });
     stkGrid.appendChild(item);
   });
 }
@@ -397,38 +371,10 @@ function stkFromJson(data) {
   return out.join('\n');
 }
 
-// docx：正文文字，挂在文字上的超链接也把地址读出来
-function stkReadDocx(buf) {
-  var rels = {};
-  return zipReadEntry(buf, function(n) { return n === 'word/_rels/document.xml.rels'; }).then(function(b) {
-    new TextDecoder().decode(b).replace(/<Relationship\b[^>]*>/g, function(tag) {
-      var id = (tag.match(/\bId="([^"]+)"/) || [])[1], t = (tag.match(/\bTarget="([^"]+)"/) || [])[1];
-      if (id && t && /^https?:/i.test(t)) rels[id] = t.replace(/&amp;/g, '&');
-      return '';
-    });
-  }, function() {}).then(function() {
-    return zipReadEntry(buf, function(n) { return n === 'word/document.xml'; });
-  }).then(function(bytes) {
-    var text = new TextDecoder().decode(bytes)
-      .replace(/<w:hyperlink\b[^>]*r:id="([^"]+)"[^>]*>([\s\S]*?)<\/w:hyperlink>/g, function(all, id, inner) {
-        var url = rels[id];
-        return url && inner.replace(/<[^>]+>/g, '').indexOf(url) < 0 ? inner + '<w:t> ' + url + ' </w:t>' : inner;
-      })
-      .replace(/<w:tab\/>/g, '\t')
-      .replace(/<w:br[^>]*\/>/g, '\n')
-      .replace(/<\/w:p>/g, '\n')
-      .replace(/<[^>]+>/g, '');
-    var ta = document.createElement('textarea');
-    ta.innerHTML = text;   // 解码 &amp; 等实体
-    // 老式 Word 的超链接是「HYPERLINK "地址"」域代码
-    return ta.value.replace(/\bHYPERLINK\s+"?([^"\s]+)"?/g, ' $1 ');
-  });
-}
-
 // 读文档：txt 先按 UTF-8 读，读不通再按 GBK（Windows 记事本存的中文常见）
 function stkReadDocText(file) {
   var name = file.name.toLowerCase();
-  if (/\.docx$/.test(name)) return file.arrayBuffer().then(stkReadDocx);
+  if (/\.docx$/.test(name)) return file.arrayBuffer().then(function(buf) { return readDocxText(buf, { links: true }); });
   if (/\.(doc|xls|xlsx|pdf)$/.test(name)) return Promise.reject(new Error('这种文档读不了，可以另存为 docx 或 txt 再导入'));
   return file.arrayBuffer().then(function(buf) {
     var text;
@@ -556,7 +502,7 @@ document.getElementById('stkEditDel').addEventListener('click', function() {
   var s = stkEditTarget;
   if (!s) return;
   closeStkEdit();
-  openPfEntryDel('删除表情包「' + s.name + '」？已经发出去的不受影响', function() {
+  openConfirm('删除表情包「' + s.name + '」？已经发出去的不受影响', function() {
     stkData.items = stkData.items.filter(function(x) { return x !== s; });
     saveStickers();
     renderStickerDrawer();
@@ -594,7 +540,7 @@ document.getElementById('stkCatDel').addEventListener('click', function() {
   if (!c) return;
   closeStkCat();
   var n = stkItemsOf(c.id).length;
-  openPfEntryDel('删除分类「' + c.name + '」' + (n ? '和里面的 ' + n + ' 个表情包' : '') + '？', function() {
+  openConfirm('删除分类「' + c.name + '」' + (n ? '和里面的 ' + n + ' 个表情包' : '') + '？', function() {
     stkData.cats = stkData.cats.filter(function(x) { return x !== c; });
     stkData.items = stkData.items.filter(function(x) { return x.cat !== c.id; });
     saveStickers();
@@ -661,5 +607,5 @@ document.getElementById('stkSetClose').addEventListener('click', function() { st
 
 // 点弹窗外面关掉
 [stkImportOverlay, stkEditOverlay, stkCatOverlay, stkSetOverlay].forEach(function(ov) {
-  ov.addEventListener('click', function(e) { if (e.target === ov) ov.classList.remove('open'); });
+  closeOnBackdrop(ov);
 });

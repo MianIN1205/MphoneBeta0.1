@@ -140,7 +140,7 @@ function renderFavs() {
     var un = document.createElement('button');
     un.textContent = '取消收藏';
     un.addEventListener('click', function() {
-      openPfEntryDel('取消收藏这条内容？', function() { removeFav(f.id); renderFavs(); });
+      openConfirm('取消收藏这条内容？', function() { removeFav(f.id); renderFavs(); });
     });
     head.appendChild(info);
     head.appendChild(un);
@@ -297,7 +297,7 @@ msgCtxMenu.addEventListener('click', function(e) {
   } else if (act === 'recall') {
     recallMsg(t);
   } else if (act === 'delete') {
-    openPfEntryDel('删除这条消息？删除后 TA 也不会再看到', function() { deleteMsg(t); });
+    openConfirm('删除这条消息？删除后 TA 也不会再看到', function() { deleteMsg(t); });
   } else if (act === 'regenFrom') {
     regenerateFrom(t.listId, t.msg);
   } else if (act === 'delRound') {
@@ -356,7 +356,7 @@ function openMsgEdit(t) {
 }
 function closeMsgEdit() { msgEditOverlay.classList.remove('open'); msgEditTarget = null; }
 document.getElementById('msgEditCancel').addEventListener('click', closeMsgEdit);
-msgEditOverlay.addEventListener('click', function(e) { if (e.target === msgEditOverlay) closeMsgEdit(); });
+closeOnBackdrop(msgEditOverlay, closeMsgEdit);
 document.getElementById('msgEditSave').addEventListener('click', function() {
   var ta = document.getElementById('msgEditText');
   var text = ta.value.trim();

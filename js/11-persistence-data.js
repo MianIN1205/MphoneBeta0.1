@@ -205,24 +205,8 @@
   // 打开设置时刷新占用
   dockSettings.addEventListener('click', function() { setTimeout(renderUsage, 50); });
 
-  exportRow.addEventListener('click', function() {
-    // 有分享面板时让用户选「分享 / 下载」（见 33-backup.js）
-    if (typeof openBackupExport === 'function') { openBackupExport(); return; }
-    mphoneStore.flush();
-    var data = {};
-    mphoneStore.keys().forEach(function(k) { data[k] = mphoneStore.load(k, null); });
-    var d = new Date();
-    var name = 'mphone-backup-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.json';
-    var blob = new Blob([JSON.stringify({ app: 'mphone', version: 2, data: data })], { type: 'application/json' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
-    showToast('✓ 已导出备份', 'success');
-  });
+  // 导出：选「分享 / 下载」（见 33-backup.js）
+  exportRow.addEventListener('click', function() { openBackupExport(); });
 
   importRow.addEventListener('click', function() {
     importInput.value = '';
@@ -242,7 +226,7 @@
         showToast('✗ 文件格式不正确', 'error');
         return;
       }
-      openPfEntryDel('导入会覆盖当前的全部数据，确定继续吗？', function() {
+      openConfirm('导入会覆盖当前的全部数据，确定继续吗？', function() {
         // 第 1 版备份里的值是 localStorage 文本，需要先解析
         var data = {};
         Object.keys(parsed.data).forEach(function(k) {

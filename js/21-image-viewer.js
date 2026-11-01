@@ -116,29 +116,19 @@ document.getElementById('imgViewerSave').addEventListener('click', function(e) {
   e.stopPropagation();
   var src = ivState.src;
   var name = 'mphone-' + Date.now();
-  function download(href) {
+  fetch(src).then(function(r) { return r.blob(); }).then(function(blob) {
+    var ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    if (!blob.type) blob = new Blob([blob], { type: 'image/png' });
+    return shareOrDownload(blob, name + '.' + ext);
+  }).catch(function() {
+    // 读不到图片数据（跨域图片）：在新页面打开，长按保存
     var a = document.createElement('a');
-    a.href = href;
+    a.href = src;
     a.download = name;
     a.target = '_blank';
     document.body.appendChild(a);
     a.click();
     a.remove();
-  }
-  fetch(src).then(function(r) { return r.blob(); }).then(function(blob) {
-    var ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
-    var file = new File([blob], name + '.' + ext, { type: blob.type || 'image/png' });
-    var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
-      return navigator.share({ files: [file] }).catch(function() {});
-    }
-    var url = URL.createObjectURL(blob);
-    name += '.' + ext;
-    download(url);
-    setTimeout(function() { URL.revokeObjectURL(url); }, 10000);
-  }).catch(function() {
-    // 读不到图片数据（跨域图片）：在新页面打开，长按保存
-    download(src);
   });
 });
 document.getElementById('imgViewerFav').addEventListener('click', function(e) {
