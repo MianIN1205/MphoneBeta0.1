@@ -32,8 +32,8 @@
 | 06 / 08 | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）、聊天与剧情两套美化 |
 | 09-prompt | 系统提示词、预设（可导入酒馆预设）、世界书、思维链 |
 | 12-api-config | 主 API 设置 |
-| 13-chat-messages | `buildMsgs` 拼提示词（聊天 / 剧情都按回合 + token 上限裁剪，剧情省略部分用隐藏的 `<前情>` 代替）、发送与接收回复、`fillMacros`（{{char}} / {{user}}） |
-| 16-feed-auto | 动态（朋友圈）、社交圈、自主活动 |
+| 13-chat-messages | `buildMsgs` 拼提示词（聊天 / 剧情都按回合 + token 上限裁剪，剧情省略部分用隐藏的 `<前情>` 代替）、发送与接收回复、`fillMacros`（{{char}} / {{user}}）；`realWorldContext` 现实感知（角色设置「聊天」页 → 时间与感知：现在几点按角色时区、隔了多久没说话、真实电量 `phoneBattery`（iPhone 拿不到就不说）、纪念日和日程 `calendarContextFor`），只放聊天窗口；状态栏会带上上一次的状态（`lastStatusOf`） |
+| 16-feed-auto | 动态（朋友圈）、社交圈、自主活动。`callApiOnce(msgs, char)` 传角色时用 TA 自己的模型预设（朋友圈、主动消息、日记、总结、里程碑都和聊天用同一个模型） |
 | 17-memory-import | 数据备份导入、角色卡导入 |
 | 18 / 20 | 语音与生图 API、发图片和语音给 AI |
 | 22-assistant | MianIN 助手权限（加世界书、改 CSS、看报错） |

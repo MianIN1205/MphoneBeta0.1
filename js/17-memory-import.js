@@ -34,7 +34,7 @@ function summarizeRounds(idx, from, to) {
     { role: 'system', content: '你是记忆整理助手。请把下面这段聊天总结成简洁的记忆要点：用第三人称，保留关键事件、约定、情绪与关系变化、重要细节，不超过 200 字。只输出总结内容。' },
     { role: 'user', content: roundsAsText(rounds, char) }
   ];
-  return callApiOnce(msgs).then(function(text) {
+  return callApiOnce(msgs, char).then(function(text) {
     var mem = getCharMemory(char);
     var item = { id: genFeedId('m'), text: text.trim(), from: from, to: to, time: Date.now() };
     mem.summaries.push(item);

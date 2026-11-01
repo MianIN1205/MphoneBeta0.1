@@ -86,7 +86,7 @@ function memMaybeMilestone(char) {
   if (!char || !char.id || !cfg.on || !cfg.milestone || memMilestoneBusy[char.id]) return;
   var ms = memMilestones[char.id] || {};
   if (memImportant(char.id).length - (ms.basedOn || 0) < MILESTONE_EVERY) return;
-  var api = getApiCfg();
+  var api = getApiCfg(char);
   if (!api.url || !api.key || !api.model) return;
   memBuildMilestone(char).catch(function(err) { console.warn('[Mphone] 整理关系里程碑失败:', err); });
 }
@@ -105,7 +105,7 @@ function memBuildMilestone(char) {
     '- 不写日常闲聊、一时的情绪和普通的喜好\n- 之前整理过的里程碑，没有被新的记忆推翻就保留\n' +
     '- 发生在剧情空间的事在后面注明（剧情空间）\n- 每条一行，格式「时间 · 事件」，按时间先后，最多 12 条\n' +
     '- 只输出里程碑本身；如果还没有这样的节点，只输出「暂无」';
-  return llmRequest([{ role: 'user', content: prompt }], { stream: false }).then(function(text) {
+  return llmRequest([{ role: 'user', content: prompt }], { stream: false, cfg: getApiCfg(char) }).then(function(text) {
     text = String(text || '').trim();
     if (/^暂无/.test(text)) text = '';
     memMilestones[char.id] = { text: text.slice(0, 1500), time: Date.now(), basedOn: list.length };
@@ -412,7 +412,7 @@ document.getElementById('memAskBtn').addEventListener('click', function() {
   memAskOverlay.classList.add('open');
   var q = '（私下问你一下）你还记得关于我、关于我们的哪些事？用你自己的话说说，挑你觉得最重要的讲，简短一点。';
   var msgs = buildMsgs(idx, getChatHistory(idx).concat([{ role: 'user', content: q }]));
-  callApiOnce(msgs).then(function(text) {
+  callApiOnce(msgs, char).then(function(text) {
     askText.textContent = fillMacros(memStripTags(text), char) || '（TA 没有回答）';
   }, function(err) {
     askText.textContent = '没问成：' + err.message;

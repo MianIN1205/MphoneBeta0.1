@@ -430,17 +430,18 @@ feedCommentInput.addEventListener('keydown', function(e) {
 });
 
 // ---------- AI 调用（非流式，返回完整文本） ----------
-function callApiOnce(messages) {
+// char：用这个角色自己的模型（便捷拓展栏选过模型预设时），和 TA 聊天用的是同一个
+function callApiOnce(messages, char) {
   // 按接口类型自动适配（见 24-llm.js）
-  return llmRequest(messages, { stream: false }).then(function(text) {
+  return llmRequest(messages, { stream: false, cfg: char ? getApiCfg(char) : undefined }).then(function(text) {
     if (!text) throw new Error('未收到回复内容');
     return String(text).trim();
   });
 }
 
-function nowText() {
-  var d = new Date();
-  return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + WEEKDAYS[d.getDay()] + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+// 现在的时间；传角色时按 TA 所在的时区
+function nowText(char) {
+  return charNowText(char);
 }
 
 // 角色上下文：人设 + 预设 + 世界书 + 记忆总结 + 注意力范围内的聊天
@@ -457,11 +458,11 @@ function generateCharPost(idx) {
   if (!char) return Promise.reject(new Error('角色不存在'));
   var msgs = charContextMsgs(idx).concat([{
     role: 'system',
-    content: '【发动态】现在是 ' + nowText() + '。请你以「' + charAuthor(char).name + '」的身份，发一条朋友圈 / 微博式的个人动态。' +
+    content: '【发动态】现在是 ' + nowText(char) + '。请你以「' + charAuthor(char).name + '」的身份，发一条朋友圈 / 微博式的个人动态。' +
              '内容可以和最近的聊天、生活、心情相关，口吻自然，符合人设，一般不超过 100 字。只输出动态正文，不要加引号、标题或任何说明。' +
              '想配图的话，在正文后面用 <文字图>画面描述</文字图> 附上 1～3 张「文字图」（用一两句话描述照片里的画面，比如：窗外的晚霞，橘粉色的云）；不配图也可以。'
   }]);
-  return callApiOnce(msgs).then(function(text) {
+  return callApiOnce(msgs, char).then(function(text) {
     text = memExtractTags(char, text);   // TA 顺手记下的记忆
     var textImgs = [];
     text = text.replace(/<文字图>([\s\S]*?)<\/文字图>/g, function(_, t) { if (t.trim()) textImgs.push(t.trim()); return ''; });
@@ -553,12 +554,12 @@ function charInteract(post, idx) {
     : [];
   var msgs = charContextMsgs(idx).concat(imgMsg, [{
     role: 'system',
-    content: '【动态互动】现在是 ' + nowText() + '。你（' + me.name + '）在刷动态时看到了' + (isOwn ? '自己发的' : '下面这条') + '动态：\n\n' +
+    content: '【动态互动】现在是 ' + nowText(char) + '。你（' + me.name + '）在刷动态时看到了' + (isOwn ? '自己发的' : '下面这条') + '动态：\n\n' +
              feedPostAsText(post, char) + '\n\n' +
              '请以角色身份决定是否点赞，并写一条简短评论；如果评论区里有人回复了你或评论了你的动态，就回复对方。' +
              '只输出 JSON：{"like": true 或 false, "comment": "评论内容"}，不想评论时 comment 为空字符串。'
   }]);
-  return callApiOnce(msgs).then(function(text) {
+  return callApiOnce(msgs, char).then(function(text) {
     var r = parseInteraction(memExtractTags(char, text));
     if (r.like && !isOwn && !post.likes.some(function(a) { return sameAuthor(a, me); })) post.likes.push(me);
     if (r.comment) {
@@ -698,9 +699,9 @@ function autoSendMessage(idx) {
       '可以是分享日常、想念、追问之前的话题等，自然简短，符合人设与当前关系' + (last && last.role === 'assistant' ? '（对方还没回复你上一条消息）' : '') + '。只输出消息内容本身。';
   var msgs = charContextMsgs(idx).concat([{
     role: 'system',
-    content: '【主动消息】现在是 ' + nowText() + '。' + gap + ask
+    content: '【主动消息】现在是 ' + nowText(char) + '。' + gap + ask
   }]).concat(chatFormatRules(char));
-  return callApiOnce(msgs).then(function(text) {
+  return callApiOnce(msgs, char).then(function(text) {
     text = stripQuotes(text);
     var viewing = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;
     var showNow = viewing && currentCrSubView === 'chat';

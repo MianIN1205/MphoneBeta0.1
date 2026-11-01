@@ -115,6 +115,9 @@ function chatFormatRules(char) {
       rules.push('在全部消息之后，另起一行输出你当前的状态（每项只写简短的内容，不写 HTML；数值只写数字，比如好感度写 68）：<status>' +
                  fields.map(function(f) { return f + '：…'; }).join(' | ') + '</status>');
     }
+    // 接着上一次的状态写，数值不会忽高忽低
+    var prev = lastStatusOf(chatHistories[char.id]);
+    if (prev) rules.push('你上一次的状态是：' + prev + '\n这次在它的基础上按刚才发生的事自然变化，没变的项照抄，数值不要无故大起大落。');
   }
   return rules.length ? [{ role: 'system', content: '【回复格式】' + rules.join('\n') }] : [];
 }
@@ -187,6 +190,70 @@ function crossSceneContext(idx, isDrama) {
 }
 
 // histOverride：指定使用的记录（自主活动 / 动态生成时用聊天记录），默认取当前子视图的记录
+// =============================================
+// 现实感知（角色设置「聊天」页 → 时间与感知）：现在几点（按角色所在时区）、隔了多久没说话、手机电量、纪念日和日程
+// 只放进聊天窗口（以及用聊天记录的主动消息、动态、日记）；剧情空间有自己的时间线，不放
+// =============================================
+function zoneParts(t, tz) {
+  try {
+    var o = {};
+    new Intl.DateTimeFormat('en-US', { timeZone: tz || undefined, year: 'numeric', month: 'numeric', day: 'numeric',
+      weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date(t)).forEach(function(p) { o[p.type] = p.value; });
+    return { y: +o.year, m: +o.month, d: +o.day, w: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(o.weekday), h: (+o.hour) % 24, min: +o.minute };
+  } catch (_) {
+    var d = new Date(t);
+    return { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate(), w: d.getDay(), h: d.getHours(), min: d.getMinutes() };
+  }
+}
+function dayPart(h) { return h < 5 ? '凌晨' : h < 8 ? '早上' : h < 11 ? '上午' : h < 13 ? '中午' : h < 18 ? '下午' : h < 23 ? '晚上' : '深夜'; }
+function zoneTimeText(t, tz) {
+  var p = zoneParts(t, tz);
+  return p.y + '年' + p.m + '月' + p.d + '日 ' + WEEKDAYS[p.w] + ' ' + dayPart(p.h) + ' ' + pad(p.h) + ':' + pad(p.min);
+}
+function charTimeZone(char) { return ((char && char.chatCfg) || {}).timeZone || ''; }
+// 角色那边的「现在」（主动消息、动态、日记里用）
+function charNowText(char) { return zoneTimeText(Date.now(), charTimeZone(char)); }
+function durText(ms) {
+  var m = Math.round(ms / 60000);
+  if (m < 60) return m + ' 分钟';
+  var h = Math.round(m / 60);
+  return h < 48 ? h + ' 小时' : Math.round(h / 24) + ' 天';
+}
+function zoneLabel(tz) {
+  var o = document.querySelector('#timeZone option[value="' + tz + '"]');
+  return o ? o.textContent : tz;
+}
+function realWorldContext(char, hist) {
+  var c = Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {});
+  var lines = [], now = Date.now();
+  if (c.timeOn) {
+    var mine = zoneTimeText(now), theirs = c.timeZone ? zoneTimeText(now, c.timeZone) : mine;
+    lines.push(theirs !== mine ? '你所在的地方（' + zoneLabel(c.timeZone) + '）现在是 ' + theirs + '；{{user}}那边是 ' + mine + '。' : '现在是 ' + mine + '。');
+    // 隔了多久没说话：你上一条消息之后，对方隔了多久才回；或者对方还没回，已经过去多久
+    var ai = -1;
+    for (var i = hist.length - 1; i >= 0; i--) {
+      if (hist[i].role === 'assistant' && hist[i].time && !hist[i].action) { ai = i; break; }
+    }
+    if (ai >= 0) {
+      var firstUser = null;
+      for (var j = ai + 1; j < hist.length; j++) { if (hist[j].role === 'user' && hist[j].time) { firstUser = hist[j]; break; } }
+      var gap = (firstUser ? firstUser.time : now) - hist[ai].time;
+      if (firstUser && gap >= 30 * 60000) lines.push('你上一条消息发出后，{{user}}隔了 ' + durText(gap) + ' 才回你。');
+      else if (!firstUser && gap >= 10 * 60000) lines.push('距离你上一条消息已经过去了 ' + durText(gap) + '。');
+    }
+  }
+  if (c.batteryOn && typeof phoneBattery !== 'undefined' && phoneBattery.real) {
+    var pct = Math.round(phoneBattery.level * 100);
+    lines.push('{{user}}的手机电量 ' + pct + '%' + (phoneBattery.charging ? '，正在充电' : pct <= 20 ? '，快没电了' : '') + '。');
+  }
+  if (c.calOn && typeof calendarContextFor === 'function') {
+    var cal = calendarContextFor(char);
+    if (cal) lines.push(cal);
+  }
+  if (!lines.length) return '';
+  return '【现在】' + lines.join('\n') + '\n这些是你此刻自然知道的现实情况，需要时自然地带进对话（比如很晚了劝对方早点睡、好久没聊有点想念），不用每次都提。';
+}
+
 function buildMsgs(idx, histOverride) {
   var char = charList[idx] || {};
   var sys  = (document.getElementById('systemPromptTA') ? document.getElementById('systemPromptTA').value.trim() : '');
@@ -210,6 +277,7 @@ function buildMsgs(idx, histOverride) {
   if (feedSys) msgs.push({ role: 'system', content: feedSys });
 
   var history = histOverride || getActiveHistory(idx);
+  var fullHistory = history;   // 下面会裁剪 history；算「隔了多久」要用完整的记录
   var isDrama = history === getDramaHistory(idx);
 
   // 记录裁剪：聊天和剧情都按「最大记忆范围」（回合）和「上下文上限」（token）只带最近的部分；
@@ -285,6 +353,9 @@ function buildMsgs(idx, histOverride) {
   var cross = crossSceneContext(idx, isDrama);
   if (cross) msgs.push({ role: 'system', content: cross });
   if (typeof scenePrompt === 'function') msgs.push({ role: 'system', content: scenePrompt(isDrama) });
+  // 聊天窗口：现在几点、隔了多久、电量、纪念日和日程
+  var realSys = isChatHist ? realWorldContext(char, fullHistory) : '';
+  if (realSys) msgs.push({ role: 'system', content: realSys });
   // 聊天窗口：这个角色能用的表情包名字（表情包抽屉的设置里按角色打开）
   var stkSys = (isChatHist && typeof stickerPrompt === 'function') ? stickerPrompt(char) : '';
   if (stkSys) msgs.push({ role: 'system', content: stkSys });
@@ -717,6 +788,18 @@ function commitAssistantReply(hist, raw, list, empty) {
   if (status && typeof refreshStatusPanel === 'function') refreshStatusPanel();
   return added;
 }
+// 记录里最近一次的状态栏内容（去掉 HTML，太长截断）
+function lastStatusOf(hist) {
+  for (var i = (hist || []).length - 1; i >= 0; i--) {
+    var s = hist[i].status;
+    if (s) {
+      s = String(s).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      return s.length > 400 ? s.slice(0, 400) + '…' : s;
+    }
+  }
+  return '';
+}
+
 // 角色回复里的 <撤回>内容</撤回>：拆成单独一条「刚发就撤回」的消息
 function splitRecallParts(parts) {
   var out = [];

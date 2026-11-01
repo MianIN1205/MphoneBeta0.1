@@ -131,7 +131,7 @@ var DEFAULT_CHAT_CFG = {
   maxMem: 50, attention: 10, autoSum: false, sumEvery: 10,
   lang: '', translate: false, replyMin: 1, replyMax: 3,
   patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false, actionOn: false, ctxTokens: 16000,
-  recallOn: false, recallPeek: true
+  recallOn: false, recallPeek: true, timeOn: true, timeZone: '', batteryOn: true, calOn: true
 };
 // 状态栏 HTML 模板：用 {{心情}} 这样的占位符标出要填的地方，AI 只输出这些字段的内容，小手机按模板画出来
 // （清空模板就按「字段」显示成线条本卡片；模板里没有占位符的旧写法，仍让 AI 直接输出整段 HTML）
@@ -347,6 +347,10 @@ function setChatCfgForm(c) {
   $('chatActionOn').checked = c.actionOn;
   $('recallOn').checked   = c.recallOn;
   $('recallPeek').checked = c.recallPeek;
+  $('timeOn').checked     = c.timeOn;
+  $('timeZone').value     = c.timeZone;
+  $('batteryOn').checked  = c.batteryOn;
+  $('calOn').checked      = c.calOn;
   $('memAutoSumSub').classList.toggle('open', c.autoSum);
 }
 
@@ -374,6 +378,10 @@ function readChatCfgForm() {
     actionOn:  $('chatActionOn').checked,
     recallOn:  $('recallOn').checked,
     recallPeek: $('recallPeek').checked,
+    timeOn:    $('timeOn').checked,
+    timeZone:  $('timeZone').value,
+    batteryOn: $('batteryOn').checked,
+    calOn:     $('calOn').checked,
     vectorOn:  $('vectorMemOn').checked
   };
 }

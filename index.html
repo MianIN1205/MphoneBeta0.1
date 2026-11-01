@@ -2298,6 +2298,41 @@
           <div class="auto-hint">打开后，TA 偶尔会在聊天窗口发了又撤回（说漏嘴、发错、害羞），过两秒变成「撤回了一条消息」，TA 自己也记得撤回过什么。能偷看时，点「偷看」就能看到原文</div>
         </div>
 
+        <div class="section-label">时间与感知</div>
+        <div class="settings-card">
+          <div class="auto-row">
+            <span class="auto-row-label">感知现实时间</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="timeOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-row">
+            <span class="auto-row-label">TA 所在的时区</span>
+            <select class="field-input" id="timeZone" style="width:150px;flex:none;">
+              <option value="">跟随我的手机</option>
+              <option value="Asia/Shanghai">北京 / 上海</option>
+              <option value="Asia/Hong_Kong">香港</option>
+              <option value="Asia/Taipei">台北</option>
+              <option value="Asia/Tokyo">东京</option>
+              <option value="Asia/Seoul">首尔</option>
+              <option value="Asia/Singapore">新加坡</option>
+              <option value="Europe/London">伦敦</option>
+              <option value="Europe/Paris">巴黎</option>
+              <option value="Europe/Berlin">柏林</option>
+              <option value="America/New_York">纽约</option>
+              <option value="America/Los_Angeles">洛杉矶</option>
+              <option value="Australia/Sydney">悉尼</option>
+            </select>
+          </div>
+          <div class="auto-row">
+            <span class="auto-row-label">能看到我的手机电量</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="batteryOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-row">
+            <span class="auto-row-label">知道我的纪念日和日程</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="calOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-hint">感知现实时间：聊天时 TA 知道现在几点、星期几，也知道你们隔了多久没说话。时区和你不一样时（比如异地、跨国），TA 会按自己那边的时间过日子，也知道你那边几点。<br>电量：只有手机浏览器给得出真实电量时 TA 才看得到（安卓一般可以；iPhone 拿不到，就不告诉 TA）。<br>纪念日和日程：桌面「纪念日」里最近 30 天的日子和今天的日程。</div>
+        </div>
+
         <div class="section-label">聊天记录</div>
         <div class="char-action-row">
           <button class="char-action-btn char-upload-btn" id="csClearChat">清空聊天记录</button>

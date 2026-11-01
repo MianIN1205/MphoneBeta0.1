@@ -126,6 +126,8 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
+// 真实电量（给角色看）；浏览器不提供电量时 real 为 false
+var phoneBattery = { level: 0.8, charging: false, real: false };
 function setBatteryLevel(level) {
   const pct = Math.max(0, Math.min(1, level));
   const fill = document.getElementById('batteryFill');
@@ -134,9 +136,12 @@ function setBatteryLevel(level) {
 }
 if ('getBattery' in navigator) {
   navigator.getBattery().then(function(bat) {
+    var sync = function() { phoneBattery = { level: bat.level, charging: bat.charging, real: true }; };
+    sync();
     setBatteryLevel(bat.level);
-    bat.addEventListener('levelchange', function() { setBatteryLevel(bat.level); });
-  });
+    bat.addEventListener('levelchange', function() { sync(); setBatteryLevel(bat.level); });
+    bat.addEventListener('chargingchange', sync);
+  }).catch(function() { setBatteryLevel(0.8); });
 } else { setBatteryLevel(0.8); }
 
 // 设置界面开关

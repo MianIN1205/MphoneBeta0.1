@@ -156,6 +156,20 @@ function annivEntries() {
   // 置顶在前；其次「认识第几天」、今天和快到的日子（越近越前）；已经过去的在最后
   return list.sort(function(x, y) { return (y.pin - x.pin) || (x.order - y.order); });
 }
+// 告诉角色的纪念日和日程（角色设置「聊天」页 → 知道我的纪念日和日程）：
+// 和这个角色认识第几天；今天的日子和日程；30 天内要到的；已经过去的纪念日算到今天第几天。最多 8 条
+function calendarContextFor(char) {
+  var known = '', items = [];
+  annivEntries().forEach(function(e) {
+    if (e.auto) { if (e.charId === char.id) known = '今天是你们认识的第 ' + e.big + ' 天。'; return; }
+    if (e.past || items.length >= 8) return;
+    if (e.today) items.push((e.kind === 'event' ? '今天的日程：' : '今天是纪念日：') + e.title + (e.time ? '（' + e.time + '）' : ''));
+    else if (e.note === '还有' && e.big <= 30) items.push(e.title + '：还有 ' + e.big + ' 天' + (e.kind === 'event' && e.time ? '（' + e.time + '）' : ''));
+    else if (e.kind === 'anniv' && e.note === '已经') items.push(e.title + '：已经 ' + e.big + ' 天');
+  });
+  return known + (known && items.length ? '\n' : '') + (items.length ? '{{user}}手机日历里记着的纪念日和日程：\n' + items.map(function(t) { return '· ' + t; }).join('\n') : '');
+}
+
 // 小组件上显示的：设了外显的；都没设就用置顶的；还没有就用排在最前的一条
 function annivWidgetItems() {
   var all = annivEntries();
@@ -341,10 +355,10 @@ diaryDelBtn.addEventListener('click', function() {
 function writeCharDiary(idx) {
   var char = charList[idx], name = char.charAlias || char.charName || '角色';
   var msgs = charContextMsgs(idx).concat([{ role: 'system', content:
-    '【写日记】现在是 ' + nowText() + '。请你以「' + name + '」的身份，用第一人称写一篇今天的私人日记：可以写今天发生的事、和用户的聊天、心情和没说出口的想法，口吻符合人设，200～400 字。' +
+    '【写日记】现在是 ' + nowText(char) + '。请你以「' + name + '」的身份，用第一人称写一篇今天的私人日记：可以写今天发生的事、和用户的聊天、心情和没说出口的想法，口吻符合人设，200～400 字。' +
     '第一行只写日记标题（不超过 12 个字，不加书名号和「标题」二字），然后空一行写正文。只输出日记本身。' +
     '日记写完后另起一行写 <要点>用一句话概括今天最值得记住的事（30 字以内）</要点>，这一行不会出现在日记里。' }]);
-  return callApiOnce(msgs).then(function(text) {
+  return callApiOnce(msgs, char).then(function(text) {
     var point = '';
     text = String(text).replace(/<要点>([\s\S]*?)<\/要点>/g, function(_, s) { point = s.replace(/\s+/g, ' ').trim(); return ''; });
     var lines = memExtractTags(char, text).replace(/\r/g, '').split('\n');
