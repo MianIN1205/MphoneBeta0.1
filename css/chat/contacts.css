@@ -1,0 +1,125 @@
+/* 眠花糖机 — 消息子视图、通讯录（字母目录、分组） */
+
+/* =============================================
+   消息子视图（聊天 / 通讯录）
+   ============================================= */
+.msg-view { display: none; }
+.msg-view.active { display: block; }
+
+/* 通讯录页面布局 */
+.msg-view[data-view="contacts"].active {
+  display: flex;
+  min-height: 360px;
+}
+
+.contacts-index-bar {
+  width: 18px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 0 8px;
+  background: rgba(255,255,255,0.70);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 2px 7px rgba(0,0,0,0.08),
+    inset 0 -1px 4px rgba(0,0,0,0.04),
+    0 1px 4px rgba(200,170,170,0.14);
+  position: fixed;
+  left: 16px;
+  bottom: 82px;
+  z-index: 50;
+}
+
+.contacts-main-area {
+  flex: 1;
+}
+
+.ci-item {
+  width: 16px;
+  height: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: #ccc;
+  cursor: pointer;
+  border-radius: 50%;
+  user-select: none;
+  line-height: 1;
+  transition: color 0.12s, background 0.12s;
+  letter-spacing: 0;
+}
+
+.ci-item:active {
+  color: #D05858;
+  background: rgba(208,88,88,0.10);
+}
+
+.ci-item.ci-star {
+  color: #E8A0A0;
+  font-size: 11px;
+  margin-bottom: 1px;
+}
+
+/* 通讯录：左侧字母目录 + 分组 */
+.contacts-wrap { display: flex; align-items: flex-start; padding-left: 10px; }
+.contacts-wrap .chat-char-list { flex: 1; min-width: 0; }
+/* 目录固定在屏幕左侧、上下居中，不随列表滚动 */
+.contact-index {
+  position: absolute; left: 5px; top: 50%; transform: translateY(-50%); z-index: 5;
+  flex-shrink: 0; width: 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 0; border-radius: 9px; background: rgba(255,255,255,0.55);
+}
+.contact-index:empty { display: none; }
+.contact-index span {
+  font-size: 9.5px; font-weight: 600; color: #b07a8c; line-height: 13px;
+  width: 16px; text-align: center; cursor: pointer; user-select: none;
+}
+.contact-index span.empty { color: #dcc8cf; font-weight: 500; }
+.contact-index span:active { color: #fff; background: #D05858; border-radius: 50%; }
+.contact-section-label {
+  font-size: 11px; font-weight: 600; color: #b0889a; padding: 4px 4px 0;
+  scroll-margin-top: 8px;
+}
+.contact-star-btn {
+  margin-left: auto; flex-shrink: 0; border: none; background: none;
+  font-size: 17px; line-height: 1; color: #d8c4cc; cursor: pointer; padding: 4px;
+}
+.contact-star-btn.on { color: #F0A040; }
+
+.chat-char-card {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 16px; padding: 11px 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.chat-char-card:active { background: rgba(255,255,255,0.72); transform: scale(0.98); }
+
+.chat-char-card-avatar {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chat-char-card-info {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 3px;
+}
+
+.chat-char-card-name {
+  font-size: 15px; font-weight: 600; color: #222;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.chat-char-card-last {
+  font-size: 12px; color: #bbb;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

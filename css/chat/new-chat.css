@@ -1,3 +1,5 @@
+/* 眠花糖机 — 新建对话：选角色弹窗 */
+
 /* =============================================
    新建对话 — 角色选择弹窗
    ============================================= */
@@ -76,4 +78,3 @@
 .new-chat-btn:active { opacity: 0.72; transform: scale(0.97); }
 .new-chat-cancel  { background: #F0F0F0; color: #666; }
 .new-chat-confirm { background: #FFE4E1; color: #B04040; }
-

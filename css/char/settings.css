@@ -1,0 +1,451 @@
+/* 眠花糖机 — 角色设置：头像、世界书关联、人设、三页滑动、自主活动、开场白、记忆总结、操作按钮 */
+
+/* 角色设置 — 自主活动 */
+.auto-row { display: flex; align-items: center; gap: 8px; min-height: 30px; }
+.auto-row-label { flex: 1; font-size: 13px; color: #555; }
+.auto-sub { display: none; flex-direction: column; gap: 8px; margin-top: 8px; }
+.auto-sub.open { display: flex; }
+.auto-num { width: 58px; flex: none; text-align: center; padding: 5px 4px; }
+.auto-unit { font-size: 12px; color: #999; }
+.auto-card:not(.mode-fixed) .auto-mode-fixed,
+.auto-card.mode-fixed .auto-mode-random { display: none; }
+.auto-hint { font-size: 10.5px; color: #bbb; margin-top: 10px; line-height: 1.5; }
+
+/* 角色设置 — 三页左右滑动 */
+/* 角色设置顶栏中间的三档滑块（样式同聊天 / 剧情切换） */
+/* 加上 .msg-toggle-wrap / .msg-toggle-slider 提高优先级，否则会被 chat-list.css 里的通用样式盖掉 */
+.msg-toggle-wrap.cs-tabs {
+  position: absolute; left: 50%; transform: translateX(-50%);
+}
+.msg-toggle-slider.cs-toggle-slider { width: 52px; }
+.cs-tab {
+  width: 52px; height: 30px; border: none; background: none;
+  border-radius: 15px; font-size: 12.5px; color: #aaa;
+  cursor: pointer; font-family: inherit; position: relative; z-index: 1;
+  transition: color 0.2s ease; -webkit-tap-highlight-color: transparent;
+}
+.cs-tab.active { color: #D05858; font-weight: 600; }
+.cs-pages {
+  flex: 1; min-height: 0;
+  display: flex; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+.cs-pages::-webkit-scrollbar { display: none; }
+.cs-page {
+  flex: 0 0 100%; box-sizing: border-box;
+  scroll-snap-align: start;
+}
+
+/* 角色设置 — USER：主账号 / 当前会话账号 / 称呼 同一行 */
+.cs-user-row { display: flex; align-items: center; gap: 6px; min-height: 36px; }
+.cs-user-chip {
+  display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1;
+  padding: 3px 6px 3px 3px; border-radius: 18px; background: rgba(250,240,242,0.7);
+}
+.cs-user-chip .cs-acc-av { width: 26px; height: 26px; flex-shrink: 0; }
+.cs-user-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.cs-user-label { font-size: 9.5px; color: #aaa; white-space: nowrap; }
+.cs-user-id {
+  font-size: 11.5px; color: #555; font-weight: 600;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cs-user-cur { cursor: pointer; }
+.cs-call-input { width: 64px; flex: none; padding: 5px 7px; font-size: 12px; }
+
+/* 长文本输入框：右下角可拖动调整高度 */
+.persona-textarea, .mine-field-textarea, .pf-textarea, .prompt-textarea,
+.custom-css-textarea, .mem-sum-text, textarea.field-input { resize: vertical !important; }
+.cs-acc-list { display: none; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.cs-acc-list.open { display: flex; }
+.cs-opening-list { display: flex; flex-direction: column; gap: 8px; }
+.cs-opening-item { position: relative; }
+.cs-opening-item textarea { min-height: 60px; padding-right: 26px; }
+.cs-opening-del {
+  position: absolute; top: 6px; right: 6px; border: none; background: none;
+  color: #c0a0aa; font-size: 13px; cursor: pointer;
+}
+/* 剧情：开场白选择 */
+.drama-opening-picker { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 12px; width: 100%; box-sizing: border-box; }
+.drama-opening-title { font-size: 12px; color: #b0889a; text-align: center; }
+.drama-opening-item {
+  background: rgba(255,255,255,0.85); border-radius: 12px; padding: 10px 12px;
+  font-size: 12.5px; color: #555; line-height: 1.5; cursor: pointer;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.drama-opening-item:active { transform: scale(0.98); }
+.cs-acc-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px 4px 4px; border-radius: 16px; cursor: pointer;
+  border: 1.5px solid rgba(210,180,180,0.35); background: #fff;
+  font-size: 12.5px; color: #555;
+}
+.cs-acc-item.active { border-color: #D05858; color: #D05858; background: rgba(255,240,242,0.9); }
+.cs-acc-av {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD0 100%);
+  background-size: cover; background-position: center;
+}
+.cs-acc-persona {
+  margin-top: 10px; font-size: 12px; color: #888; line-height: 1.5;
+  background: rgba(250,240,242,0.7); border-radius: 10px; padding: 8px 10px;
+  white-space: pre-wrap; max-height: 90px; overflow-y: auto;
+}
+
+/* 角色设置 — 记忆总结列表 */
+.mem-sum-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.mem-sum-item {
+  background: rgba(250,240,242,0.7); border-radius: 10px; padding: 8px 10px;
+}
+.mem-sum-head { display: flex; align-items: center; font-size: 11px; color: #b0889a; }
+.mem-sum-head span { flex: 1; }
+.mem-sum-head button {
+  border: none; background: none; color: #c08aa0; font-size: 11px; cursor: pointer; font-family: inherit;
+}
+.mem-sum-text {
+  width: 100%; box-sizing: border-box; margin-top: 4px;
+  border: none; background: transparent; resize: vertical;
+  font-size: 12.5px; color: #444; line-height: 1.5; font-family: inherit; outline: none;
+  min-height: 54px;
+}
+
+/* 角色设置四页：按在滑块 / 输入框上时锁住左右翻页；一次最多翻一页 */
+.cs-pages.swipe-locked { overflow-x: hidden; }
+.cs-page { scroll-snap-stop: always; }
+
+/* 角色设置「扩展」页：每日日记的时间 */
+.diary-time { width: 96px; flex: none; }
+
+/* =============================================
+   角色设置界面
+   ============================================= */
+.save-nav-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: #D05858;
+  padding: 4px 6px;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.save-nav-btn:active { opacity: 0.6; }
+
+.char-info-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.char-avatar-box {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.15s;
+}
+.char-avatar-box:active { opacity: 0.8; }
+
+/* 已设置图片的头像：隐藏占位小人，图片铺满 */
+.avatar-img {
+  background-size: cover !important;
+  background-position: center !important;
+  border: none !important;
+}
+.avatar-img::before, .avatar-img::after { display: none !important; }
+
+/* 角色设置 — 关联世界书勾选列表 */
+.wb-link-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 2px; font-size: 13px; color: #555; cursor: pointer;
+}
+.wb-link-item input { accent-color: #c06080; }
+
+
+
+.char-card-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  justify-content: center;
+}
+
+.char-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.char-field-row .char-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 28px;
+  letter-spacing: 0.3px;
+}
+
+.char-field-row .field-input {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.char-field-hint {
+  font-weight: 400;
+  color: #ccc;
+  letter-spacing: 0.3px;
+}
+
+.char-field-required {
+  font-weight: 600;
+  color: #E08080;
+  letter-spacing: 0.3px;
+}
+
+/* 角色/用户头像包裹 + 角色标签 */
+.char-avatar-wrap {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.char-role-tag {
+  font-size: 7px; font-weight: 700;
+  color: rgba(150,110,110,0.55);
+  letter-spacing: 0.9px;
+  line-height: 1;
+}
+
+/* 合并人设卡片内小标题 */
+.persona-title-sm {
+  font-size: 12px; font-weight: 600; color: #555;
+}
+
+/* 卡片内分隔线 */
+.card-inner-divider {
+  height: 1px;
+  background: rgba(0,0,0,0.05);
+  margin: 12px 0;
+}
+
+.persona-header {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.persona-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.persona-subtitle {
+  font-size: 10px;
+  font-weight: 500;
+  color: #bbb;
+  letter-spacing: 0.8px;
+}
+
+.persona-textarea {
+  width: 100%;
+  min-height: 90px;
+  border: none;
+  outline: none;
+  background: rgba(0,0,0,0.045);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #333;
+  font-family: inherit;
+  resize: none;
+  line-height: 1.6;
+}
+.persona-textarea::placeholder { color: #ccc; }
+
+.world-book-card {
+  background: rgba(255,255,255,0.92);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+  margin-bottom: 14px;
+}
+
+.wb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.wb-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.wb-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.wb-subtitle {
+  font-size: 10px;
+  font-weight: 500;
+  color: #bbb;
+  letter-spacing: 0.8px;
+}
+
+.wb-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wb-count {
+  font-size: 12px;
+  color: #aaa;
+  font-weight: 500;
+}
+
+.wb-arrow {
+  width: 16px; height: 16px;
+  stroke: #bbb; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.wb-arrow.open { transform: rotate(90deg); }
+
+.wb-content {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.30s cubic-bezier(0.4,0,0.2,1);
+}
+
+.wb-content.open {
+  max-height: 300px;
+  border-top: 1px solid rgba(0,0,0,0.045);
+}
+
+.wb-empty-hint {
+  padding: 16px;
+  font-size: 12px;
+  color: #ccc;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.contacts-main-area { padding: 8px 0 20px 20px; }
+
+.contact-card {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 16px; padding: 11px 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.contact-card:active { background: rgba(255,255,255,0.72); transform: scale(0.98); }
+
+.contact-card-avatar {
+  width: 46px; height: 46px; border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.contact-card-info { flex: 1; min-width: 0; }
+.contact-card-alias {
+  font-size: 15px; font-weight: 600; color: #222;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.contact-card-name {
+  font-size: 12px; color: #aaa; margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+@keyframes shakeX {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+.shake { animation: shakeX 0.38s ease; }
+
+@keyframes cardGlow {
+  0%   { box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+  40%  { box-shadow: 0 0 0 3px rgba(208,88,88,0.38), 0 4px 22px rgba(208,88,88,0.32), 0 2px 10px rgba(0,0,0,0.08); }
+  100% { box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+}
+.card-glow { animation: cardGlow 1s ease forwards; }
+
+/* 角色设置 — 操作按钮行 */
+.char-action-row {
+  display: flex; gap: 10px; padding: 4px 0 8px;
+}
+.char-action-btn {
+  flex: 1; padding: 13px 0; border: none; border-radius: 16px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: opacity 0.15s, transform 0.15s;
+}
+.char-action-btn:active { opacity: 0.72; transform: scale(0.97); }
+.char-upload-btn {
+  background: rgba(255,255,255,0.92);
+  border: 1.5px solid rgba(200,180,180,0.40);
+  color: #555;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.char-delete-btn {
+  background: rgba(255,215,215,0.90);
+  color: #c03030;
+  box-shadow: 0 2px 10px rgba(200,60,60,0.10);
+}
+
+/* Prompt — 世界书文件夹 */
+.wb-add-row { display: flex; gap: 8px; }
+.wb-folder { margin-bottom: 8px; }
+.wb-folder-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 10px; border-radius: 12px; cursor: pointer;
+  background: rgba(208,88,120,0.06);
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.wb-folder-arrow {
+  width: 13px; height: 13px; flex-shrink: 0;
+  stroke: #c08aa0; stroke-width: 2.2; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: transform 0.2s;
+}
+.wb-folder.open .wb-folder-arrow { transform: rotate(90deg); }
+.wb-folder-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: #a0506a;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-folder-count { font-size: 11px; color: #c0a0aa; }
+.wb-folder-act {
+  border: none; background: none; color: #c08aa0; font-size: 11px;
+  padding: 2px 4px; cursor: pointer; font-family: inherit;
+}
+.wb-folder-body { display: none; padding: 8px 0 0 10px; }
+.wb-folder.open .wb-folder-body { display: block; }

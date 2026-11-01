@@ -1,0 +1,58 @@
+/* 眠花糖机 — 小手机状态栏（时间、信号、电量） */
+
+/* 状态栏 */
+.status-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 26px 10px;
+}
+
+.status-time {
+  font-size: 15px; font-weight: 600;
+  color: #333; letter-spacing: 0.3px;
+}
+
+.status-right { display: flex; align-items: center; gap: 7px; }
+
+.signal-bars {
+  display: flex; align-items: flex-end;
+  gap: 2.5px; height: 13px;
+}
+
+.signal-bars span {
+  display: block; width: 3px;
+  background: #333; border-radius: 1.5px;
+}
+
+.signal-bars span:nth-child(1) { height: 4px; }
+.signal-bars span:nth-child(2) { height: 7px; }
+.signal-bars span:nth-child(3) { height: 10px; }
+.signal-bars span:nth-child(4) { height: 13px; }
+
+.battery-wrapper { display: flex; align-items: center; }
+
+.battery-body {
+  width: 22px; height: 12px;
+  border: 1.5px solid #333;
+  border-radius: 3px; padding: 1.5px; overflow: hidden;
+}
+
+.battery-fill {
+  height: 100%; width: 80%;
+  background: #333; border-radius: 1px;
+  transition: width 0.6s ease, background 0.4s ease;
+}
+
+.battery-cap {
+  width: 3px; height: 6px;
+  background: #333;
+  border-radius: 0 2px 2px 0; margin-left: 1px;
+}
+
+/* 外观里关掉小手机自带的状态栏时，顶栏和桌面不再给它留位置 */
+.phone.no-statusbar .settings-nav { padding-top: 16px; }
+.phone.no-statusbar .desktop { padding-top: 28px; }

@@ -1,27 +1,17 @@
-/* =============================================
-   通用 App 界面（外观 / Chat / Prompt）
-   ============================================= */
-.app-screen {
-  position: absolute; inset: 0;
-  background: #FFF0F5;
-  display: flex; flex-direction: column;
-  z-index: 100;
-  transform: scale(0.96);
-  opacity: 0; pointer-events: none;
-  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
-  border-radius: 52px;
-}
+/* 眠花糖机 — 外观界面：壁纸、字体、字号、状态栏卡片、系统顶栏颜色 */
 
-.app-screen.active {
-  transform: scale(1); opacity: 1; pointer-events: all;
-}
+/* 系统顶栏颜色（安卓桌面程序 / 手机浏览器地址栏）：取最上层界面的 --system-bar-color。
+   默认固定白底黑字（浅色底时系统自动用黑色文字图标）；也可以在全局 CSS 或某个界面上改，比如 #appChatRoom { --system-bar-color: #FFE7E7; } */
+:root { --system-bar-color: #FFFFFF; }
 
-/* 各 App 展开原点（对应 dock 图标位置） */
-#appAppearance { transform-origin: 39% 92%; }
-#appChat       { transform-origin: 61% 92%; }
-#appPrompt     { transform-origin: 82% 92%; }
-#appNotes      { transform-origin: 17% 27%; }
-#appMemory     { transform-origin: 39% 27%; }
+/* 外观 → 系统顶栏颜色 */
+.sysbar-color {
+  width: 34px; height: 26px; padding: 0; border: 1px solid rgba(200,170,175,0.55);
+  border-radius: 8px; background: none; cursor: pointer; flex-shrink: 0;
+}
+.sysbar-color::-webkit-color-swatch-wrapper { padding: 2px; }
+.sysbar-color::-webkit-color-swatch { border: none; border-radius: 6px; }
+.sysbar-reset { margin-left: auto; margin-right: 8px; font-size: 12px; color: #b08890; cursor: pointer; }
 
 /* =============================================
    外观界面 — 壁纸区
@@ -268,37 +258,6 @@
   font-size: 15px; font-weight: 500; color: #222;
 }
 
-/* iOS 风格 Toggle */
-.toggle-wrap { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
-
-.toggle-wrap input {
-  opacity: 0; width: 0; height: 0; position: absolute;
-}
-
-.toggle-slider {
-  position: absolute; inset: 0;
-  background: #ddd; border-radius: 13px;
-  cursor: pointer;
-  transition: background 0.22s ease;
-}
-
-.toggle-slider::before {
-  content: ''; position: absolute;
-  width: 20px; height: 20px;
-  left: 3px; top: 3px;
-  background: #fff; border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
-  transition: transform 0.22s ease;
-}
-
-.toggle-wrap input:checked + .toggle-slider {
-  background: #F08090;
-}
-
-.toggle-wrap input:checked + .toggle-slider::before {
-  transform: translateX(20px);
-}
-
 /* 自定义文字行 */
 .sb-custom-label {
   font-size: 11px; font-weight: 600;
@@ -359,103 +318,4 @@
 .wp-adjust-slider::-moz-range-thumb {
   width: 18px; height: 18px; border-radius: 50%; background: #fff; border: none; cursor: pointer;
   box-shadow: 0 1px 4px rgba(0,0,0,0.25), 0 0 0 1px rgba(208,136,152,0.4);
-}
-
-/* =============================================
-   桌面小程序：相册 / 纪念日 / 日记
-   ============================================= */
-.desk-filter { margin: 6px 0 12px; }
-.desk-filter .pf-radio-btn { flex: 1; }
-.desk-empty { text-align: center; padding: 30px 10px; grid-column: 1 / -1; }
-.desk-count { text-align: center; grid-column: 1 / -1; margin-top: 8px; }
-
-.gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-.gallery-cell {
-  aspect-ratio: 1; border-radius: 8px; cursor: zoom-in;
-  background-color: rgba(0,0,0,0.04); background-size: cover; background-position: center;
-}
-
-.anniv-card {
-  position: relative; display: flex; flex-direction: column; gap: 8px;
-  background: rgba(255,255,255,0.88); border-radius: 18px; padding: 14px 16px; margin-bottom: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-.anniv-card.today { background: linear-gradient(135deg, #fde7ea, #fff3f6); box-shadow: 0 0 0 1.5px rgba(208,88,88,0.35); }
-.anniv-card.pinned { box-shadow: 0 0 0 1.5px rgba(208,88,88,0.22), 0 2px 10px rgba(0,0,0,0.05); }
-.anniv-card.past { opacity: 0.6; }
-.anniv-main { display: flex; align-items: center; gap: 12px; }
-.anniv-acts { display: flex; gap: 6px; }
-.anniv-flag {
-  border: 1px solid rgba(208,88,88,0.25); background: #fff; color: #a08890;
-  border-radius: 12px; padding: 3px 10px; font-size: 11px; cursor: pointer; font-family: inherit;
-}
-.anniv-flag.on { background: rgba(208,88,88,0.12); color: #D05858; border-color: #D05858; }
-.anniv-flag.anniv-del { margin-left: auto; color: #c0909a; }
-.anniv-info { flex: 1; min-width: 0; }
-.anniv-title { font-size: 14px; font-weight: 600; color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.anniv-date { font-size: 11px; color: #b0a0a6; margin-top: 3px; }
-.anniv-num { display: flex; align-items: baseline; gap: 2px; color: #c05068; flex-shrink: 0; }
-.anniv-num b { font-size: 26px; font-weight: 700; }
-.anniv-num small { font-size: 11px; color: #b08090; }
-
-.diary-char-row { margin-bottom: 10px; max-height: none; }
-.diary-write-btn { width: 100%; margin-bottom: 14px; }
-.diary-card {
-  background: rgba(255,255,255,0.88); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05); cursor: pointer;
-}
-.diary-date { font-size: 11px; color: #b0a0a6; }
-.diary-title { font-size: 14px; font-weight: 600; color: #b0506a; margin: 3px 0 4px; }
-.diary-preview {
-  font-size: 12.5px; color: #666; line-height: 1.6;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.diary-read-modal { max-height: 82%; }
-.diary-read-meta { font-size: 11px; color: #b0a0a6; text-align: center; margin-top: -6px; }
-.diary-read-text {
-  font-size: 13.5px; color: #444; line-height: 1.85; white-space: pre-wrap;
-  overflow-y: auto; flex: 1; min-height: 0; padding: 4px 2px;
-}
-
-/* 记忆库：首页角色卡片，一行两张 */
-.mem-char-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 6px 0 14px; }
-.mem-char-card {
-  border-radius: 18px; padding: 16px 14px 14px; cursor: pointer; min-height: 74px; box-sizing: border-box;
-  background: linear-gradient(150deg, #ffffff 0%, #fff4f6 100%);
-  border: 1px solid rgba(230,190,200,0.55);
-  box-shadow: 0 4px 14px rgba(160,90,110,0.08);
-  display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
-  transition: transform 0.12s ease;
-}
-.mem-char-card:active { transform: scale(0.97); }
-.mem-char-name { font-size: 15px; font-weight: 700; color: #5a4249; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mem-char-stats { font-size: 11px; color: #b0909a; }
-.mem-export-all { width: 100%; margin-bottom: 6px; }
-.mem-detail-acts { margin-top: 6px; }
-.mem-stats { margin: 0 2px 10px; }
-.mem-card {
-  background: rgba(255,255,255,0.88); border-radius: 16px; padding: 11px 13px; margin-bottom: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-.mem-card.type-precious { background: linear-gradient(135deg, #fff6f8, #fdeef3); box-shadow: 0 0 0 1.5px rgba(208,88,88,0.22), 0 2px 10px rgba(0,0,0,0.05); }
-.mem-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-.mem-badge { font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 9px; background: rgba(0,0,0,0.05); color: #8a7a80; }
-.mem-badge.precious { background: rgba(208,88,88,0.14); color: #c05068; }
-.mem-badge.long { background: rgba(110,140,200,0.14); color: #5a78b0; }
-.mem-badge.short { background: rgba(230,170,80,0.16); color: #b07a30; }
-.mem-badge.summary { background: rgba(120,170,130,0.16); color: #4f8a5e; }
-.mem-meta { font-size: 11px; color: #b0a0a6; }
-.mem-text { font-size: 13px; color: #444; line-height: 1.6; white-space: pre-wrap; margin-bottom: 7px; }
-.mem-type-chips { max-height: none; justify-content: flex-end; }
-
-/* 记忆库：关系里程碑卡片 */
-.mem-milestone {
-  background: rgba(255,255,255,0.82); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px;
-  border: 1px solid rgba(220,180,190,0.45);
-}
-.mem-milestone-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; color: #8a5a68; margin-bottom: 6px; }
-.mem-milestone-meta { font-size: 11px; font-weight: 400; color: #b9a0a8; }
-.mem-milestone-text {
-  width: 100%; box-sizing: border-box; border: 1px solid rgba(220,190,198,0.5); border-radius: 10px;
-  background: rgba(255,250,251,0.9); padding: 7px 9px; font: inherit; font-size: 12.5px; line-height: 1.7; color: #5a4650; resize: vertical;
 }

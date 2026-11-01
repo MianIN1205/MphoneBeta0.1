@@ -35,23 +35,41 @@
       50% { transform: scale(1.03); opacity: 0.9; }
     }
   </style>
-  <!-- 样式：按界面拆分，顺序不能乱（后面的覆盖前面的） -->
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/appearance.css">
-  <link rel="stylesheet" href="css/chat.css">
-  <link rel="stylesheet" href="css/notes.css">
-  <link rel="stylesheet" href="css/chat-list.css">
-  <link rel="stylesheet" href="css/char-settings.css">
-  <link rel="stylesheet" href="css/chat-room.css">
-  <link rel="stylesheet" href="css/mine.css">
-  <link rel="stylesheet" href="css/dialogs.css">
-  <link rel="stylesheet" href="css/char-look.css">
-  <link rel="stylesheet" href="css/prompt.css">
-  <link rel="stylesheet" href="css/image-picker.css">
-  <link rel="stylesheet" href="css/messages.css">
-  <link rel="stylesheet" href="css/settings-subnav.css">
-  <link rel="stylesheet" href="css/prompt-presets.css">
-  <link rel="stylesheet" href="css/stickers.css">
+  <!-- 样式：按功能分在 core / desk / settings / chat / char / prompt 文件夹里；顺序不能乱（后面的覆盖前面的） -->
+  <link rel="stylesheet" href="css/core/base.css">
+  <link rel="stylesheet" href="css/core/app-screen.css">
+  <link rel="stylesheet" href="css/core/controls.css">
+  <link rel="stylesheet" href="css/core/avatar.css">
+  <link rel="stylesheet" href="css/core/image-picker.css">
+  <link rel="stylesheet" href="css/desk/statusbar.css">
+  <link rel="stylesheet" href="css/desk/desktop.css">
+  <link rel="stylesheet" href="css/desk/widgets.css">
+  <link rel="stylesheet" href="css/desk/appearance.css">
+  <link rel="stylesheet" href="css/desk/bookshelf.css">
+  <link rel="stylesheet" href="css/settings/settings.css">
+  <link rel="stylesheet" href="css/settings/mcp.css">
+  <link rel="stylesheet" href="css/desk/desk-apps.css">
+  <link rel="stylesheet" href="css/desk/memory-lib.css">
+  <link rel="stylesheet" href="css/core/dialogs.css">
+  <link rel="stylesheet" href="css/chat/tabs.css">
+  <link rel="stylesheet" href="css/chat/header.css">
+  <link rel="stylesheet" href="css/chat/contacts.css">
+  <link rel="stylesheet" href="css/chat/list.css">
+  <link rel="stylesheet" href="css/chat/new-chat.css">
+  <link rel="stylesheet" href="css/chat/feed.css">
+  <link rel="stylesheet" href="css/char/settings.css">
+  <link rel="stylesheet" href="css/chat/mine.css">
+  <link rel="stylesheet" href="css/chat/room.css">
+  <link rel="stylesheet" href="css/chat/messages.css">
+  <link rel="stylesheet" href="css/chat/msg-menu.css">
+  <link rel="stylesheet" href="css/chat/msg-ops.css">
+  <link rel="stylesheet" href="css/chat/calendar.css">
+  <link rel="stylesheet" href="css/chat/quick-bar.css">
+  <link rel="stylesheet" href="css/chat/status-panel.css">
+  <link rel="stylesheet" href="css/chat/stickers.css">
+  <link rel="stylesheet" href="css/char/look.css">
+  <link rel="stylesheet" href="css/char/assistant.css">
+  <link rel="stylesheet" href="css/prompt/prompt.css">
 </head>
 <body class="phone-fullscreen">
   <!-- 载入页：脚本全部加载完后淡出（见 js/core/boot.js） -->

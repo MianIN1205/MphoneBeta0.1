@@ -3,9 +3,14 @@
 // 只处理本站文件，AI / 语音 / 生图等外部接口请求完全不经过这里。
 
 // 文件拆分后 css/、js/ 也要预先缓存；改动这个列表时把版本号加一
-const CACHE = 'mphone-v17';
-const CSS = ['base', 'appearance', 'chat', 'notes', 'chat-list', 'char-settings', 'chat-room', 'mine',
-             'dialogs', 'char-look', 'prompt', 'image-picker', 'messages', 'settings-subnav', 'prompt-presets', 'stickers']
+const CACHE = 'mphone-v18';
+const CSS = ['core/base', 'core/app-screen', 'core/controls', 'core/avatar', 'core/image-picker',
+             'desk/statusbar', 'desk/desktop', 'desk/widgets', 'desk/appearance', 'desk/bookshelf',
+             'settings/settings', 'settings/mcp', 'desk/desk-apps', 'desk/memory-lib', 'core/dialogs',
+             'chat/tabs', 'chat/header', 'chat/contacts', 'chat/list', 'chat/new-chat',
+             'chat/feed', 'char/settings', 'chat/mine', 'chat/room', 'chat/messages',
+             'chat/msg-menu', 'chat/msg-ops', 'chat/calendar', 'chat/quick-bar', 'chat/status-panel',
+             'chat/stickers', 'char/look', 'char/assistant', 'prompt/prompt']
   .map(function (n) { return './css/' + n + '.css'; });
 const JS = ['core/boot', 'core/utils', 'desk/statusbar', 'settings/api', 'core/api-errors',
             'desk/screens', 'desk/appearance', 'chat/tabs', 'desk/bookshelf', 'chat/header',

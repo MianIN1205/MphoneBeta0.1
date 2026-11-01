@@ -1,0 +1,26 @@
+/* 眠花糖机 — 通用 App 界面：打开 / 关闭动画、展开原点 */
+
+/* =============================================
+   通用 App 界面（外观 / Chat / Prompt）
+   ============================================= */
+.app-screen {
+  position: absolute; inset: 0;
+  background: #FFF0F5;
+  display: flex; flex-direction: column;
+  z-index: 100;
+  transform: scale(0.96);
+  opacity: 0; pointer-events: none;
+  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
+  border-radius: 52px;
+}
+
+.app-screen.active {
+  transform: scale(1); opacity: 1; pointer-events: all;
+}
+
+/* 各 App 展开原点（对应 dock 图标位置） */
+#appAppearance { transform-origin: 39% 92%; }
+#appChat       { transform-origin: 61% 92%; }
+#appPrompt     { transform-origin: 82% 92%; }
+#appNotes      { transform-origin: 17% 27%; }
+#appMemory     { transform-origin: 39% 27%; }

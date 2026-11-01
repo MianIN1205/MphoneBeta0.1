@@ -1,3 +1,5 @@
+/* 眠花糖机 — Chat「我的」：名片、更换账号、钱包、收藏、账号左滑 */
+
 /* =============================================
    Chat — 「我的」界面（账号信息与更换账号）
    ============================================= */
@@ -234,46 +236,6 @@
 .fav-item-imgs.single { grid-template-columns: 1fr; }
 .fav-item-imgs.single img { aspect-ratio: auto; max-height: 260px; object-fit: contain; }
 
-/* 聊天消息长按菜单 */
-.msg-ctx-menu {
-  position: fixed; z-index: 9000; display: none; flex-wrap: wrap; justify-content: center; max-width: 292px;
-  background: rgba(40,30,35,0.92); border-radius: 10px; padding: 4px; gap: 2px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-}
-.msg-ctx-menu.open { display: flex; }
-.msg-ctx-menu button {
-  border: none; background: none; color: #fff; font-size: 12.5px; padding: 6px 12px;
-  border-radius: 8px; cursor: pointer; font-family: inherit;
-}
-.msg-ctx-menu button:active { background: rgba(255,255,255,0.15); }
-.msg-ctx-menu button.hide { display: none; }
-
-/* 引用块（消息下方）与输入栏上方的引用条 */
-.cr-quote {
-  max-width: 62%; margin-top: -6px; padding: 4px 9px; border-radius: 6px;
-  background: rgba(0,0,0,0.05); color: #888; font-size: 11.5px; line-height: 1.45;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.cr-quote.user { align-self: flex-end; margin-right: 40px; }
-.cr-quote.ai   { align-self: flex-start; margin-left: 40px; }
-#appChatRoom.cr-no-avatar .cr-quote.user { margin-right: 0; }
-#appChatRoom.cr-no-avatar .cr-quote.ai { margin-left: 0; }
-.cr-quote-bar {
-  display: none; align-items: center; gap: 8px; flex-shrink: 0;
-  padding: 6px 14px; background: rgba(255,240,240,0.92);
-  border-top: 1px solid rgba(200,170,170,0.35);
-}
-.cr-quote-bar.open { display: flex; }
-.cr-quote-bar-text {
-  flex: 1; min-width: 0; font-size: 12px; color: #888;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.cr-quote-bar-close { border: none; background: none; color: #bbb; font-size: 13px; cursor: pointer; }
-
-/* 撤回提示 */
-.cr-recall-notice { align-self: center; font-size: 11.5px; color: #aaa; padding: 2px 0; }
-.cr-recall-reedit { color: #6a8fc0; margin-left: 6px; cursor: pointer; }
-
 /* 账号行左滑：右侧露出 登录 / 修改 / 删除 */
 .mine-acc-swipe { position: relative; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
 .mine-acc-swipe-acts {
@@ -324,92 +286,3 @@
   stroke: #D05858; stroke-width: 2; fill: none;
   stroke-linecap: round; stroke-linejoin: round;
 }
-
-/* 更换账号弹窗列表 */
-.mine-acc-overlay {
-  display: none; position: absolute; inset: 0;
-  background: rgba(0,0,0,0.32); z-index: 460;
-  align-items: center; justify-content: center;
-  border-radius: 52px;
-}
-.mine-acc-overlay.open { display: flex; }
-
-.mine-acc-modal {
-  background: rgba(255,248,252,0.98);
-  border-radius: 22px;
-  padding: 18px 16px 15px;
-  width: 296px; max-height: 75%;
-  box-shadow: 0 10px 36px rgba(0,0,0,0.22);
-  display: flex; flex-direction: column; gap: 12px;
-}
-
-.mine-acc-title {
-  font-size: 15px; font-weight: 600; color: #222; text-align: center;
-}
-
-.mine-acc-list {
-  display: flex; flex-direction: column; gap: 8px;
-  max-height: 240px; overflow-y: auto; padding: 2px;
-}
-
-.mine-acc-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 11px; border-radius: 14px;
-  background: rgba(255,255,255,0.85);
-  border: 1.5px solid rgba(210,180,180,0.28);
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.mine-acc-item.active {
-  border-color: #D05858;
-  background: rgba(255,240,242,0.92);
-}
-
-.mine-acc-item-av {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD0 100%);
-  background-size: cover; background-position: center;
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-}
-.mine-acc-item-av svg {
-  width: 18px; height: 18px;
-  stroke: rgba(190,110,120,0.75); stroke-width: 1.8; fill: none;
-}
-.mine-acc-item-av.has-img svg { display: none; }
-
-.mine-acc-item-info { flex: 1; min-width: 0; }
-
-.mine-acc-item-name {
-  font-size: 13px; font-weight: 600; color: #222;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-.mine-acc-item-sub {
-  font-size: 11px; color: #999;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-.mine-acc-item-badge {
-  font-size: 10px; color: #D05858; font-weight: 600;
-  padding: 2px 6px; border-radius: 8px;
-  background: rgba(208,88,88,0.12); flex-shrink: 0;
-}
-
-.mine-acc-del-btn {
-  background: none; border: none; color: #ccc;
-  cursor: pointer; padding: 4px; font-size: 14px;
-  line-height: 1; flex-shrink: 0;
-}
-.mine-acc-del-btn:hover { color: #D05858; }
-
-.mine-acc-actions { display: flex; gap: 8px; }
-.mine-acc-btn {
-  flex: 1; border: none; border-radius: 12px;
-  padding: 9px 0; font-size: 13px; font-weight: 600;
-  cursor: pointer; font-family: inherit;
-}
-.mine-acc-btn-add { background: #D05858; color: #fff; }
-.mine-acc-btn-close { background: rgba(220,200,200,0.35); color: #665; }
-

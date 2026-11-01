@@ -1,0 +1,12 @@
+/* 眠花糖机 — 角色帮你记的日程卡片 */
+
+/* 角色帮你记的提醒 / 闹钟 / 日程卡片 */
+.cr-cal-card {
+  margin: 0 0 0 40px; max-width: 78%; align-self: flex-start; box-sizing: border-box;
+  background: rgba(255,255,255,0.85); border-radius: 12px; border: 1px solid rgba(160,180,230,0.5);
+  padding: 9px 11px; font-size: 12px; color: #6f5560; line-height: 1.55;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+}
+#appChatRoom.cr-no-avatar .cr-cal-card { margin-left: 0; }
+.cr-cal-head { font-weight: 600; color: #6a82c0; }
+.cr-cal-body { font-size: 13px; color: #555; white-space: pre-wrap; }

@@ -1,0 +1,343 @@
+/* 眠花糖机 — 聊天室：顶栏、聊天 / 剧情切换、底部输入栏、加号抽屉、布局 */
+
+/* 聊天室 — 布局（头像 / 间距）、翻译、状态栏 */
+#appChatRoom.cr-no-avatar .chat-msg-avatar { display: none; }
+.chat-room-title-text { display: flex; flex-direction: column; align-items: center; min-width: 0; max-width: 140px; }
+.chat-room-head-av {
+  display: none; width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+}
+#appChatRoom.cr-head-avatar .chat-room-head-av { display: block; }
+#appChatRoom.cr-head-left .chat-room-title-wrap {
+  position: static; transform: none; margin-left: 6px; max-width: none; min-width: 0;
+}
+#appChatRoom.cr-head-left .chat-room-title-text { align-items: flex-start; }
+.cr-translation {
+  display: block; margin-top: 6px; padding-top: 6px;
+  border-top: 1px dashed rgba(0,0,0,0.12);
+  font-size: 12px; color: #777;
+}
+.cr-status-card {
+  margin: -4px 0 0 40px; max-width: 70%;
+  background: rgba(255,255,255,0.75); border-radius: 10px;
+  padding: 6px 10px; font-size: 11.5px; color: #8a6a76; line-height: 1.6;
+  border: 1px solid rgba(220,180,190,0.4); align-self: flex-start;
+  white-space: pre-wrap;
+}
+#appChatRoom.cr-no-avatar .cr-status-card { margin-left: 0; }
+
+/* =============================================
+   聊天对话界面 — 顶栏双行标题与右侧控件
+   ============================================= */
+/* 名字放在顶栏正中；左右各留出右侧控件（约 120px）的宽度，长名字显示省略号，不压到切换键 */
+.chat-room-title-wrap {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  max-width: calc(100% - 256px);
+  display: flex; flex-direction: row; align-items: center; gap: 7px;
+  pointer-events: none;
+}
+
+.chat-room-main-title {
+  font-size: 16px; font-weight: 600; color: #222;
+  line-height: 1.2;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.chat-room-sub-title {
+  font-size: 11px; color: #aaa;
+  line-height: 1.3; margin-top: 2px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.chat-room-right-wrap {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.chat-room-settings-btn {
+  background: none; border: none;
+  cursor: pointer; padding: 6px 4px;
+  display: flex; align-items: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chat-room-settings-btn svg {
+  width: 20px; height: 20px;
+  stroke: #333; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+}
+
+/* 聊天窗口内视图切换（聊天 / 剧情） */
+.cr-view {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.cr-view.active {
+  display: flex;
+}
+.cr-view-drama {
+  position: relative;
+}
+.cr-view-drama .drama-empty-hint {
+  flex: 1;
+}
+
+/* =============================================
+   聊天对话界面 — 底部输入栏与加号扩展面板
+   ============================================= */
+.chat-room-bottom {
+  flex-shrink: 0;
+  min-height: 62px;
+  background: rgba(255,228,225,0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(200,170,170,0.55);
+  border-radius: 0 0 52px 52px;
+  display: flex; align-items: center;
+  padding: 8px 12px 10px;
+  gap: 6px;
+  box-shadow: 0 -6px 28px rgba(200,140,140,0.22);
+  transition: border-radius 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  position: relative;
+  z-index: 3;
+}
+
+.chat-room-bottom.panel-open {
+  border-radius: 0;
+}
+
+/* 聊天模式 / 剧情模式 专属底栏按钮显隐 */
+.chat-room-bottom.drama-mode .cr-chat-only {
+  display: none !important;
+}
+.chat-room-bottom:not(.drama-mode) .cr-drama-only {
+  display: none !important;
+}
+
+/* 加号按钮激活旋转 */
+#crPlusBtn svg {
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+#crPlusBtn.active svg {
+  transform: rotate(45deg);
+}
+
+/* 微信风格底部 4×2 扩展功能面板 */
+.cr-plus-panel {
+  flex-shrink: 0;
+  max-height: 0;
+  overflow: hidden;
+  background: rgba(255, 235, 233, 0.86);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-radius: 0 0 52px 52px;
+  transition:
+    max-height 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+    padding 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+    border-top-color 0.28s ease;
+  border-top: 1px solid transparent;
+  padding: 0 18px;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cr-plus-panel.open {
+  max-height: 210px;
+  padding: 16px 18px 22px;
+  border-top-color: rgba(200, 165, 165, 0.42);
+}
+
+/* 加号 / 表情包抽屉内容区固定为两排图标的高度 */
+.cr-plus-grid,
+.cr-emoji-panel-body {
+  height: 160px;
+}
+
+.cr-plus-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, auto);
+  gap: 14px 12px;
+  justify-items: center;
+}
+
+.cr-plus-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.cr-plus-box {
+  width: 54px;
+  height: 54px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 3px 10px rgba(180, 120, 120, 0.14),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.14s ease, background 0.14s ease;
+}
+
+.cr-plus-item:active .cr-plus-box {
+  transform: scale(0.90);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.cr-plus-box svg {
+  width: 24px;
+  height: 24px;
+  stroke: #7a5866;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.cr-plus-label {
+  font-size: 11px;
+  color: #7a5866;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+/* 消息内发送的图片气泡样式 */
+.chat-msg-bubble.img-bubble {
+  padding: 4px;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+.chat-msg-bubble.img-bubble img {
+  display: block;
+  max-width: 165px;
+  max-height: 210px;
+  width: auto;
+  height: auto;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+}
+
+/* 底栏圆形图标按钮 */
+.cr-icon-btn {
+  width: 36px; height: 36px;
+  flex-shrink: 0;
+  border: none; cursor: pointer;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.55);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(180,120,120,0.18), 0 1px 3px rgba(0,0,0,0.09);
+  transition: transform 0.13s ease, opacity 0.13s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.cr-icon-btn:active { transform: scale(0.88); opacity: 0.72; }
+.cr-icon-btn svg {
+  width: 18px; height: 18px;
+  stroke: #886070; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+}
+
+/* 底栏 emoji 按钮（❄️请求回复） */
+.cr-emoji-btn {
+  width: 36px; height: 36px;
+  flex-shrink: 0;
+  border: none; cursor: pointer;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.55);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; line-height: 1;
+  box-shadow: 0 2px 8px rgba(180,120,120,0.18), 0 1px 3px rgba(0,0,0,0.09);
+  transition: transform 0.13s ease, opacity 0.13s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.cr-emoji-btn:active { transform: scale(0.88); opacity: 0.72; }
+
+/* 输入框包裹 */
+.cr-input-wrap {
+  flex: 1;
+  position: relative;
+  display: flex; align-items: center;
+}
+
+.cr-input {
+  width: 100%;
+  border: none; outline: none;
+  background: rgba(255,255,255,0.60);
+  border-radius: 18px;
+  padding: 8px 38px 8px 14px;
+  font-size: 14px; color: #333;
+  font-family: inherit;
+  line-height: 1.4;
+  box-shadow:
+    inset 0 2px 6px rgba(180,120,120,0.16),
+    inset 0 1px 3px rgba(0,0,0,0.08);
+  resize: none;
+  max-height: 80px;
+  overflow-y: auto;
+}
+.cr-input::-webkit-scrollbar { display: none; }
+.cr-input::placeholder { color: #ccc; }
+
+/* 输入框内嵌回车键 */
+.cr-send-btn {
+  position: absolute;
+  right: 5px;
+  width: 28px; height: 28px;
+  border: none; cursor: pointer;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.65);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 5px rgba(180,120,120,0.18), 0 1px 2px rgba(0,0,0,0.08);
+  transition: transform 0.13s ease, opacity 0.13s ease;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.cr-send-btn:active { transform: scale(0.86); opacity: 0.72; }
+.cr-send-btn svg {
+  width: 14px; height: 14px;
+  stroke: #886070; stroke-width: 2.2;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+}
+
+/* 剧情视图空状态提示 */
+.msg-view[data-view="contacts"] {
+  display: none;
+  min-height: 300px;
+  align-items: center;
+  justify-content: center;
+}
+.msg-view[data-view="contacts"].active {
+  display: flex;
+}
+
+.drama-empty-hint {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px;
+  color: #ccc;
+}
+.drama-empty-hint svg {
+  width: 40px; height: 40px;
+  stroke: #ddd; stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+}
+.drama-empty-hint span {
+  font-size: 13px; color: #ccc; letter-spacing: 0.5px;
+}
