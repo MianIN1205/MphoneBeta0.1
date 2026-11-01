@@ -15,7 +15,7 @@ body {
   html, body { background: #FFFFFF; overscroll-behavior: none; }
   body { -webkit-touch-callout: none; }
 }
-/* 全屏模式：系统状态栏、底部操作条那一条用 --system-bar-color（默认白色，见 02-screens-appearance.js） */
+/* 全屏模式：系统状态栏、底部操作条那一条用 --system-bar-color（默认白色，见 js/desk/appearance.js） */
 html:has(body.phone-fullscreen), body.phone-fullscreen { background: var(--app-top-color, #FFFFFF) !important; }
 
 html {

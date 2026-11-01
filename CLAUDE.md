@@ -14,40 +14,77 @@
 ## 文件结构
 - `index.html`：只有界面结构（各个 app-screen、弹窗）。
 - `css/`：16 个样式文件，`<link>` 顺序有影响。
-- `js/`：普通脚本（不是模块），由 `js/00-boot.js` 的 `MPHONE_SCRIPTS` 按顺序注入。所有顶层名字都是全局共享的。
-  - 加载时调用后面文件里的函数会报错：用 `typeof` 判断，或者用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。
-  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v16`）。
+- `js/`：普通脚本（不是模块），按功能分在 6 个文件夹里：`core/` 公共、`desk/` 桌面、`settings/` 设置、`chat/` 聊天、`char/` 角色、`prompt/` 提示词。所有顶层名字都是全局共享的。
+  - **加载顺序在 `js/core/boot.js` 的 `MPHONE_SCRIPTS` 里，和文件夹无关，顺序很重要**：后面的脚本会用到前面定义的东西，加载时（不在函数里）调用后面文件的函数会报错；要么用 `typeof` 判断，要么用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。2026-11-01 按功能拆分时保持了原来的加载顺序，所以同一个功能有时会分在两三个文件里（比如角色设置：`char/settings.js`、`char/settings-save.js`、`char/look.js`）。
+  - 每个文件第一行写了它管什么，找东西先看第一行。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v17`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。
   - logo 是用户提供的图（粉色月牙 + 睡觉的小熊 + 蓝色小花）抠成透明底、外面加一圈白色描边：`icon-192/512` 透明底（载入页也用 `icon-512`），`apple-touch-icon` 白底（苹果桌面图标不支持透明，会变黑底；用户要白底看得清楚），`icon-maskable-512` 带粉蓝渐变底。
-  - 载入页在 `index.html` 开头（样式内联，小字随机），`js/00-boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
+  - 载入页在 `index.html` 开头（样式内联，小字随机），`js/core/boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
 - 文件都是 CRLF 换行。Git Bash 的 `sed -i` 会悄悄改成 LF，改文件请用 Edit 工具或 node 脚本。
 
 ## 主要模块（js/）
+### core/ 公共
 | 文件 | 内容 |
 |---|---|
-| 00-boot | `mphoneStore`（IndexedDB 键值存储，键名都以 `mphone_` 开头）、脚本加载 |
-| 01-core | 公共工具（开头一段）：`openConfirm` 确认弹窗（全站共用）、`closeOnBackdrop` 点遮罩关闭、`bindPress` 点一下 / 长按、`downloadBlob` / `shareOrDownload` 保存文件、`zipReadEntry` / `readDocxText` 读 zip 和 docx、时间格式（`fmtMsgTime` / `fmtListTime` / `fmtAgo` / `durText`）；还有设置页、API 报错记录 |
-| 02 / 03 / 07 | 界面切换与外观、Chat 标签页、聊天列表与聊天室 |
-| 04-notes | 书架（日记 / 相册是系统书） |
-| 06 / 08 | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）、聊天与剧情两套美化 |
-| 09-prompt | 系统提示词、预设（可导入酒馆预设）、世界书、思维链 |
-| 12-api-config | 主 API 设置 |
-| 13-chat-messages | `buildMsgs` 拼提示词（聊天 / 剧情都按回合 + token 上限裁剪，剧情省略部分用隐藏的 `<前情>` 代替）、发送与接收回复、`fillMacros`（{{char}} / {{user}}）；`realWorldContext` 现实感知（角色设置「聊天」页 → 时间与感知：现在几点按角色时区、隔了多久没说话、真实电量 `phoneBattery`（iPhone 拿不到就不说）、纪念日和日程 `calendarContextFor`），只放聊天窗口；状态栏会带上上一次的状态（`lastStatusOf`） |
-| 16-feed-auto | 动态（朋友圈）、社交圈、自主活动。`callApiOnce(msgs, char)` 传角色时用 TA 自己的模型预设（朋友圈、主动消息、日记、总结、里程碑都和聊天用同一个模型） |
-| 17-memory-import | 数据备份导入、角色卡导入 |
-| 18 / 20 | 语音与生图 API、发图片和语音给 AI |
-| 22-assistant | MianIN 助手权限（加世界书、改 CSS、看报错） |
-| 23-assist | 设置 → 辅助功能（通知、后台保活、数据管理） |
-| 24-llm | `llmRequest` 统一调用各家模型（Claude 原生接口，其余走 OpenAI 兼容），以及工具调用循环 |
-| 25-mcp | MCP 客户端（Streamable HTTP） |
-| 26 / 27 | 桌面 app（相册、纪念日与日程、日记 + 每日定时写日记并记成长期记忆）、桌面网格与小组件（编辑模式拖动） |
-| 28-memory | 角色记忆（短期 / 长期 / 珍贵，可选向量检索，按 token 预算注入）、关系里程碑（每 10 条长期记忆自动整理）、记忆库界面、导出 Word |
-| 29-quick-bar | 聊天窗口顶栏下的便捷拓展栏（本窗口用的模型预设 / 预设 / 世界书） |
-| 30-status-panel | 点聊天顶栏角色名展开的状态栏面板（AI 只输出字段，按 HTML 模板的 {{字段}} 占位符画出来；一次一条，左右滑看最近 10 轮；没有模板时显示成线条本卡片） |
-| 31-stickers | 表情包（图床链接导入（也能从 txt / docx / json / md / csv 文档自动识别）、分类、名字辅助识别、打字联想；消息存 `[表情包：名字]` + 图片地址，打不开时显示这句文字；每个角色单独设置能不能发、能用哪些分类、能不能看到图片：`char.stickerCfg`；导入时把图片压成小图存 `b64` 给 AI 看，图床跨域读不了记 `b64Fail`） |
-| 32-msg-ops | 消息多选（批量删除 / 合并收藏）、删除本轮回复、从某一轮重新生成、清空聊天 / 剧情记录。撤回：`m.recalledBy` 为 `user`（你撤回的，自己或角色的消息）或 `char`（角色回复里写 `<撤回>…</撤回>`，先显示两秒再变撤回提示，角色设置可开「偷看」） |
-| 33-backup | 备份：「数据备份」弹出分享（存到文件 / 云盘 / 微信，安卓不认 .json 就用 .txt）或下载；备份提醒（`mphone_backup_meta` 记上次备份和最近改动，这一项不进备份）；自动加密备份到 GitHub Gist（PBKDF2 + AES-GCM，gzip 压缩；令牌和密码存 localStorage 的 `mphoneCloudToken` / `mphoneCloudPass`，不进备份）。iPhone 删掉桌面图标会连数据一起清掉 |
-| 34-calendar | 角色回复里的 `<日程 类型="提醒/闹钟/日程 三选一" 时间="YYYY-MM-DD HH:MM">事</日程>` 直接记进桌面「纪念日」（`annivs` 里 `remind` / `by` / `charIds`），聊天里出一张卡片。只记在小手机里，不加到手机系统日历（试过 .ics / Google 日历，用户觉得麻烦，先不做）。纪念日按 `charIds` 决定角色看不看得到：只和用户有关的、和自己有关的、和社交圈里认识的人有关的（`annivVisibleTo`）。用户说的 char / user / NPC 都站在当前角色的角度：char = 这个角色本人，user = 用户，NPC = 其他所有人（小手机里别的角色 + 用户身边的人，后者存在 `npc` 文字里） |
+| boot | `mphoneStore`（IndexedDB 键值存储，键名都以 `mphone_` 开头）、载入页、脚本加载清单 `MPHONE_SCRIPTS` |
+| utils | 公共工具：`openConfirm` 确认弹窗（全站共用）、`closeOnBackdrop` 点遮罩关闭、`bindPress` 点一下 / 长按、`downloadBlob` / `shareOrDownload` 保存文件、`zipReadEntry` / `readDocxText` 读 zip 和 docx、时间格式（`fmtMsgTime` / `fmtListTime` / `fmtAgo` / `durText`）、左滑操作 `bindSwipeActions`、`showToast` |
+| api-errors | 接口报错记录（不记密钥），供 MianIN 答疑 |
+| llm | `llmRequest` 统一调用各家模型（Claude 原生接口，其余走 OpenAI 兼容），以及工具调用循环 |
+| mcp | MCP 客户端（Streamable HTTP） |
+| image-picker / image-viewer | 通用图片选择弹窗、图片全屏查看 |
+
+### desk/ 桌面
+| 文件 | 内容 |
+|---|---|
+| statusbar | 时钟、电量（真实电量 `phoneBattery`，iPhone 拿不到） |
+| screens | 桌面图标打开各个界面 |
+| appearance / appearance-store | 外观设置（边框 / 全屏、状态栏、字体、字号、全局 CSS、系统顶栏颜色）；保存和启动时恢复（也恢复系统提示词） |
+| bookshelf | 书架（日记 / 相册是系统书） |
+| gallery / anniv / diary | 相册；纪念日与日程；日记 + 每日定时写日记并记成长期记忆 |
+| widgets | 桌面网格与小组件（编辑模式拖动） |
+| memory-open / memory-lib | 记忆库的打开、返回；记忆库界面、问 TA 记得什么、导出 Word |
+
+### settings/ 设置
+| 文件 | 内容 |
+|---|---|
+| api / api-restore | 设置页本身、主 API、API 预设和字体预设、温度；启动时恢复主 API |
+| media-api | 语音 API（TTS）与生图 API |
+| assist | 辅助功能：通知、后台保活 |
+| data | 数据管理：占用圆环、导入备份；末尾还有一句启动时画聊天列表（保持原来的时机） |
+| backup | 导出（分享 / 下载，安卓不认 .json 就用 .txt）、备份提醒（`mphone_backup_meta` 不进备份）、自动加密备份到 GitHub Gist（PBKDF2 + AES-GCM，gzip；令牌和密码在 localStorage 的 `mphoneCloudToken` / `mphoneCloudPass`，不进备份）。iPhone 删掉桌面图标会连数据一起清掉 |
+
+### chat/ 聊天
+| 文件 | 内容 |
+|---|---|
+| tabs / header / list / new-chat / contacts | Chat 底部标签、消息页顶栏和加号菜单、消息列表（会话卡片、未读、删除会话）、新建对话、通讯录 |
+| room / room-view / room-lists | 聊天室：返回、齿轮、应用角色美化；聊天 / 剧情切换和底部抽屉开关；打开时画两个列表（分页）、相册发图 |
+| history | 聊天 / 剧情记录的存取（`stripMsg` 决定存哪些字段）、当前窗口用哪份记录、`getApiCfg(char)` |
+| prompt | 拼给 AI 的内容：`buildMsgs`（聊天 / 剧情都按回合 + token 上限裁剪，剧情省略部分用隐藏的 `<前情>` 代替）、`chatFormatRules` 回复格式、`fillMacros`（{{char}} / {{user}}）、`realWorldContext` 现实感知（现在几点按角色时区、隔了多久没说话、真实电量、纪念日和日程，只放聊天窗口）、`lastStatusOf` 接上一次状态栏、`msgTextForAI` |
+| render | 消息显示：气泡、动作小字、引用、小时间（`refreshMsgStamps`）、版本切换、拍一拍、撤回提示 |
+| reply | 收到回复：`commitAssistantReply` 拆成多条（|||、`<撤回>`、表情包、`<日程>`）、`sendMsg`、重新生成 |
+| input / voice / media-send | 输入栏（回车只发自己的、↵ 换行、引用、❄️）；语音录音和转写；识图与语音发给 AI |
+| msg-menu / msg-ops | 长按菜单；多选（批量删除 / 合并收藏）、删除本轮、从这里重新生成、清空记录。撤回：`m.recalledBy` 为 `user`（你撤回的，自己或角色的消息）或 `char`（角色写 `<撤回>…</撤回>`，先显示两秒再变撤回提示，角色设置可开「偷看」） |
+| feed / mine / wallet-fav | 动态（朋友圈）和社交圈、「我的」账号、钱包和收藏 |
+| quick-bar / status-panel | 便捷拓展栏（本窗口用的模型预设 / 预设 / 世界书）；状态栏面板（按 HTML 模板的 {{字段}} 画，左右滑看最近 10 轮） |
+| stickers | 表情包：图床链接 / 文档（txt / docx / json / md / csv）导入、分类、打字联想；消息存 `[表情包：名字]` + 图片地址，打不开时显示这句文字；每个角色单独设置能不能发、能用哪些分类、能不能看到图片（`char.stickerCfg`）；导入时压成小图存 `b64` 给 AI 看，读不了记 `b64Fail` |
+| calendar | 角色回复里的 `<日程 类型="提醒/闹钟/日程 三选一" 时间="YYYY-MM-DD HH:MM">事</日程>` 记进桌面「纪念日」（`annivs` 里 `remind` / `by` / `charIds`），聊天里出卡片；只记在小手机里，不加到手机系统日历（试过 .ics / Google 日历，用户觉得麻烦） |
+
+### char/ 角色
+| 文件 | 内容 |
+|---|---|
+| settings / settings-save / look | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）表单和默认值 `DEFAULT_CHAT_CFG`；保存 / 删除角色；美化页 |
+| memory / summary / backup | 角色记忆（短期 / 长期 / 珍贵，可选向量检索，按 token 预算注入）、关系里程碑；按回合总结；单个角色的记忆备份 |
+| auto | 自主活动：主动发消息、聊天后发动态、调度。`callApiOnce(msgs, char)`（在 chat/feed）传角色时用 TA 自己的模型预设 |
+| import | 导入酒馆角色卡 PNG / JSON、Word |
+| assistant | 内置助手 MianIN（加世界书、改 CSS、看报错；`ASSISTANT_GUIDE` 是给它的应用说明，加新功能时顺手补一句） |
+
+纪念日（desk/anniv）按 `charIds` 决定角色看不看得到：只和用户有关的、和自己有关的、和社交圈里认识的人有关的（`annivVisibleTo`）。用户说的 char / user / NPC 都站在当前角色的角度：char = 这个角色本人，user = 用户，NPC = 其他所有人（小手机里别的角色 + 用户身边的人，后者存在 `npc` 文字里）。
+
+### prompt/ 提示词
+| 文件 | 内容 |
+|---|---|
+| tabs / worldbook / cot / presets / scene | Prompt 页的文件夹标签、世界书、思维链、预设（可导入酒馆预设）、场景说明（聊天 = 隔着屏幕，剧情 = 剧情空间） |
 
 ## 测试
 - 内置浏览器面板里 service worker 注册不上（控制台有 “fetching the script” 报错），这是环境问题，不是 bug。

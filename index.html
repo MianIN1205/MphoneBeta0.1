@@ -54,7 +54,7 @@
   <link rel="stylesheet" href="css/stickers.css">
 </head>
 <body class="phone-fullscreen">
-  <!-- 载入页：脚本全部加载完后淡出（见 js/00-boot.js） -->
+  <!-- 载入页：脚本全部加载完后淡出（见 js/core/boot.js） -->
   <div id="bootSplash">
     <img src="icons/icon-512.png" alt="">
     <div class="boot-name">眠花糖机</div>
@@ -2751,7 +2751,7 @@
       </div>
     </div>
 
-    <!-- 确认弹窗（全站共用，见 js/01-core.js openConfirm） -->
+    <!-- 确认弹窗（全站共用，见 js/core/utils.js openConfirm） -->
     <div class="book-del-confirm-overlay" id="confirmOverlay">
       <div class="book-del-confirm-box">
         <div class="book-del-confirm-title" id="confirmTitle">删除此条目？</div>
@@ -2791,6 +2791,6 @@
   </div>
 
   <!-- 程序入口：先准备存储，再按顺序加载 js/ 里的各功能脚本 -->
-  <script src="js/00-boot.js"></script>
+  <script src="js/core/boot.js"></script>
 </body>
 </html>

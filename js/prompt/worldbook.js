@@ -1,0 +1,263 @@
+// 眠花糖机 — Prompt：世界书（文件夹、条目详情、开关、按关键词取用）
+
+// =============================================
+// Prompt — 世界书详情视图
+// =============================================
+var wbDetailView = document.getElementById('wbDetailView');
+var wbDetailBack = document.getElementById('wbDetailBack');
+var wbDetailTitle= document.getElementById('wbDetailTitle');
+var wbEntryName  = document.getElementById('wbEntryName');
+var wbEntryKeywords = document.getElementById('wbEntryKeywords');
+var wbEntryContent  = document.getElementById('wbEntryContent');
+var wbInjectPos  = document.getElementById('wbInjectPos');
+var wbDetailSave = document.getElementById('wbDetailSave');
+var wbAddEntryBtn= document.getElementById('wbAddEntryBtn');
+var wbPanelList  = document.getElementById('wbPanelList');
+var wbDetailDelete = document.getElementById('wbDetailDelete');
+
+// 世界书条目：{ id, name, keywords, content, pos: 'before' | 'middle' | 'after', folderId: '' = 未分类 }
+// 文件夹：{ id, name }
+var wbEntries = mphoneStore.load('mphone_worldbook', []);
+var wbFolders = mphoneStore.load('mphone_wb_folders', []);
+var wbEditingId = null;   // null = 新建
+var wbOpenFolders = {};   // 列表里展开的文件夹（默认全部收起）
+var WB_POS_LABEL = { before: '前', middle: '中', after: '后' };
+var WB_NONE = '';         // 未分类
+
+function saveWbEntries() {
+  mphoneStore.save('mphone_worldbook', wbEntries);
+  mphoneStore.save('mphone_wb_folders', wbFolders);
+}
+function genWbId(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+// 按文件夹分组：先各文件夹（含空的），最后是有条目的「未分类」
+function wbGroups() {
+  var groups = wbFolders.map(function(f) {
+    return { id: f.id, name: f.name, entries: wbEntries.filter(function(e) { return e.folderId === f.id; }) };
+  });
+  var known = {};
+  wbFolders.forEach(function(f) { known[f.id] = true; });
+  var loose = wbEntries.filter(function(e) { return !e.folderId || !known[e.folderId]; });
+  if (loose.length) groups.push({ id: WB_NONE, name: '未分类', entries: loose });
+  return groups;
+}
+
+var FOLDER_ARROW = '<svg class="wb-folder-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+
+function renderWbList() {
+  var wrap = document.getElementById('wbFolderList');
+  wrap.innerHTML = '';
+  wbGroups().forEach(function(g) {
+    var folder = document.createElement('div');
+    folder.className = 'wb-folder' + (wbOpenFolders[g.id] ? ' open' : '');
+    var head = document.createElement('div');
+    head.className = 'wb-folder-head';
+    head.innerHTML = FOLDER_ARROW;
+    var name = document.createElement('span');
+    name.className = 'wb-folder-name';
+    name.textContent = g.name;
+    var count = document.createElement('span');
+    count.className = 'wb-folder-count';
+    count.textContent = g.entries.length + ' 条';
+    head.appendChild(name);
+    head.appendChild(count);
+    head.addEventListener('click', function() {
+      wbOpenFolders[g.id] = !wbOpenFolders[g.id];
+      folder.classList.toggle('open', wbOpenFolders[g.id]);
+    });
+    // 文件夹操作：在此新建 / 重命名 / 删除（未分类没有重命名和删除）
+    var addBtn = document.createElement('button');
+    addBtn.className = 'wb-folder-act';
+    addBtn.textContent = '+ 条目';
+    addBtn.addEventListener('click', function(e) { e.stopPropagation(); openWbDetail(null, g.id); });
+    head.appendChild(addBtn);
+    if (g.id !== WB_NONE) {
+      var renBtn = document.createElement('button');
+      renBtn.className = 'wb-folder-act';
+      renBtn.textContent = '重命名';
+      renBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        askWbFolderName('重命名文件夹', g.name, function(n) {
+          wbFolders.forEach(function(f) { if (f.id === g.id) f.name = n; });
+          saveWbEntries();
+          renderWbList();
+        });
+      });
+      var delBtn = document.createElement('button');
+      delBtn.className = 'wb-folder-act';
+      delBtn.textContent = '删除';
+      delBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openConfirm('删除文件夹「' + g.name + '」？里面的条目会移到未分类', function() {
+          wbFolders = wbFolders.filter(function(f) { return f.id !== g.id; });
+          wbEntries.forEach(function(en) { if (en.folderId === g.id) en.folderId = WB_NONE; });
+          saveWbEntries();
+          renderWbList();
+        });
+      });
+      head.appendChild(renBtn);
+      head.appendChild(delBtn);
+    }
+    folder.appendChild(head);
+
+    var body = document.createElement('div');
+    body.className = 'wb-folder-body';
+    g.entries.forEach(function(entry) {
+      var card = document.createElement('div');
+      card.className = 'pf-entry-card';
+      var cb = document.createElement('div');
+      cb.className = 'pf-entry-card-body';
+      var nameEl = document.createElement('div');
+      nameEl.className = 'pf-entry-card-name';
+      nameEl.textContent = entry.name || '未命名';
+      var subEl = document.createElement('div');
+      subEl.className = 'pf-entry-card-sub';
+      subEl.textContent = (WB_POS_LABEL[entry.pos] || '前') + (entry.keywords ? ' · 关键词：' + entry.keywords : ' · 常驻');
+      cb.appendChild(nameEl);
+      cb.appendChild(subEl);
+      card.appendChild(cb);
+      // 条目开关：关掉后保留内容，但不发给模型
+      card.classList.toggle('disabled', entry.enabled === false);
+      var tl = document.createElement('label');
+      tl.className = 'st-toggle-wrap';
+      tl.innerHTML = '<input type="checkbox"><span class="st-toggle-slider"></span>';
+      var tcb = tl.querySelector('input');
+      tcb.checked = entry.enabled !== false;
+      tl.addEventListener('click', function(e) { e.stopPropagation(); });
+      tcb.addEventListener('change', function() {
+        entry.enabled = this.checked;
+        card.classList.toggle('disabled', !this.checked);
+        saveWbEntries();
+      });
+      card.appendChild(tl);
+      card.insertAdjacentHTML('beforeend', '<svg class="pf-entry-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>');
+      card.addEventListener('click', function() { openWbDetail(entry.id); });
+      body.appendChild(card);
+    });
+    if (!g.entries.length) body.innerHTML = '<div class="auto-hint" style="margin:0 0 6px;">空文件夹</div>';
+    folder.appendChild(body);
+    wrap.appendChild(folder);
+  });
+}
+
+// 文件夹命名：复用「备注名称」弹窗
+var _wbFolderNameCb = null;
+function askWbFolderName(title, value, cb) {
+  presetModalMode = 'wbFolder';
+  _wbFolderNameCb = cb;
+  document.querySelector('#presetModal .modal-title').textContent = title;
+  presetNameInput.value = value || '';
+  presetModal.classList.add('open');
+  presetNameInput.focus();
+}
+
+document.getElementById('wbAddFolderBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  askWbFolderName('新建文件夹', '', function(n) {
+    var f = { id: genWbId('wf'), name: n };
+    wbFolders.push(f);
+    wbOpenFolders[f.id] = true;
+    saveWbEntries();
+    renderWbList();
+  });
+});
+
+// 注入位置单选
+wbInjectPos.querySelectorAll('.pf-radio-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    wbInjectPos.querySelectorAll('.pf-radio-btn').forEach(function(b) { b.classList.remove('selected'); });
+    this.classList.add('selected');
+  });
+});
+
+// folderId：新建时预选的文件夹
+function openWbDetail(id, folderId) {
+  var entry = null;
+  wbEntries.forEach(function(e) { if (e.id === id) entry = e; });
+  wbEditingId = entry ? entry.id : null;
+  wbDetailTitle.textContent = entry ? (entry.name || '世界书条目') : '新建条目';
+  wbEntryName.value     = entry ? entry.name : '';
+  wbEntryKeywords.value = entry ? entry.keywords : '';
+  wbEntryContent.value  = entry ? entry.content : '';
+  var sel = document.getElementById('wbEntryFolder');
+  sel.innerHTML = '';
+  [{ id: WB_NONE, name: '未分类' }].concat(wbFolders).forEach(function(f) {
+    var o = document.createElement('option');
+    o.value = f.id;
+    o.textContent = f.name;
+    sel.appendChild(o);
+  });
+  sel.value = entry ? (entry.folderId || WB_NONE) : (folderId || WB_NONE);
+  if (sel.selectedIndex < 0) sel.value = WB_NONE;
+  var pos = entry ? entry.pos : 'before';
+  wbInjectPos.querySelectorAll('.pf-radio-btn').forEach(function(b) {
+    b.classList.toggle('selected', b.dataset.val === pos);
+  });
+  wbDetailDelete.classList.toggle('hidden', !entry);
+  wbDetailView.classList.add('open');
+}
+
+wbDetailBack.addEventListener('click', function() { wbDetailView.classList.remove('open'); });
+
+wbAddEntryBtn.addEventListener('click', function(e) { e.stopPropagation(); openWbDetail(null); });
+
+wbDetailSave.addEventListener('click', function() {
+  var posBtn = wbInjectPos.querySelector('.pf-radio-btn.selected');
+  var data = {
+    name:     wbEntryName.value.trim() || '未命名',
+    keywords: wbEntryKeywords.value.trim(),
+    content:  wbEntryContent.value.trim(),
+    pos:      posBtn ? posBtn.dataset.val : 'before',
+    folderId: document.getElementById('wbEntryFolder').value
+  };
+  var entry = null;
+  wbEntries.forEach(function(e) { if (e.id === wbEditingId) entry = e; });
+  if (entry) {
+    Object.assign(entry, data);
+  } else {
+    data.id = genWbId('wb');
+    wbEntries.push(data);
+  }
+  wbOpenFolders[data.folderId] = true;
+  saveWbEntries();
+  renderWbList();
+  wbDetailView.classList.remove('open');
+});
+
+// 世界书 — 删除按钮
+wbDetailDelete.addEventListener('click', function() {
+  if (!wbEditingId) {
+    wbDetailView.classList.remove('open');
+    return;
+  }
+  var delId = wbEditingId;
+  openConfirm('删除此世界书条目？', function() {
+    wbEntries = wbEntries.filter(function(e) { return e.id !== delId; });
+    saveWbEntries();
+    renderWbList();
+    wbDetailView.classList.remove('open');
+  });
+});
+
+wbDetailDelete.classList.add('hidden');
+renderWbList();
+
+// 取出某角色当前应注入的世界书条目：已关联（整个文件夹或单个条目）且（无关键词 或 最近 6 条消息里出现任一关键词）
+function getActiveWbEntries(char, hist) {
+  var ids = (char && char.worldbookIds) || [];
+  var folders = (char && char.worldbookFolders) || [];
+  if (!ids.length && !folders.length) return [];
+  var known = {};
+  wbFolders.forEach(function(f) { known[f.id] = true; });
+  var recent = hist.slice(-6).map(function(m) { return m.content || ''; }).join('\n').toLowerCase();
+  return wbEntries.filter(function(e) {
+    var fid = (e.folderId && known[e.folderId]) ? e.folderId : WB_NONE;
+    var linked = ids.indexOf(e.id) >= 0 || folders.indexOf(fid) >= 0;
+    if (!linked || !e.content || e.enabled === false) return false;
+    if (!e.keywords) return true;
+    return e.keywords.split(/[,，]/).some(function(k) {
+      k = k.trim().toLowerCase();
+      return k && recent.indexOf(k) >= 0;
+    });
+  });
+}

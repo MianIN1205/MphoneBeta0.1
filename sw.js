@@ -3,16 +3,23 @@
 // 只处理本站文件，AI / 语音 / 生图等外部接口请求完全不经过这里。
 
 // 文件拆分后 css/、js/ 也要预先缓存；改动这个列表时把版本号加一
-const CACHE = 'mphone-v16';
+const CACHE = 'mphone-v17';
 const CSS = ['base', 'appearance', 'chat', 'notes', 'chat-list', 'char-settings', 'chat-room', 'mine',
              'dialogs', 'char-look', 'prompt', 'image-picker', 'messages', 'settings-subnav', 'prompt-presets', 'stickers']
   .map(function (n) { return './css/' + n + '.css'; });
-const JS = ['00-boot', '01-core', '02-screens-appearance', '03-chat-tabs', '04-notes', '05-msg-controls',
-            '06-char-settings', '07-chat-list-room', '08-char-look', '09-prompt', '10-image-picker',
-            '11-persistence-data', '12-api-config', '13-chat-messages', '14-voice-room', '15-mine',
-            '16-feed-auto', '17-memory-import', '18-media-api', '19-wallet-fav-menu', '20-media-send',
-            '21-image-viewer', '22-assistant', '23-assist', '24-llm',
-            '25-mcp', '26-desk-apps', '27-widgets', '28-memory', '29-quick-bar', '30-status-panel', '31-stickers', '32-msg-ops', '33-backup', '34-calendar']
+const JS = ['core/boot', 'core/utils', 'desk/statusbar', 'settings/api', 'core/api-errors',
+            'desk/screens', 'desk/appearance', 'chat/tabs', 'desk/bookshelf', 'chat/header',
+            'chat/room-view', 'char/settings', 'chat/contacts', 'chat/new-chat', 'char/settings-save',
+            'chat/list', 'chat/room', 'char/look', 'prompt/tabs', 'prompt/worldbook',
+            'prompt/cot', 'prompt/presets', 'prompt/scene', 'core/image-picker', 'desk/appearance-store',
+            'settings/data', 'settings/api-restore', 'chat/history', 'chat/prompt', 'chat/render',
+            'chat/reply', 'chat/input', 'chat/voice', 'chat/room-lists', 'chat/mine',
+            'chat/feed', 'char/auto', 'char/summary', 'char/backup', 'char/import',
+            'desk/memory-open', 'settings/media-api', 'chat/wallet-fav', 'chat/msg-menu', 'chat/media-send',
+            'core/image-viewer', 'char/assistant', 'settings/assist', 'core/llm', 'core/mcp',
+            'desk/gallery', 'desk/anniv', 'desk/diary', 'desk/widgets', 'char/memory',
+            'desk/memory-lib', 'chat/quick-bar', 'chat/status-panel', 'chat/stickers', 'chat/msg-ops',
+            'settings/backup', 'chat/calendar']
   .map(function (n) { return './js/' + n + '.js'; });
 const CORE = ['./', './index.html', './manifest.webmanifest',
               './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
