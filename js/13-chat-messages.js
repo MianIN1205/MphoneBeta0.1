@@ -11,10 +11,10 @@ function getDramaHistory(idx) { var k = charKey(idx); if (!dramaHistories[k]) dr
 function stripMsg(m) {
   var o = { role: m.role, content: m.content, imgSrc: m.imgSrc, sticker: m.sticker, status: m.status, time: m.time,
             quote: m.quote, recalled: m.recalled, recalledText: m.recalledText, recalledBy: m.recalledBy,
-            voice: m.voice, transcript: m.transcript, action: m.action, recap: m.recap, pat: m.pat, patSuffix: m.patSuffix };
+            voice: m.voice, transcript: m.transcript, action: m.action, recap: m.recap, pat: m.pat, patSuffix: m.patSuffix, cal: m.cal };
   if (m.alts) {
     o.alts = m.alts.map(function(group) {
-      return group.map(function(g) { return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, action: g.action, recap: g.recap, pat: g.pat,
+      return group.map(function(g) { return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, action: g.action, recap: g.recap, pat: g.pat, cal: g.cal,
                                               recalled: g.recalled, recalledText: g.recalledText, recalledBy: g.recalledBy }; });
     });
     o.altIdx = m.altIdx;
@@ -93,6 +93,8 @@ function chatFormatRules(char) {
     rules.push('像发微信一样，把这次回复拆成 ' + (c.replyMin === c.replyMax ? c.replyMax : c.replyMin + '~' + c.replyMax) +
                ' 条消息，每两条之间单独一行写 |||');
   }
+  // 帮忙记提醒 / 闹钟 / 日程（见 34-calendar.js）
+  if (typeof CAL_RULE === 'string') rules.push(CAL_RULE);
   if (c.recallOn) {
     rules.push('你也可以像微信一样撤回自己刚发的消息：偶尔说漏嘴、发错或者害羞的时候，把那一条单独写成 <撤回>这条消息的内容</撤回>，' +
                '它会先发出去，过两秒变成「撤回了一条消息」，对方不一定看得到。很少用，不要每次都撤回。');
@@ -191,7 +193,7 @@ function crossSceneContext(idx, isDrama) {
 
 // histOverride：指定使用的记录（自主活动 / 动态生成时用聊天记录），默认取当前子视图的记录
 // =============================================
-// 现实感知（角色设置「聊天」页 → 时间与感知）：现在几点（按角色所在时区）、隔了多久没说话、手机电量、纪念日和日程
+// 现实感知：现在几点（按角色所在时区，角色设置「聊天」页 → 时间与感知可以关）、隔了多久没说话；手机电量、纪念日和日程一直带着
 // 只放进聊天窗口（以及用聊天记录的主动消息、动态、日记）；剧情空间有自己的时间线，不放
 // =============================================
 function zoneParts(t, tz) {
@@ -242,11 +244,11 @@ function realWorldContext(char, hist) {
       else if (!firstUser && gap >= 10 * 60000) lines.push('距离你上一条消息已经过去了 ' + durText(gap) + '。');
     }
   }
-  if (c.batteryOn && typeof phoneBattery !== 'undefined' && phoneBattery.real) {
+  if (typeof phoneBattery !== 'undefined' && phoneBattery.real) {
     var pct = Math.round(phoneBattery.level * 100);
     lines.push('{{user}}的手机电量 ' + pct + '%' + (phoneBattery.charging ? '，正在充电' : pct <= 20 ? '，快没电了' : '') + '。');
   }
-  if (c.calOn && typeof calendarContextFor === 'function') {
+  if (typeof calendarContextFor === 'function') {
     var cal = calendarContextFor(char);
     if (cal) lines.push(cal);
   }
@@ -469,6 +471,7 @@ function renderHistMsg(m, list, empty) {
   if (m.recalled && !m._flash) return renderRecallNotice(m, list, empty);
   if (m.pat) return renderPatNotice(m, list, empty);
   if (m.action && typeof renderActionCard === 'function') return renderActionCard(m, list, empty);
+  if (m.cal && typeof renderCalCard === 'function') return renderCalCard(m, list, empty);
   if (m.voice) {
     var vrow = createVoiceBubble(m, list, empty);
     if (m.quote) vrow._extras.push(appendQuoteBlock(list, m.quote, 'user'));
@@ -519,7 +522,7 @@ function refreshMsgStamps(list) {
       if (prev && (broken || prev.classList.contains('user') !== el.classList.contains('user'))) stamp(prev);
       prev = el;
       broken = false;
-    } else if (el.matches('.cr-time-sep, .cr-recall-notice, .cr-action-card')) {
+    } else if (el.matches('.cr-time-sep, .cr-recall-notice, .cr-action-card, .cr-cal-card')) {
       broken = true;
     }
   });
@@ -571,7 +574,7 @@ function trailingReplyGroup(hist) {
 
 function cloneGroup(group) {
   return group.map(function(g) {
-    return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, recap: g.recap, pat: g.pat,
+    return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, recap: g.recap, pat: g.pat, cal: g.cal,
              recalled: g.recalled, recalledText: g.recalledText, recalledBy: g.recalledBy,
              action: g.action ? JSON.parse(JSON.stringify(g.action)) : undefined };
   });
@@ -711,6 +714,7 @@ function msgTextForAI(m) {
   }
   if (m.pat) return patTextForAI(m);
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
+  if (m.cal && typeof calTextForAI === 'function') return calTextForAI(m.cal);
   var c = m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
   if (m.quote) c = '「引用 ' + m.quote.author + '：' + m.quote.text + '」\n' + c;
   return c;
@@ -762,6 +766,9 @@ function commitAssistantReply(hist, raw, list, empty) {
     saveCharList();
     if (charList[openingChatCharIdx] === rc) paintChatSubTitle(rc);
   }
+  // 聊天窗口：TA 帮忙记的提醒 / 闹钟 / 日程，记进桌面「纪念日」，后面单独成一张卡片
+  var calItems = [];
+  if (rc && chatHistories[rc.id] === hist && typeof extractCalTags === 'function') raw = extractCalTags(rc, raw, calItems);
   if (rc && chatHistories[rc.id] === hist && !(rc.chatCfg && rc.chatCfg.actionOn)) {
     raw = raw.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
   }
@@ -778,6 +785,7 @@ function commitAssistantReply(hist, raw, list, empty) {
   if (added.length && status) added[added.length - 1].status = status;
   if (added.length && recap) added[added.length - 1].recap = recap;
   actions.forEach(function(a) { added.push({ role: 'assistant', content: '', action: a, time: now }); });
+  calItems.forEach(function(c) { added.push({ role: 'assistant', content: '', cal: c, time: now }); });
   var pc = charOfHistory(hist);
   if (patBack && pc && chatHistories[pc.id] === hist && pc.chatCfg && pc.chatCfg.patOn) added.push({ role: 'assistant', content: '', pat: 'user', time: now });
   added.forEach(function(m) {

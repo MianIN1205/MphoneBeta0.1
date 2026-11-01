@@ -108,7 +108,8 @@ document.querySelectorAll('#galleryFilter .pf-radio-btn').forEach(function(btn) 
 // · 自己添加：纪念日（可每年重复，如生日）、日程（某天某时要做的事）
 // · 置顶：在列表里排最前；外显：显示在桌面的纪念日小组件上
 // =============================================
-var annivs = mphoneStore.load('mphone_annivs', []);              // [{ id, kind: 'anniv' | 'event', title, date, time, yearly, pin, show }]
+var annivs = mphoneStore.load('mphone_annivs', []);              // [{ id, kind: 'anniv' | 'event', title, date, time, yearly, pin, show, charIds, remind, by }]
+// charIds：和谁有关（空 = 只和用户有关）；remind：角色帮忙记的「提醒 / 闹钟 / 日程」；by：哪个角色记的
 var annivFlags = mphoneStore.load('mphone_anniv_flags', {});     // 自动条目的置顶 / 外显：{ 'auto_角色id': { pin, show } }
 var DAY_MS = 86400000;
 function dayStart(t) { var d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
@@ -133,7 +134,8 @@ function annivEntries() {
       date: first, note: '第', big: Math.round((today - dayStart(first)) / DAY_MS) + 1, unit: '天', order: 0, pin: !!fl.pin, show: !!fl.show });
   });
   annivs.forEach(function(a) {
-    var t = parseYmd(a.date), e = { id: a.id, kind: a.kind || 'anniv', a: a, title: a.title, date: t, time: a.time || '', pin: !!a.pin, show: !!a.show, unit: '天' };
+    var t = parseYmd(a.date), e = { id: a.id, kind: a.kind || 'anniv', a: a, title: a.title, date: t, time: a.time || '', pin: !!a.pin, show: !!a.show,
+      charIds: a.charIds || [], remind: a.remind || '', unit: '天' };
     if (e.kind === 'anniv' && a.yearly) {
       var d = new Date(t), y = new Date(today).getFullYear();
       var next = new Date(y, d.getMonth(), d.getDate()).getTime();
@@ -156,16 +158,23 @@ function annivEntries() {
   // 置顶在前；其次「认识第几天」、今天和快到的日子（越近越前）；已经过去的在最后
   return list.sort(function(x, y) { return (y.pin - x.pin) || (x.order - y.order); });
 }
-// 告诉角色的纪念日和日程（角色设置「聊天」页 → 知道我的纪念日和日程）：
-// 和这个角色认识第几天；今天的日子和日程；30 天内要到的；已经过去的纪念日算到今天第几天。最多 8 条
+// 告诉角色的纪念日和日程：和这个角色认识第几天；今天的日子和日程；30 天内要到的；已经过去的纪念日算到今天第几天。最多 8 条
+// 角色只看得到：只和用户有关的、和自己有关的、和 TA 认识的人（社交圈）有关的；不认识的人的看不到
+function annivVisibleTo(e, char) {
+  var ids = e.charIds || [];
+  if (!ids.length || ids.indexOf(char.id) >= 0) return true;
+  return ids.some(function(id) { return (char.circle || []).indexOf(id) >= 0; });
+}
 function calendarContextFor(char) {
   var known = '', items = [];
   annivEntries().forEach(function(e) {
     if (e.auto) { if (e.charId === char.id) known = '今天是你们认识的第 ' + e.big + ' 天。'; return; }
-    if (e.past || items.length >= 8) return;
-    if (e.today) items.push((e.kind === 'event' ? '今天的日程：' : '今天是纪念日：') + e.title + (e.time ? '（' + e.time + '）' : ''));
-    else if (e.note === '还有' && e.big <= 30) items.push(e.title + '：还有 ' + e.big + ' 天' + (e.kind === 'event' && e.time ? '（' + e.time + '）' : ''));
-    else if (e.kind === 'anniv' && e.note === '已经') items.push(e.title + '：已经 ' + e.big + ' 天');
+    if (e.past || items.length >= 8 || !annivVisibleTo(e, char)) return;
+    var who = (e.charIds || []).map(function(id) { return id === char.id ? '你' : annivCharName(id); }).filter(Boolean);
+    var title = (e.remind ? '（' + e.remind + '）' : '') + e.title + (who.length ? '〔和' + who.join('、') + '〕' : '');
+    if (e.today) items.push((e.kind === 'event' ? '今天的日程：' : '今天是纪念日：') + title + (e.time ? '（' + e.time + '）' : ''));
+    else if (e.note === '还有' && e.big <= 30) items.push(title + '：还有 ' + e.big + ' 天' + (e.kind === 'event' && e.time ? '（' + e.time + '）' : ''));
+    else if (e.kind === 'anniv' && e.note === '已经') items.push(title + '：已经 ' + e.big + ' 天');
   });
   return known + (known && items.length ? '\n' : '') + (items.length ? '{{user}}手机日历里记着的纪念日和日程：\n' + items.map(function(t) { return '· ' + t; }).join('\n') : '');
 }
@@ -202,10 +211,11 @@ function renderAnnivs() {
     info.className = 'anniv-info';
     var t = document.createElement('div');
     t.className = 'anniv-title';
-    t.textContent = (e.kind === 'event' ? '🗓 ' : '') + e.title + (e.a && e.a.yearly ? ' 🔁' : '');
+    t.textContent = (e.kind === 'event' ? (CAL_ICON[e.remind] || '🗓') + ' ' : '') + e.title + (e.a && e.a.yearly ? ' 🔁' : '');
     var d = document.createElement('div');
     d.className = 'anniv-date';
-    d.textContent = deskDateText(e.date) + (e.time ? ' ' + e.time : '');
+    var who = (e.charIds || []).map(annivCharName).filter(Boolean);
+    d.textContent = deskDateText(e.date) + (e.time ? ' ' + e.time : '') + (who.length ? ' · 和 ' + who.join('、') : '');
     info.appendChild(t);
     info.appendChild(d);
     var num = document.createElement('div');
@@ -228,6 +238,11 @@ function renderAnnivs() {
       acts.appendChild(b);
     });
     if (e.a) {
+      var push = document.createElement('button');
+      push.className = 'anniv-flag';
+      push.textContent = '📲 推送到手机';
+      push.addEventListener('click', function() { if (typeof openCalPush === 'function') openCalPush(e.a); });
+      acts.appendChild(push);
       var del = document.createElement('button');
       del.className = 'anniv-flag anniv-del';
       del.textContent = '删除';
@@ -247,6 +262,28 @@ function renderAnnivs() {
 
 // 添加纪念日 / 日程
 var annivOverlay = document.getElementById('annivOverlay');
+var CAL_ICON = { '提醒': '🔔', '闹钟': '⏰', '日程': '🗓' };
+function annivCharName(id) {
+  var c = charList.filter(function(x) { return x.id === id; })[0];
+  return c ? (c.charAlias || c.charName || '') : '';
+}
+// 和谁有关：点角色名选上 / 取消
+var annivPeople = [];
+function renderAnnivPeople() {
+  var box = document.getElementById('annivPeople');
+  box.innerHTML = '';
+  charList.forEach(function(c) {
+    var b = document.createElement('button');
+    b.className = 'stk-chip' + (annivPeople.indexOf(c.id) >= 0 ? ' selected' : '');
+    b.textContent = c.charAlias || c.charName || '未命名';
+    b.addEventListener('click', function() {
+      var i = annivPeople.indexOf(c.id);
+      if (i >= 0) annivPeople.splice(i, 1); else annivPeople.push(c.id);
+      renderAnnivPeople();
+    });
+    box.appendChild(b);
+  });
+}
 var annivKind = 'anniv';
 function setAnnivKind(kind) {
   annivKind = kind;
@@ -265,6 +302,8 @@ document.getElementById('annivAddBtn').addEventListener('click', function() {
   document.getElementById('annivTime').value = '';
   document.getElementById('annivYearly').checked = false;
   setAnnivKind('anniv');
+  annivPeople = [];
+  renderAnnivPeople();
   annivOverlay.classList.add('open');
 });
 document.getElementById('annivCancel').addEventListener('click', function() { annivOverlay.classList.remove('open'); });
@@ -276,7 +315,8 @@ document.getElementById('annivSave').addEventListener('click', function() {
   annivs.push({
     id: 'an' + Date.now().toString(36), kind: annivKind, title: titleEl.value.trim(), date: dateEl.value,
     time: annivKind === 'event' ? document.getElementById('annivTime').value : '',
-    yearly: annivKind === 'anniv' && document.getElementById('annivYearly').checked, pin: false, show: false
+    yearly: annivKind === 'anniv' && document.getElementById('annivYearly').checked, pin: false, show: false,
+    charIds: annivPeople.slice()
   });
   saveAnnivs();
   annivOverlay.classList.remove('open');

@@ -294,10 +294,12 @@
 /* 多选：每条消息左边一个小圆圈，选中的变成粉色对勾，整行淡淡高亮 */
 .cr-selecting > .chat-msg-row,
 .cr-selecting > .cr-recall-notice,
-.cr-selecting > .cr-action-card { position: relative; padding-left: 28px; cursor: pointer; border-radius: 12px; }
+.cr-selecting > .cr-action-card,
+.cr-selecting > .cr-cal-card { position: relative; padding-left: 28px; cursor: pointer; border-radius: 12px; }
 .cr-selecting > .chat-msg-row::after,
 .cr-selecting > .cr-recall-notice::after,
-.cr-selecting > .cr-action-card::after {
+.cr-selecting > .cr-action-card::after,
+.cr-selecting > .cr-cal-card::after {
   content: ''; position: absolute; left: 4px; top: 50%; margin-top: -9px;
   width: 16px; height: 16px; border-radius: 50%; box-sizing: border-box;
   border: 1.5px solid rgba(180,150,160,0.7); background: rgba(255,255,255,0.8);
@@ -323,3 +325,16 @@
 .cr-sel-btn.danger { background: #D05858; color: #fff; }
 .cr-sel-btn:disabled { opacity: 0.45; }
 @keyframes crSelFade { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* 角色帮你记的提醒 / 闹钟 / 日程卡片 */
+.cr-cal-card {
+  margin: 0 0 0 40px; max-width: 78%; align-self: flex-start; box-sizing: border-box;
+  background: rgba(255,255,255,0.85); border-radius: 12px; border: 1px solid rgba(160,180,230,0.5);
+  padding: 9px 11px; font-size: 12px; color: #6f5560; line-height: 1.55;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+}
+#appChatRoom.cr-no-avatar .cr-cal-card { margin-left: 0; }
+.cr-cal-head { font-weight: 600; color: #6a82c0; }
+.cr-cal-body { font-size: 13px; color: #555; white-space: pre-wrap; }
+.cal-push-info { white-space: pre-line; text-align: center; font-size: 13px; color: #555; line-height: 1.6; }
+#calPushOverlay .mine-acc-btn { flex: none; width: 100%; }

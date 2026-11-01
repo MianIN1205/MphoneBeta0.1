@@ -16,7 +16,7 @@
 - `css/`：16 个样式文件，`<link>` 顺序有影响。
 - `js/`：普通脚本（不是模块），由 `js/00-boot.js` 的 `MPHONE_SCRIPTS` 按顺序注入。所有顶层名字都是全局共享的。
   - 加载时调用后面文件里的函数会报错：用 `typeof` 判断，或者用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。
-  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v15`）。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v16`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。
   - logo 是用户提供的图（粉色月牙 + 睡觉的小熊 + 蓝色小花）抠成透明底、外面加一圈白色描边：`icon-192/512` 透明底（载入页也用 `icon-512`），`apple-touch-icon` 白底（苹果桌面图标不支持透明，会变黑底；用户要白底看得清楚），`icon-maskable-512` 带粉蓝渐变底。
   - 载入页在 `index.html` 开头（样式内联，小字随机），`js/00-boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
@@ -47,6 +47,7 @@
 | 31-stickers | 表情包（图床链接导入（也能从 txt / docx / json / md / csv 文档自动识别）、分类、名字辅助识别、打字联想；消息存 `[表情包：名字]` + 图片地址，打不开时显示这句文字；每个角色单独设置能不能发、能用哪些分类、能不能看到图片：`char.stickerCfg`；导入时把图片压成小图存 `b64` 给 AI 看，图床跨域读不了记 `b64Fail`） |
 | 32-msg-ops | 消息多选（批量删除 / 合并收藏）、删除本轮回复、从某一轮重新生成、清空聊天 / 剧情记录。撤回：`m.recalledBy` 为 `user`（你撤回的，自己或角色的消息）或 `char`（角色回复里写 `<撤回>…</撤回>`，先显示两秒再变撤回提示，角色设置可开「偷看」） |
 | 33-backup | 备份：「数据备份」弹出分享（存到文件 / 云盘 / 微信，安卓不认 .json 就用 .txt）或下载；备份提醒（`mphone_backup_meta` 记上次备份和最近改动，这一项不进备份）；自动加密备份到 GitHub Gist（PBKDF2 + AES-GCM，gzip 压缩；令牌和密码存 localStorage 的 `mphoneCloudToken` / `mphoneCloudPass`，不进备份）。iPhone 删掉桌面图标会连数据一起清掉 |
+| 34-calendar | 角色回复里的 `<日程 类型="提醒/闹钟/日程 三选一" 时间="YYYY-MM-DD HH:MM">事</日程>` 直接记进桌面「纪念日」（`annivs` 里 `remind` / `by` / `charIds`），聊天里出一张卡片；「推送到手机日历」：日历文件 .ics（带提醒）/ 分享 / Google 日历链接。纪念日按 `charIds` 决定角色看不看得到：只和用户有关的、和自己有关的、和社交圈里认识的人有关的（`annivVisibleTo`） |
 
 ## 测试
 - 内置浏览器面板里 service worker 注册不上（控制台有 “fetching the script” 报错），这是环境问题，不是 bug。

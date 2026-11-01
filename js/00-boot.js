@@ -199,7 +199,8 @@ var MPHONE_SCRIPTS = [
   "js/30-status-panel.js",
   "js/31-stickers.js",
   "js/32-msg-ops.js",
-  "js/33-backup.js"
+  "js/33-backup.js",
+  "js/34-calendar.js"
 ];
 
 // 要等全部脚本执行完才能跑的初始化（会用到后面脚本里的函数），用 onMphoneReady 登记

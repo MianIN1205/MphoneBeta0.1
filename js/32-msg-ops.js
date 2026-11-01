@@ -137,7 +137,7 @@ document.getElementById('crSelFav').addEventListener('click', function() {
   selectableEls(msgSel.list).filter(function(el) { return msgSel.picked.indexOf(el) >= 0; }).forEach(function(el) {
     var m = el._msg;
     if (m.imgSrc && !m.recalled) images.push(m.imgSrc);
-    var text = m.recalled ? '[撤回了一条消息]' : m.pat ? '[拍一拍]' : m.action ? '[操作]' : m.imgSrc ? '[图片]'
+    var text = m.recalled ? '[撤回了一条消息]' : m.pat ? '[拍一拍]' : m.action ? '[操作]' : m.cal ? '[' + m.cal.kind + '] ' + m.cal.title : m.imgSrc ? '[图片]'
       : m.voice ? '[语音]' + (m.transcript ? ' ' + m.transcript : '') : String(m.content || '').replace(/〔译〕/, '\n（译）');
     if (m.role === 'assistant') text = fillMacros(text, char);
     lines.push((m.role === 'user' ? myName : charName) + '：' + text);
