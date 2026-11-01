@@ -2751,6 +2751,23 @@
     </div>
 
     <!-- Prompt 条目删除确认弹窗 -->
+    <!-- 报错分析：聊天里「回复失败」那行小字点开（见 js/core/errors.js） -->
+    <div class="mine-acc-overlay" id="errInfoOverlay">
+      <div class="mine-acc-modal err-info-modal">
+        <div class="mine-acc-title" id="errInfoTitle">出了点问题</div>
+        <div class="err-info-sec">可能的原因</div>
+        <ul class="err-info-list" id="errInfoReasons"></ul>
+        <div class="err-info-sec">可以这样试试</div>
+        <ul class="err-info-list" id="errInfoFixes"></ul>
+        <button class="err-info-raw-toggle" id="errInfoRawToggle">原始报错（复制给 Claude 帮忙看用）</button>
+        <div class="err-info-raw-wrap" id="errInfoRawWrap"><pre class="err-info-raw" id="errInfoRaw"></pre></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="errInfoCopy">复制报错</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="errInfoClose">知道了</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 导出备份：分享（存到文件 / 云盘 / 微信）或下载 -->
     <div class="mine-acc-overlay" id="backupExportOverlay">
       <div class="mine-acc-modal">

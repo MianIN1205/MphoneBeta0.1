@@ -37,6 +37,8 @@
 .chat-msg-list::-webkit-scrollbar { display: none; }
 /* 列表里的每一样（气泡、引用、撤回提示、卡片…）都不许被挤：消息一多，带 overflow:hidden 的引用条会被压成细细一条 */
 .chat-msg-list > * { flex-shrink: 0; }
+/* 回复失败的那行小字（点开看原因） */
+.cr-err-notice { color: #c47a84; cursor: pointer; }
 
 .chat-msg-row { display: flex; align-items: flex-end; gap: 8px; }
 .chat-msg-row.user { flex-direction: row-reverse; }

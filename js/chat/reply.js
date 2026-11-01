@@ -94,8 +94,8 @@ function stopGenerating() { if (genState) genState.ctrl.abort(); }
 // onDone(added)：回复结束后调用，added 是写入记录的角色消息（失败或停止且没有内容时为空数组）
 function sendMsg(userText, requestOnly, onDone) {
   var cfg = getApiCfg(charList[openingChatCharIdx]);
-  if (!cfg.url || !cfg.key) { appendMsg('ai', '⚠️ 请先在设置中填写 API 地址和密钥，点击「当前应用」保存。', false); if (onDone) onDone([]); return; }
-  if (!cfg.model)           { appendMsg('ai', '⚠️ 请先选择模型。', false); if (onDone) onDone([]); return; }
+  if (!cfg.url || !cfg.key) { showErrNotice(new Error('请先在设置中填写 API 地址和密钥'), null, getActiveEmptyEl(), cfg); if (onDone) onDone([]); return; }
+  if (!cfg.model)           { showErrNotice(new Error('请先选择模型'), null, getActiveEmptyEl(), cfg); if (onDone) onDone([]); return; }
   if (genState) { showToast('正在回复中，可以先点 ⏹ 停止', 'error'); if (onDone) onDone([]); return; }
   var hist = getActiveHistory(openingChatCharIdx);
   var replyCharIdx = openingChatCharIdx;
@@ -108,6 +108,13 @@ function sendMsg(userText, requestOnly, onDone) {
   var aiText = '';
   genState = { ctrl: ctrl, char: replyChar };
   setGenerating(true);
+
+  // 出错：还在这个对话里就在列表里放一行小字（点开看原因）；已经离开了就在顶部提示一下是谁回复失败
+  function showReplyError(err) {
+    var here = appChatRoom.classList.contains('active') && charList[openingChatCharIdx] === replyChar && getActiveHistory(openingChatCharIdx) === hist;
+    if (here) showErrNotice(err, getActiveMsgListEl(), null, cfg);
+    else showToast('「' + ((replyChar && (replyChar.charAlias || replyChar.charName)) || '角色') + '」回复失败：' + explainError(err).title, 'error');
+  }
 
   function endGen() {
     if (genState && genState.ctrl === ctrl) { genState = null; setGenerating(false); }
@@ -145,7 +152,7 @@ function sendMsg(userText, requestOnly, onDone) {
       if (onDone) onDone(added);
     } else {
       typing.row.remove();
-      appendMsg('ai', '⚠️ 未收到回复内容', false).bubble.classList.add('error');
+      showReplyError(new Error('未收到回复内容'));
       if (onDone) onDone([]);
     }
   }
@@ -180,7 +187,7 @@ function sendMsg(userText, requestOnly, onDone) {
     endGen();
     // 已收到的部分内容保留下来；手动停止时不显示错误
     var added = aiText ? deliver(aiText) : (typing.row.remove(), []);
-    if (err.name !== 'AbortError') appendMsg('ai', '⚠️ 请求失败：' + err.message, false).bubble.classList.add('error');
+    if (err.name !== 'AbortError') showReplyError(err);
     if (onDone) onDone(added);
   });
 }

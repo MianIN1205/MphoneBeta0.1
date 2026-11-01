@@ -227,7 +227,8 @@ var MPHONE_SCRIPTS = [
   "js/chat/stickers.js",
   "js/chat/msg-ops.js",
   "js/settings/backup.js",
-  "js/chat/calendar.js"
+  "js/chat/calendar.js",
+  "js/core/errors.js"
 ];
 
 // 要等全部脚本执行完才能跑的初始化（会用到后面脚本里的函数），用 onMphoneReady 登记

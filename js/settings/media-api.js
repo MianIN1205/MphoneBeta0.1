@@ -66,7 +66,9 @@ function apiError(res) {
       var e = JSON.parse(t);
       msg = (e.error && (e.error.message || e.error)) || (e.detail && (e.detail.message || e.detail)) || e.message || msg;
     } catch (_) {}
-    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    var err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    err.status = res.status;   // 状态码：报错分析（js/core/errors.js）按它判断原因
+    throw err;
   });
 }
 
