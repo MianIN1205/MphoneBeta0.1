@@ -106,13 +106,7 @@
     mphoneStore.save('mphone_font_size', parseInt(this.value, 10));
   });
 
-  // 系统提示词（Prompt → 系统）
-  var sysTA = document.getElementById('systemPromptTA');
-  var savedSys = mphoneStore.load('mphone_system_prompt', null);
-  if (savedSys !== null) sysTA.value = savedSys;
-  sysTA.addEventListener('input', function() {
-    mphoneStore.save('mphone_system_prompt', this.value);
-  });
+  // 系统提示词：读取和保存在 js/prompt/scene.js（改完点「保存」，可以「恢复默认」）
 
   renderApiPresets();
   renderFontPresets();
