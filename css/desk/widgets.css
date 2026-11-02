@@ -10,7 +10,9 @@
   row-gap: 0; column-gap: 0; padding: 0; margin: 18px 11px 0;
   justify-items: stretch; align-items: stretch; position: relative;
 }
-.desk-grid > .dock-item { justify-content: center; align-items: center; touch-action: none; }
+/* 图标和小组件都从格子顶上按同一个距离往下排（不按内容居中），字号、字体变了也对得齐；名字固定 14px 行高 */
+.desk-grid > .dock-item { justify-content: flex-start; align-items: center; touch-action: none; padding-top: calc((var(--desk-cell, 73.5px) - 69px) / 2); }
+.desk-grid .dock-label { line-height: 14px; }
 /* 小组件排好之前先不显示，排好后淡入 */
 .desktop-apps.desk-grid { transition: opacity 0.25s ease; }
 .desktop-apps.desk-grid:not(.desk-ready) { opacity: 0; }
