@@ -95,6 +95,7 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.08);
 }
 
+.dock-icon .dock-svg { width: 38px; height: 38px; }   /* 没有合适 emoji 的图标（灯塔）用小 SVG，大小和 emoji 差不多 */
 .dock-label { font-size: 10.5px; font-weight: 500; color: #444; letter-spacing: 0.2px; }
 
 /* 壁纸模糊层：只模糊 .phone 上的壁纸，桌面内容在它上面 */
