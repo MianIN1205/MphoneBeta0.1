@@ -551,7 +551,7 @@ function charInteract(post, idx) {
     '【动态互动】现在是 ' + nowText(char) + '。你（' + me.name + '）在刷动态时看到了' + (isOwn ? '自己发的' : '下面这条') + '动态：\n\n' +
     feedPostAsText(post, char) + '\n\n' +
     '请以角色身份决定是否点赞，并写一条评论；如果评论区里有人回复了你或评论了你的动态，就回复对方。' +
-    '评论像真人在朋友圈下面回复：一两句口语，一般不超过 30 字，不写动作描写和 *星号*。' +
+    '评论像真人在朋友圈下面回复：口语，一句到四五句都可以，看你想说多少，不写动作描写和 *星号*。' +
     '只输出 JSON：{"like": true 或 false, "comment": "评论内容"}，不想评论时 comment 为空字符串。'
   )]);
   return callApiOnce(msgs, char).then(function(text) {
