@@ -166,6 +166,10 @@ function errFullCode(d) {
 document.getElementById('errInfoRawToggle').addEventListener('click', function() {
   document.getElementById('errInfoRawWrap').classList.toggle('open');
 });
+document.getElementById('errInfoCodeCopy').addEventListener('click', function() {
+  if (!navigator.clipboard) { showToast('✗ 这里不能复制', 'error'); return; }
+  navigator.clipboard.writeText(errInfoCode).then(function() { showToast('✓ 已复制', 'success'); }, function() { showToast('✗ 复制失败', 'error'); });
+});
 document.getElementById('errInfoCodeToggle').addEventListener('click', function() {
   document.getElementById('errInfoCodeWrap').classList.toggle('open');
 });
