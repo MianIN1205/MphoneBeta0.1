@@ -117,7 +117,7 @@ function errRedact(text) {
     .replace(/([?&](?:key|api_key|apikey|token|access_token)=)[^&\s"]+/gi, '$1***');
 }
 var errInfoOverlay = document.getElementById('errInfoOverlay');
-var errInfoText = '';
+var errInfoText = '', errInfoCode = '';
 function openErrInfo(d) {
   var fill = function(id, arr) {
     var ul = document.getElementById(id);
@@ -127,39 +127,51 @@ function openErrInfo(d) {
   document.getElementById('errInfoTitle').textContent = d.ex.title;
   fill('errInfoReasons', d.ex.reasons);
   fill('errInfoFixes', d.ex.fixes);
-  // 完整报错：状态码、接口（不带参数）、错误本身、接口返回的原文（JSON 排好版），全部照原样，只把密钥打码
-  var e = d.err || {};
-  var where = '';
-  try { var u = new URL(e.url || d.ctx.url || ''); where = u.origin + u.pathname; } catch (_) {}
-  var lines = [
+  // 原始报错：时间、状态码、模型、接口（只留域名），原文里的密钥打码
+  var host = '';
+  try { host = d.ctx.url ? new URL(d.ctx.url).host : ''; } catch (_) {}
+  var raw = String((d.err && d.err.message) || d.err || '');
+  errInfoText = [
     '时间：' + fmtMsgTime(d.time),
     '分类：' + d.ex.title,
-    e.status ? '状态码：' + e.status + (e.statusText ? ' ' + e.statusText : '') : '',
+    d.err && d.err.status ? '状态码：' + d.err.status : '',
     d.ctx.model ? '模型：' + d.ctx.model : '',
-    where ? '接口：' + where : '',
-    '错误：' + (e.name || 'Error') + ': ' + String(e.message || d.err || '')
-  ];
+    host ? '接口：' + host : '',
+    '原文：' + (typeof redactSecret === 'function' ? redactSecret(raw) : raw)
+  ].filter(Boolean).join('\n');
+  document.getElementById('errInfoRaw').textContent = errInfoText;
+  document.getElementById('errInfoRawWrap').classList.remove('open');
+  // 完整报错代码（单独折叠）：状态行、接口、错误本身、接口返回的原文（JSON 排好版）；连不上时是出错的位置。只把密钥打码，不截断
+  errInfoCode = errFullCode(d);
+  document.getElementById('errInfoCode').textContent = errInfoCode;
+  document.getElementById('errInfoCodeWrap').classList.remove('open');
+  errInfoOverlay.classList.add('open');
+}
+function errFullCode(d) {
+  var e = d.err || {}, where = '';
+  try { var u = new URL(e.url || d.ctx.url || ''); where = u.origin + u.pathname; } catch (_) {}
+  var lines = [];
+  if (e.status) lines.push('HTTP ' + e.status + (e.statusText ? ' ' + e.statusText : ''));
+  if (where) lines.push(where);
+  lines.push((e.name || 'Error') + ': ' + String(e.message || d.err || ''));
   if (e.body != null && String(e.body).trim()) {
     var body = String(e.body);
     try { body = JSON.stringify(JSON.parse(body), null, 2); } catch (_) {}
-    lines.push('', '—— 接口返回的原文 ——', body.length > 20000 ? body.slice(0, 20000) + '\n…（太长，后面省略）' : body);
+    lines.push('', body.length > 20000 ? body.slice(0, 20000) + '\n…（太长，后面省略）' : body);
   } else if (e.stack) {
-    // 没有接口返回（比如连不上）：附上错误发生的位置
-    lines.push('', '—— 出错的位置 ——', String(e.stack).split('\n').slice(0, 10).join('\n'));
+    lines.push('', String(e.stack).split('\n').slice(0, 10).join('\n'));
   }
-  errInfoText = errRedact(lines.filter(function(l, i) { return l !== '' || i > 5; }).join('\n'));
-  document.getElementById('errInfoRaw').textContent = errInfoText;
-  document.getElementById('errInfoRawWrap').classList.remove('open');
-  document.getElementById('errInfoRawToggle').textContent = '展开完整报错';
-  errInfoOverlay.classList.add('open');
+  return errRedact(lines.join('\n'));
 }
 document.getElementById('errInfoRawToggle').addEventListener('click', function() {
-  var open = document.getElementById('errInfoRawWrap').classList.toggle('open');
-  this.textContent = open ? '收起完整报错' : '展开完整报错';
+  document.getElementById('errInfoRawWrap').classList.toggle('open');
+});
+document.getElementById('errInfoCodeToggle').addEventListener('click', function() {
+  document.getElementById('errInfoCodeWrap').classList.toggle('open');
 });
 document.getElementById('errInfoCopy').addEventListener('click', function() {
   if (!navigator.clipboard) { showToast('✗ 这里不能复制', 'error'); return; }
-  navigator.clipboard.writeText(errInfoText).then(function() { showToast('✓ 已复制', 'success'); }, function() { showToast('✗ 复制失败', 'error'); });
+  navigator.clipboard.writeText(errInfoText + (errInfoCode ? '\n\n—— 完整报错代码 ——\n' + errInfoCode : '')).then(function() { showToast('✓ 已复制', 'success'); }, function() { showToast('✗ 复制失败', 'error'); });
 });
 document.getElementById('errInfoClose').addEventListener('click', function() { errInfoOverlay.classList.remove('open'); });
 closeOnBackdrop(errInfoOverlay);
