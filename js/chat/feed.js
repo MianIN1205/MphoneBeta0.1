@@ -470,6 +470,58 @@ function generateCharPost(idx) {
     showToast('「' + charAuthor(char).name + '」发布了新动态', 'plain');
     memLogFeed(char, '我在动态里发了：' + feedPosts[0].text.slice(0, 80));
     if (typeof notifyFeedPost === 'function') notifyFeedPost(char, feedPosts[0]);
+    var post = feedPosts[0];
+    charNpcComments(post, idx).catch(function(err) { console.warn('[Mphone] NPC 评论失败:', err); });
+  });
+}
+
+// ---------- 角色生活里的人（NPC）来评论 ----------
+// 角色发了动态后，TA 现实生活里的朋友、同事、同学、家人……来评论：1～4 个人，每人 1～3 句；
+// TA 看心情回复全部、一部分，或者都不回。这些人只存名字，作者是 { type: 'npc', id, name, ownerId: 角色 id }，
+// 只有这个角色本人认识（knowsAuthor），出现过的名字记在 char.feedNpcs，下次还可能是这些人
+function npcAuthor(char, name) {
+  return { type: 'npc', id: 'npc:' + char.id + ':' + name, name: name, ownerId: char.id };
+}
+function charNpcComments(post, idx) {
+  var char = charList[idx];
+  if (!char) return Promise.resolve();
+  var me = charAuthor(char);
+  var others = charList.filter(function(c) { return c !== char; }).map(function(c) { return c.charAlias || c.charName; }).filter(Boolean);
+  var known = (char.feedNpcs || []).slice(-12);
+  var msgs = charContextMsgs(idx).concat([activityAsk(
+    '【动态评论区】你刚发了一条动态：\n「' + post.text + '」' + ((post.textImgs || []).length ? '（配图：' + post.textImgs.join('；') + '）' : '') + '\n' +
+    '现在你现实生活里的人来评论了：按你的人设和生活安排 1～4 个人（朋友、同事、同学、家人、网友……），名字和称呼要像真人，' +
+    '不要是{{user}}' + (others.length ? '，也不要是 ' + others.join('、') : '') + '。' +
+    (known.length ? '以前在你动态下出现过的人：' + known.join('、') + '，可以还是他们，也可以有新的人。' : '') +
+    '每人说 1～3 句，口语，像朋友圈评论那样各有各的语气，可以互相接话、打趣。' +
+    '然后你看心情回复：可以都回、只回一部分，也可以一个都不回；回复一到三句，还是你平时的口吻。都不写动作描写和 *星号*。' +
+    '只输出 JSON：{"comments": [{"name": "名字", "text": "评论"}], "replies": [{"to": "回复谁的名字", "text": "你的回复"}]}，不回复时 replies 为空数组。'
+  )]);
+  return callApiOnce(msgs, char).then(function(text) {
+    var m = String(text).match(/\{[\s\S]*\}/);
+    if (!m) return;
+    var o; try { o = JSON.parse(m[0]); } catch (_) { return; }
+    var clean = function(s) { return String(s || '').replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ').trim(); };
+    var t = Date.now(), names = {};
+    (Array.isArray(o.comments) ? o.comments : []).slice(0, 4).forEach(function(c) {
+      var name = clean(c && c.name).slice(0, 12), txt = clean(c && c.text);
+      if (!name || !txt || name === me.name) return;
+      var a = npcAuthor(char, name);
+      names[name] = a;
+      post.comments.push({ id: genFeedId('c'), author: a, text: txt, time: t += 1000 });
+    });
+    (Array.isArray(o.replies) ? o.replies : []).forEach(function(r) {
+      var to = names[clean(r && r.to)], txt = clean(r && r.text);
+      if (!to || !txt) return;
+      post.comments.push({ id: genFeedId('c'), author: me, text: txt, time: t += 1000, replyTo: to });
+    });
+    var got = Object.keys(names);
+    if (got.length) {
+      char.feedNpcs = (char.feedNpcs || []).filter(function(n) { return got.indexOf(n) < 0; }).concat(got).slice(-30);
+      saveCharList();
+    }
+    saveFeed();
+    renderFeed();
   });
 }
 
@@ -477,6 +529,7 @@ function generateCharPost(idx) {
 // 角色之间互相认识（角色设置 → 社交圈）才能看到彼此的动态、点赞和评论；用户和所有角色都认识
 function knowsAuthor(char, author) {
   if (!author) return false;
+  if (author.type === 'npc') return author.ownerId === char.id;   // 角色生活里的人：只有 TA 本人认识
   if (author.type === 'user' || author.id === char.id) return true;
   return (char.circle || []).indexOf(author.id) >= 0;
 }
@@ -551,7 +604,7 @@ function charInteract(post, idx) {
     '【动态互动】现在是 ' + nowText(char) + '。你（' + me.name + '）在刷动态时看到了' + (isOwn ? '自己发的' : '下面这条') + '动态：\n\n' +
     feedPostAsText(post, char) + '\n\n' +
     '请以角色身份决定是否点赞，并写一条评论；如果评论区里有人回复了你或评论了你的动态，就回复对方。' +
-    '评论像真人在朋友圈下面回复：口语，一句到四五句都可以，看你想说多少，不写动作描写和 *星号*。' +
+    '评论像真人在朋友圈下面回复：口语，一到三句，不写动作描写和 *星号*。' +
     '只输出 JSON：{"like": true 或 false, "comment": "评论内容"}，不想评论时 comment 为空字符串。'
   )]);
   return callApiOnce(msgs, char).then(function(text) {
