@@ -39,11 +39,8 @@ function commitAssistantReply(hist, raw, list, empty) {
     raw = raw.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
   }
   var parts = raw.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean);
-  // 聊天窗口：角色忘了用 ||| 分条、而是用空行隔开了几段时，按空行拆成几条气泡（用了 ||| 的，气泡里的空行照原样留着）
-  if (rc && chatHistories[rc.id] === hist && parts.length === 1 && raw.indexOf('|||') < 0 &&
-      Object.assign({}, DEFAULT_CHAT_CFG, rc.chatCfg || {}).replyMax > 1) {
-    parts = parts[0].split(/\n[ \t]*\n+/).map(function(p) { return p.trim(); }).filter(Boolean);
-  }
+  // 聊天窗口：像微信那样一句一个气泡（每次回复条数设成 1 的角色除外）
+  if (rc && chatHistories[rc.id] === hist && Object.assign({}, DEFAULT_CHAT_CFG, rc.chatCfg || {}).replyMax > 1) parts = chatSplitLines(parts);
   // 聊天窗口：<撤回>…</撤回> 拆成单独一条，先显示两秒再变成撤回提示
   if (rc && chatHistories[rc.id] === hist) parts = splitRecallParts(parts);
   // 聊天窗口：回复里的「[表情包：名字]」拆成单独的表情包消息（见 js/chat/stickers.js）
@@ -66,6 +63,32 @@ function commitAssistantReply(hist, raw, list, empty) {
   });
   if (status && typeof refreshStatusPanel === 'function') refreshStatusPanel();
   return added;
+}
+
+// 聊天窗口：一条里换了行、空了行的，每一行拆成单独一个气泡（用户要日常微信那种短短一条条的，不要大段气泡）
+// · 只有 *动作* 的一行跟着下一句（它显示成气泡外的灰色小字，自己成不了气泡）
+// · 「〔译〕」开头的翻译跟着上一句
+// · 句尾单个「。」去掉，聊天时一般不打句号（「……」「。。。」这类不动）
+function chatSplitLines(parts) {
+  var out = [];
+  parts.forEach(function(p) {
+    if (typeof p !== 'string') { out.push(p); return; }
+    var lines = p.split(/\n+/).map(function(l) { return l.trim(); }).filter(Boolean);
+    var pending = '';
+    lines.forEach(function(l) {
+      if (/^〔译〕/.test(l) && out.length && typeof out[out.length - 1] === 'string') { out[out.length - 1] += '\n' + l; return; }
+      if (/^(\*[^*]+\*\s*)+$/.test(l)) { pending += (pending ? ' ' : '') + l; return; }
+      out.push((pending ? pending + ' ' : '') + l);
+      pending = '';
+    });
+    if (pending) {
+      if (out.length && typeof out[out.length - 1] === 'string') out[out.length - 1] += ' ' + pending;
+      else out.push(pending);
+    }
+  });
+  return out.map(function(p) {
+    return typeof p === 'string' ? p.replace(/([^。.…])。(\s*(?:\*[^*]+\*)?\s*)$/, '$1$2') : p;
+  });
 }
 
 // 角色回复里的 <撤回>内容</撤回>：拆成单独一条「刚发就撤回」的消息
