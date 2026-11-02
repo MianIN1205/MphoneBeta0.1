@@ -76,7 +76,7 @@
 |---|---|
 | settings / settings-save / look | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）表单和默认值 `DEFAULT_CHAT_CFG`；保存 / 删除角色；美化页 |
 | memory / summary / backup | 角色记忆（短期 / 长期 / 珍贵，可选向量检索，按 token 预算注入）、关系里程碑（记忆多时分批整理）；按回合总结；单个角色的记忆备份（含档案） |
-| archive | 其他小手机的记录（扩展页「导入聊天记录」）：认 uwu（`uwu-chat-history`，`[某某的消息：…]` 去壳，`isStatusUpdate` 是状态栏）、酒馆 .jsonl、一般 JSON、「名字：内容」的 txt / docx；先预览再导入。原文存在 `mphone_archives`（只给用户翻看，不发给 AI）；可选分段整理成长期记忆（`m.source = 'import'`、`m.from` = 小手机名、时间用原聊天日期，角色看到时带「在 X 小手机里」）。用户要求整理完整、准确、不爆 token：一件事一条、写具体细节、禁止空泛句；每段约 5000 token，太长自动减半，偶发错误重试，失败停在那一段可「继续整理」；可选逐段核对（次数翻倍） |
+| archive | 其他小手机的记录（扩展页「导入聊天记录」）：认 uwu（`uwu-chat-history`，`[某某的消息：…]` 去壳，`isStatusUpdate` 是状态栏）、眠花糖机角色备份、ChatGPT（mapping）/ Claude（chat_messages）官网导出、酒馆 .jsonl、任意 JSON（找像消息的对象）、CSV、微信 / QQ 两行式 txt、「名字：内容」的 txt / md / docx；用户要求兼容的格式尽量多。先预览再导入，预览里点名字改「谁是 TA」；同一份记录再导时按时间 + 内容跳过已导入的。原文存在 `mphone_archives`（只给用户翻看，不发给 AI），列表和记忆库都写「来自 xxx」（`from` 存完整名字，如「uwu 小手机」）；可选分段整理成长期记忆（`m.source = 'import'`、`m.from`、时间用原聊天日期，角色看到时带「在 xxx 里」）。整理完自动 `arcConsolidate`：导入的记忆按来源分组、去掉数字后按相似度分小组，让模型把同一件事合并（细节全留），条数没变少或解析失败就保持原样（用户要求导入后记忆库不要堆太多重复的）。用户要求整理完整、准确、不爆 token：一件事一条、写具体细节、禁止空泛句；每段约 5000 token，太长自动减半，偶发错误重试，失败停在那一段可「继续整理」；可选逐段核对（次数翻倍） |
 | auto | 自主活动：主动发消息、聊天后发动态、调度。`callApiOnce(msgs, char)`（在 chat/feed）传角色时用 TA 自己的模型预设 |
 | import | 导入酒馆角色卡 PNG / JSON、Word |
 | assistant | 内置助手 MianIN（加世界书、改 CSS、看报错；`ASSISTANT_GUIDE` 是给它的应用说明，加新功能时顺手补一句） |

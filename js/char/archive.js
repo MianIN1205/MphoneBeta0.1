@@ -1,9 +1,11 @@
 // 眠花糖机 — 其他小手机的聊天记录：导入成旧档案（只给你翻看，不发给 AI），分段整理成角色的长期记忆
 
 // =============================================
-// 旧档案：arcStore[角色id] = [{ id, from（小手机名字）, file, importTime, msgs, mem }]
-// · msgs：[{ r: 'user' | 'char' | 'status' | 'sys', t: 文字, time, k: 'text' | 'sticker' | 'image' | 'voice' | …（其他种类照原名） }]
-// · mem：整理成记忆的进度 { pos: 整理到第几条（不含）, count: 记下了几条, budget: 每段多长, careful: 逐段核对, withStatus: 带上状态栏, done, err }
+// 旧档案：arcStore[角色id] = [{ id, from（来自哪里，比如「uwu 小手机」）, file, importTime, msgs, mem }]
+// · msgs：[{ r: 'user' | 'char' | 'status' | 'sys', t: 文字, time, k: 'text' | 'sticker' | 'image' | 'voice' | …（其他种类照原名）, who（原文里的名字）, d: 1 = 剧情 }]
+// · mem：整理成记忆的进度 { pos: 整理到第几条（不含）, count: 记下了几条, budget: 每段多长, careful: 逐段核对, withStatus: 带上状态栏, done, err, merged: 合并了几条重复的 }
+// · 同一个地方再导出一次导进来时，已经导入过的消息（时间和内容都一样）会跳过，只存新的
+// · 整理完自动把导入的记忆里说同一件事的合并成一条（arcConsolidate），细节都保留
 // 整理时一段一段来：每段不超过 budget（估算 token），太长被拒就自动切小一半；中途失败停在那一段，下次点「继续」接着来
 // =============================================
 var arcStore = mphoneStore.load('mphone_archives', {});
@@ -14,64 +16,79 @@ function saveArcStore() { mphoneStore.save('mphone_archives', arcStore); }
 function arcListOf(charId) { return arcStore[charId] || []; }
 
 // ---------- 读文件：认出是哪种格式 ----------
-// 返回 { from, msgs, unknown: { 种类: 条数 } }；认不出时抛错
+// 认得：uwu 小手机、眠花糖机自己的角色备份、ChatGPT / Claude 官网导出、酒馆 .jsonl、各种 JSON（找像消息的东西）、
+//       CSV、微信 / QQ 那种「名字 时间」下一行是内容的 txt、每行「名字：内容」的 txt / md / docx
+// 返回 { from（来自哪里）, msgs, unknown: { 认不出的种类: 条数 } }；msgs 里的 who 是原文里的名字，预览里可以点名字改「谁是 TA」
+var ARC_USER_ROLES = /^(user|human|me|self|you|用户|我|自己)$/i;
+var ARC_CHAR_ROLES = /^(assistant|ai|bot|model|char|character|gpt|chatgpt|claude|gemini|角色|对方)$/i;
+var ARC_WRAP_RE = /^\s*\[([^\]]{1,30}?)的消息[：:]\s*([\s\S]*)\]\s*$/;   // uwu：「[简然的消息：嗯 去吧]」
+var ARC_DATE = '\\d{4}[-/.年]\\d{1,2}[-/.月]\\d{1,2}日?';
+var ARC_HM = '\\d{1,2}:\\d{2}(?::\\d{2})?';
 function arcParse(text, fileName, char) {
-  var cName = (char && (char.charAlias || char.charName)) || '';
   var names = [char && char.charName, char && char.charAlias].filter(Boolean);
   var unknown = {};
-  var trimmed = String(text || '').replace(/^﻿/, '').trim();
+  var s = String(text || '').replace(/^\uFEFF/, '').trim();
   var j = null;
-  try { j = JSON.parse(trimmed); } catch (_) {}
-  // uwu 小手机
-  if (j && j.type === 'uwu-chat-history' && Array.isArray(j.history)) {
-    return { from: 'uwu', msgs: j.history.map(function(h) { return arcFromUwu(h, unknown); }).filter(Boolean), unknown: unknown };
-  }
-  // 酒馆（SillyTavern）的 .jsonl：第一行是信息，后面每行一条消息
-  if (!j && /^\{/.test(trimmed) && /\n\s*\{/.test(trimmed)) {
-    var lines = trimmed.split(/\r?\n/).map(function(l) { try { return JSON.parse(l); } catch (_) { return null; } }).filter(Boolean);
-    var st = lines.filter(function(o) { return 'mes' in o; });
-    if (st.length) return { from: '酒馆', msgs: st.map(function(o) { return arcFromGeneric(o, names, unknown); }).filter(Boolean), unknown: unknown };
-  }
-  // 一般的 JSON：找最像聊天记录的那个数组
-  if (j) {
-    var arr = arcFindArray(j);
-    if (arr) return { from: '', msgs: arr.map(function(o) { return arcFromGeneric(o, names, unknown); }).filter(Boolean), unknown: unknown };
-    throw new Error('这个 JSON 里没找到聊天记录');
-  }
-  // 纯文字：每行「名字：内容」，前面可以带时间
-  var out = [], cur = null;
-  trimmed.split(/\r?\n/).forEach(function(line) {
-    var m = line.match(/^\s*(?:[\[【(（]?(\d{4}[-/.年]\d{1,2}[-/.月]\d{1,2}日?\s*\d{1,2}:\d{2}(?::\d{2})?|\d{1,2}:\d{2}(?::\d{2})?)[\]】)）]?\s*)?([^：:\s][^：:]{0,19})[：:]\s*(.*)$/);
-    if (m && !/^https?$/i.test(m[2])) {
-      var who = m[2].trim();
-      cur = { r: arcIsChar(who, names) ? 'char' : 'user', t: m[3], time: arcTime(m[1]), k: 'text', who: who };
-      arcKind(cur);
-      out.push(cur);
-    } else if (cur && line.trim()) {
-      cur.t += '\n' + line.trim();
-    }
-  });
-  if (!out.length) throw new Error('没认出聊天记录的格式');
-  return { from: '', msgs: out, unknown: unknown };
+  if (/^[\[{]/.test(s)) try { j = JSON.parse(s); } catch (_) {}
+  var res = j ? arcParseJson(j, names, unknown)
+    : (/^\{/.test(s) && arcParseJsonl(s, names, unknown)) ||
+      (/\.csv$/i.test(fileName || '') && arcParseCsv(s, names, unknown)) ||
+      arcParseText(s, names, unknown);
+  if (!res || !res.msgs.length) throw new Error(j ? '这个 JSON 里没找到聊天记录' : '没认出聊天记录的格式');
+  res.unknown = unknown;
+  return res;
 }
 function arcIsChar(who, names) {
-  return names.some(function(n) { return n && (who === n || who.indexOf(n) >= 0 || n.indexOf(who) >= 0); });
+  who = String(who || '').trim();
+  return !!who && names.some(function(n) { return n && (who === n || who.indexOf(n) >= 0 || n.indexOf(who) >= 0); });
 }
 function arcTime(v) {
   if (v == null || v === '') return 0;
-  if (typeof v === 'number') return v < 1e12 ? v * 1000 : v;
+  if (typeof v === 'number') return v < 1e12 ? Math.round(v * 1000) : v;
   var s = String(v).trim();
-  if (/^\d+$/.test(s)) return arcTime(Number(s));
-  var t = Date.parse(s.replace(/年|月/g, '-').replace(/日/, ' ').replace(/\//g, '-').replace(/\s+/g, ' '));
-  if (isNaN(t)) t = Date.parse(s);
+  if (/^\d+(\.\d+)?$/.test(s)) return arcTime(Number(s));
+  s = s.replace(/(\d)\s*(am|pm)\b/i, '$1 $2');   // 酒馆：June 1, 2026 10:00am
+  var t = Date.parse(s);
+  if (isNaN(t)) t = Date.parse(s.replace(/年|月/g, '-').replace(/日/, ' ').replace(/\//g, '-').replace(/\s+/g, ' ').trim().replace(' ', 'T'));
+  if (isNaN(t)) t = Date.parse(s.replace(/年|月/g, '/').replace(/日/, ' ').replace(/-/g, '/'));
   return isNaN(t) ? 0 : t;
 }
 // 「[表情包：摸头]」「[图片]」这类：记下种类
-var ARC_KIND_NAME = { '表情包': 'sticker', '表情': 'sticker', '图片': 'image', '照片': 'image', '语音': 'voice' };
+var ARC_KIND_NAME = { '表情包': 'sticker', '表情': 'sticker', '动画表情': 'sticker', '图片': 'image', '照片': 'image', '语音': 'voice' };
 function arcKind(m) {
-  var k = String(m.t || '').match(/^\s*\[(表情包|表情|图片|照片|语音|视频|转账|红包|位置|礼物|文件|通话|语音通话|视频通话)[：:\]]/);
+  var k = String(m.t || '').match(/^\s*[\[【](表情包|动画表情|表情|图片|照片|语音|视频|转账|红包|位置|礼物|文件|通话|语音通话|视频通话|链接|音乐)[：:\]】]/);
   if (k) m.k = ARC_KIND_NAME[k[1]] || k[1];
   return m;
+}
+// 把各种写法的「内容」变成文字
+function arcTextOf(c, unknown) {
+  if (c == null) return '';
+  if (typeof c === 'string') return c;
+  if (typeof c === 'number') return String(c);
+  if (Array.isArray(c)) return c.map(function(p) { return arcTextOf(p, unknown); }).filter(Boolean).join(' ');
+  if (typeof c === 'object') {
+    if (c.type && c.type !== 'text' && c.text == null) {
+      var known = { image: '图片', image_url: '图片', audio: '语音', input_audio: '语音', voice: '语音', sticker: '表情包', file: '文件', video: '视频' }[c.type];
+      if (!known && unknown) unknown[c.type] = (unknown[c.type] || 0) + 1;
+      return '[' + (known || c.type) + ']';
+    }
+    if (c.text != null) return arcTextOf(c.text, unknown);
+    if (c.parts) return arcTextOf(c.parts, unknown);
+    if (c.content != null) return arcTextOf(c.content, unknown);
+    if (c.value != null) return arcTextOf(c.value, unknown);
+  }
+  return '';
+}
+function arcRoleOf(role, who, names) {
+  role = String(role || '').trim();
+  if (/^(system)$/i.test(role)) return 'sys';
+  if (/^(tool|function)$/i.test(role)) return '';
+  if (ARC_USER_ROLES.test(role)) return 'user';
+  if (ARC_CHAR_ROLES.test(role)) return 'char';
+  who = String(who || '').trim();
+  if (arcIsChar(who, names) || arcIsChar(role, names)) return 'char';
+  if (ARC_CHAR_ROLES.test(who)) return 'char';
+  return 'user';
 }
 function arcFromUwu(h, unknown) {
   if (!h) return null;
@@ -80,54 +97,172 @@ function arcFromUwu(h, unknown) {
   (Array.isArray(h.parts) ? h.parts : []).forEach(function(p) {
     if (!p) return;
     if (p.type === 'text') { if (!text) text = p.text || ''; return; }
-    var known = { image: '图片', image_url: '图片', audio: '语音', voice: '语音', sticker: '表情包' }[p.type];
-    if (!known) unknown[p.type || '未知'] = (unknown[p.type || '未知'] || 0) + 1;
-    extra.push('[' + (known || p.type || '未知内容') + ']');
+    extra.push(arcTextOf(p, unknown) || '[未知内容]');
   });
-  // 「[简然的消息：嗯 去吧]」只留里面的话
-  var w = text.match(/^\s*\[([^\]]{1,30}?)的消息[：:]\s*([\s\S]*)\]\s*$/);
-  if (w) text = w[2];
+  var who = '';
+  var w = text.match(ARC_WRAP_RE);
+  if (w) { who = w[1]; text = w[2]; }
   if (!text && extra.length) text = extra.join(' ');
+  if (!String(text).trim()) return null;
   var m = { r: h.role === 'user' ? 'user' : h.role === 'assistant' ? 'char' : 'sys', t: text, time: arcTime(h.timestamp), k: 'text' };
-  if (h.isStatusUpdate) { m.r = 'status'; m.k = 'status'; m.t = arcStatusText(text); }
+  if (who) m.who = who;
+  if (h.isStatusUpdate) { m.r = 'status'; m.k = 'status'; m.t = arcStatusText(text); delete m.who; }
   else arcKind(m);
-  if (!text && !extra.length) return null;
-  if (!m.t.trim()) return null;
-  return m;
+  return m.t.trim() ? m : null;
 }
 // 状态栏：去掉 <JIANRAN> 这类标签和多余空行
 function arcStatusText(s) {
   return String(s || '').replace(/<\/?[A-Za-z_][\w-]*[^>]*>/g, '').replace(/\n{3,}/g, '\n\n').trim();
 }
-function arcFindArray(j) {
-  var best = null;
-  function score(arr) {
-    if (!Array.isArray(arr) || !arr.length) return 0;
-    return arr.slice(0, 20).filter(function(o) {
-      return o && typeof o === 'object' && ('content' in o || 'mes' in o || 'text' in o || 'message' in o);
-    }).length;
-  }
-  function walk(o, depth) {
-    if (!o || typeof o !== 'object' || depth > 3) return;
-    if (Array.isArray(o)) { var s = score(o); if (s && (!best || s > best.s || (s === best.s && o.length > best.a.length))) best = { s: s, a: o }; return; }
-    Object.keys(o).forEach(function(k) { walk(o[k], depth + 1); });
-  }
-  walk(j, 0);
-  return best && best.a;
+// 一般的消息对象（酒馆、Claude 导出、各种小手机的 JSON）
+var ARC_TEXT_KEYS = ['content', 'mes', 'text', 'message', 'msg', 'body', 'value'];
+var ARC_WHO_KEYS = ['name', 'sender_name', 'senderName', 'nickname', 'sender', 'from', 'speaker', 'author', 'user', 'role'];
+var ARC_TIME_KEYS = ['timestamp', 'time', 'send_date', 'sendTime', 'send_time', 'date', 'createdAt', 'created_at', 'create_time', 'createTime', 'ts'];
+function arcPick(o, keys) { for (var i = 0; i < keys.length; i++) if (o[keys[i]] != null && o[keys[i]] !== '') return o[keys[i]]; return null; }
+function arcLooksLikeMsg(o) {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
+  var c = arcPick(o, ARC_TEXT_KEYS);
+  if (c == null || (typeof c === 'object' && !Array.isArray(c) && !c.parts && c.text == null && c.content == null)) return false;
+  return 'role' in o || 'is_user' in o || 'isUser' in o || 'sender' in o || 'author' in o || 'name' in o || 'from' in o || 'speaker' in o || 'nickname' in o || 'sender_name' in o || 'senderName' in o || 'type' in o && /^(user|assistant|human|ai|bot)$/i.test(o.type);
 }
 function arcFromGeneric(o, names, unknown) {
   if (!o || typeof o !== 'object') return null;
-  var c = o.content != null ? o.content : o.mes != null ? o.mes : o.text != null ? o.text : o.message;
-  if (Array.isArray(c)) c = c.map(function(p) { return typeof p === 'string' ? p : p && p.type === 'text' ? p.text : '[' + ((p && p.type) || '未知内容') + ']'; }).join(' ');
-  if (c == null || typeof c === 'object') return null;
-  var who = o.name || o.sender || o.author || '';
-  var role = o.role || (o.is_user === true ? 'user' : o.is_user === false ? 'assistant' : '');
-  var r = role === 'user' ? 'user' : (role === 'assistant' || role === 'char' || role === 'model') ? 'char'
-    : role === 'system' || o.is_system ? 'sys' : who ? (arcIsChar(String(who), names) ? 'char' : 'user') : 'user';
-  var w = String(c).match(/^\s*\[([^\]]{1,30}?)的消息[：:]\s*([\s\S]*)\]\s*$/);
-  var m = { r: r, t: w ? w[2] : String(c), time: arcTime(o.timestamp || o.time || o.send_date || o.date || o.createdAt || o.created_at), k: 'text' };
-  arcKind(m);
-  return m.t.trim() ? m : null;
+  if (o.isStatusUpdate) return arcFromUwu(o, unknown);
+  var text = arcTextOf(arcPick(o, ARC_TEXT_KEYS), unknown);
+  var whoV = arcPick(o, ARC_WHO_KEYS);
+  var who = whoV && typeof whoV === 'object' ? (whoV.name || whoV.nickname || whoV.role || '') : (whoV || '');
+  var role = o.role || o.sender_type || (o.author && o.author.role) || (o.is_user === true || o.isUser === true ? 'user' : o.is_user === false || o.isUser === false ? 'assistant' : '') ||
+    (/^(user|assistant|human|ai|bot)$/i.test(o.type || '') ? o.type : '');
+  if (o.is_system) role = 'system';
+  var w = String(text).match(ARC_WRAP_RE);
+  if (w) { if (!who || who === role) who = w[1]; text = w[2]; }
+  var r = arcRoleOf(role, who, names);
+  if (!r || !String(text).trim()) return null;
+  var m = { r: r, t: String(text), time: arcTime(arcPick(o, ARC_TIME_KEYS)), k: 'text' };
+  who = String(who || '').trim();
+  if (who && !ARC_USER_ROLES.test(who) && !ARC_CHAR_ROLES.test(who) && who !== 'system') m.who = who.slice(0, 30);
+  return arcKind(m);
+}
+function arcParseJson(j, names, unknown) {
+  // uwu 小手机
+  if (j.type === 'uwu-chat-history' && Array.isArray(j.history))
+    return { from: 'uwu 小手机', msgs: j.history.map(function(h) { return arcFromUwu(h, unknown); }).filter(Boolean) };
+  // 眠花糖机自己的角色备份：聊天和剧情都带上（剧情的标上）
+  if (j.app === 'mphone' && j.type === 'char') {
+    var mine = [];
+    [['chat', 0], ['drama', 1]].forEach(function(x) {
+      (j[x[0]] || []).forEach(function(h) {
+        if (!h || h.hidden) return;
+        var t = h.recalled ? '[撤回了一条消息]' : h.imgSrc ? '[图片]' : h.voice ? '[语音]' + (h.transcript || '') : arcTextOf(h.content, unknown);
+        if (!String(t).trim()) return;
+        var m = arcKind({ r: h.role === 'user' ? 'user' : h.role === 'assistant' ? 'char' : 'sys', t: String(t), time: arcTime(h.time), k: 'text' });
+        if (x[1]) m.d = 1;
+        mine.push(m);
+      });
+    });
+    return { from: '眠花糖机', msgs: mine };
+  }
+  // ChatGPT 官网导出：每个对话一个 mapping（一棵树），把里面的消息都取出来
+  var gpt = [];
+  (function walk(o, depth) {
+    if (!o || typeof o !== 'object' || depth > 3) return;
+    if (o.mapping && typeof o.mapping === 'object' && !Array.isArray(o.mapping)) {
+      Object.keys(o.mapping).forEach(function(k) {
+        var msg = o.mapping[k] && o.mapping[k].message;
+        if (!msg || !msg.author) return;
+        var r = arcRoleOf(msg.author.role, msg.author.name, names);
+        if (r !== 'user' && r !== 'char') return;
+        var t = arcTextOf(msg.content, unknown);
+        if (String(t).trim()) gpt.push(arcKind({ r: r, t: t, time: arcTime(msg.create_time), k: 'text' }));
+      });
+      return;
+    }
+    (Array.isArray(o) ? o : Object.keys(o).map(function(k) { return o[k]; })).forEach(function(v) { walk(v, depth + 1); });
+  })(j, 0);
+  if (gpt.length) return { from: 'ChatGPT', msgs: gpt };
+  // 其他：把所有「像一条消息」的对象找出来（多个对话的也一起），找到就不再往里钻
+  var found = [], isClaude = false;
+  (function walk(o, depth) {
+    if (!o || typeof o !== 'object' || depth > 7) return;
+    if (arcLooksLikeMsg(o)) { found.push(o); return; }
+    if (!Array.isArray(o) && Array.isArray(o.chat_messages)) isClaude = true;
+    (Array.isArray(o) ? o : Object.keys(o).map(function(k) { return o[k]; })).forEach(function(v) { walk(v, depth + 1); });
+  })(j, 0);
+  var msgs = found.map(function(o) { return arcFromGeneric(o, names, unknown); }).filter(Boolean);
+  if (msgs.length) return { from: isClaude ? 'Claude' : found.some(function(o) { return 'mes' in o; }) ? '酒馆' : '', msgs: msgs };
+  return null;
+}
+// 一行一个 JSON（酒馆的 .jsonl）
+function arcParseJsonl(s, names, unknown) {
+  var objs = s.split(/\r?\n/).map(function(l) { l = l.trim(); if (!l) return null; try { return JSON.parse(l); } catch (_) { return null; } }).filter(Boolean);
+  if (objs.length < 2) return null;
+  var msgs = objs.map(function(o) { return arcLooksLikeMsg(o) ? arcFromGeneric(o, names, unknown) : null; }).filter(Boolean);
+  return msgs.length ? { from: objs.some(function(o) { return 'mes' in o; }) ? '酒馆' : '', msgs: msgs } : null;
+}
+// CSV：认表头（名字 / 内容 / 时间），没有表头时按「名字,内容」或「时间,名字,内容」
+function arcCsvRows(s) {
+  var rows = [], row = [], cell = '', q = false;
+  for (var i = 0; i < s.length; i++) {
+    var c = s[i];
+    if (q) { if (c === '"') { if (s[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && s[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(function(r) { return r.some(function(x) { return x.trim(); }); });
+}
+function arcParseCsv(s, names, unknown) {
+  var rows = arcCsvRows(s);
+  if (rows.length < 2) return null;
+  var head = rows[0].map(function(h) { return h.trim().toLowerCase(); });
+  var col = function(re) { for (var i = 0; i < head.length; i++) if (re.test(head[i])) return i; return -1; };
+  var ti = col(/^(time|date|timestamp|时间|日期|发送时间)$/), wi = col(/^(name|sender|role|author|from|speaker|nickname|发送者|发言人|角色|昵称|姓名|名字|说话人)$/), ci = col(/^(content|text|message|msg|body|内容|消息|正文|聊天内容)$/);
+  var start = 1;
+  if (ci < 0) { start = 0; var w = rows[0].length; ci = w - 1; wi = w >= 2 ? w - 2 : -1; ti = w >= 3 ? 0 : -1; }
+  var msgs = rows.slice(start).map(function(r) {
+    var o = { content: r[ci] || '', name: wi >= 0 ? r[wi] : '', time: ti >= 0 ? r[ti] : '' };
+    return arcFromGeneric(o, names, unknown);
+  }).filter(Boolean);
+  return msgs.length ? { from: '', msgs: msgs } : null;
+}
+// 纯文字（txt / md / docx）
+function arcParseText(s, names, unknown) {
+  var out = [], cur = null, curDate = '';
+  var reDay = new RegExp('^[\\s\\-—=*#]*(' + ARC_DATE + ')(?:\\s*(?:星期|周)[一二三四五六日天])?[\\s\\-—=*#]*$');
+  var reHeadA = new RegExp('^\\s*(' + ARC_DATE + '\\s+' + ARC_HM + ')\\s+([^：:\\s][^：:]{0,29}?)\\s*$');   // QQ：2026-06-01 12:00:00 眠眠(12345)
+  var reHeadB = new RegExp('^\\s*([^：:\\s][^：:]{0,29}?)\\s+(' + ARC_DATE + '\\s+' + ARC_HM + ')\\s*$');   // 微信：眠眠 2026-06-01 12:00
+  var reLine = new RegExp('^\\s*(?:[\\[【(（]?(' + ARC_DATE + '\\s*' + ARC_HM + '|' + ARC_HM + ')[\\]】)）]?\\s*)?([^：:\\s][^：:]{0,19})[：:]\\s*(.*)$');
+  var clean = function(who) { return who.replace(/[(（<][^)）>]*[)）>]\s*$/, '').replace(/^[*_#>\s]+|[*_\s]+$/g, '').trim(); };
+  var when = function(t) { return /^\d{1,2}:\d{2}/.test(t || '') && curDate ? arcTime(curDate + ' ' + t) : arcTime(t); };
+  var push = function(who, t, time) {
+    cur = arcKind({ r: arcRoleOf('', who, names), t: t, time: time, k: 'text', who: who });
+    out.push(cur);
+  };
+  s.split(/\r?\n/).forEach(function(raw) {
+    var line = raw.replace(/^\s*>\s?/, '');
+    var m;
+    if ((m = line.match(reDay))) { curDate = m[1]; return; }
+    if ((m = line.match(reHeadA))) { push(clean(m[2]), '', arcTime(m[1])); return; }
+    if ((m = line.match(reHeadB)) && !/[，。！？,.!?]/.test(m[1])) { push(clean(m[1]), '', arcTime(m[2])); return; }
+    if ((m = line.replace(/\*\*([^*]{1,30})\*\*/, '$1').match(reLine)) && !/^https?$/i.test(m[2])) { push(clean(m[2]), m[3], when(m[1])); return; }
+    if (cur && line.trim()) cur.t += (cur.t ? '\n' : '') + line.trim();
+  });
+  out = out.filter(function(m) { return m.t.trim(); });
+  // 只出现一次的「名字」多半是正文里带冒号的一句话（比如「注意：…」），并回上一条
+  var cnt = {};
+  out.forEach(function(m) { cnt[m.who] = (cnt[m.who] || 0) + 1; });
+  if (Object.keys(cnt).length > 2 && out.length > 20) {
+    var kept = [];
+    out.forEach(function(m) {
+      if (cnt[m.who] > 1 || !kept.length) kept.push(m);
+      else kept[kept.length - 1].t += '\n' + m.who + '：' + m.t;
+    });
+    out = kept;
+  }
+  out.forEach(function(m) { arcKind(m); });
+  return out.length ? { from: '', msgs: out } : null;
 }
 
 // ---------- 统计（预览用） ----------
@@ -156,7 +291,7 @@ function arcLineOf(m, n) {
   var hm = m.time ? pad(new Date(m.time).getHours()) + ':' + pad(new Date(m.time).getMinutes()) + ' ' : '';
   if (m.r === 'status') return hm + '（' + n.c + '的状态栏：' + m.t.replace(/\s*\n\s*/g, '；').slice(0, 600) + '）';
   if (m.r === 'sys') return hm + '（系统：' + m.t.slice(0, 300) + '）';
-  return hm + (m.r === 'user' ? n.u : n.c) + '：' + m.t;
+  return hm + (m.d ? '（剧情）' : '') + (m.r === 'user' ? n.u : n.c) + '：' + m.t;
 }
 function arcDateOf(t) { var d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 // 从第 from 条开始切一段：返回 { end, text, time（这一段第一条的时间） }
@@ -205,13 +340,13 @@ function arcRules(arc, n) {
 }
 function arcExtractMsgs(arc, chunk, n, prev) {
   return [
-    { role: 'system', content: '你是记忆整理助手。下面是「' + n.c + '」和「' + n.u + '」以前在「' + arc.from + '」小手机里的一段聊天记录（【】里是日期），请把里面值得记住的事整理成「' + n.c + '」的记忆。\n\n' + arcRules(arc, n) },
+    { role: 'system', content: '你是记忆整理助手。下面是「' + n.c + '」和「' + n.u + '」以前在「' + arc.from + '」里的一段聊天记录（【】里是日期），请把里面值得记住的事整理成「' + n.c + '」的记忆。\n\n' + arcRules(arc, n) },
     { role: 'user', content: (prev.length ? '前面已经记下的（接着往下记，不要重复）：\n' + prev.join('\n') + '\n\n' : '') + '聊天记录：\n' + chunk.text }
   ];
 }
 function arcCheckMsgs(arc, chunk, n, draft) {
   return [
-    { role: 'system', content: '你是记忆核对助手。下面是「' + n.c + '」和「' + n.u + '」在「' + arc.from + '」小手机里的一段聊天记录，以及从里面整理出的记忆。请对照原文逐条检查：\n' +
+    { role: 'system', content: '你是记忆核对助手。下面是「' + n.c + '」和「' + n.u + '」在「' + arc.from + '」里的一段聊天记录，以及从里面整理出的记忆。请对照原文逐条检查：\n' +
       '· 写错的（人物、时间、数字、谁说的谁做的弄反了）改正\n· 写得笼统、丢了细节的，补上具体内容\n· 漏掉的值得记的事，补上\n· 原文里没有的内容，删掉\n\n' +
       '输出检查后的完整列表。' + arcRules(arc, n) },
     { role: 'user', content: '聊天记录：\n' + chunk.text + '\n\n整理出的记忆：\n' + (draft.trim() || '无') }
@@ -251,14 +386,21 @@ function arcStartMemory(char, arc) {
     if (msg) showToast(msg, type);
   }
   function step() {
-    if (run.stop) { finish('已暂停整理，下次可以接着来', 'plain'); return; }
+    if (run.stop) { finish('已暂停，下次可以接着整理', 'plain'); return; }
     if (!arcStore[char.id] || arcListOf(char.id).indexOf(arc) < 0) { delete arcRunning[arc.id]; return; }   // 档案被删了
     var chunk = arcChunk(arc, arc.mem.pos, arc.mem.budget, n);
     if (chunk.end <= arc.mem.pos || !chunk.text) {
-      arc.mem.done = true;
       arc.mem.pos = arc.msgs.length;
-      finish('✓ 「' + arc.from + '」的记录整理完了，记下 ' + arc.mem.count + ' 条记忆', 'success');
-      if (typeof memMaybeMilestone === 'function') memMaybeMilestone(char);
+      arc.mem.dedup = true;
+      save();
+      // 最后把导入的记忆里说同一件事的合并一下；合并失败也不要紧，原来的都还在
+      arcConsolidate(char).catch(function(err) { console.warn('[Mphone] 合并重复记忆失败:', err); return 0; }).then(function(merged) {
+        arc.mem.done = true;
+        delete arc.mem.dedup;
+        arc.mem.merged = (arc.mem.merged || 0) + (merged || 0);
+        finish('✓ 整理完了，记下 ' + arc.mem.count + ' 条' + (merged ? '，合并 ' + merged + ' 条重复' : ''), 'success');
+        if (typeof memMaybeMilestone === 'function') memMaybeMilestone(char);
+      });
       return;
     }
     // 前面刚记下的几条，让这一段接着往下记、不重复
@@ -290,7 +432,7 @@ function arcStartMemory(char, arc) {
       save();
       step();
     }).catch(function(err) {
-      if (err && err.name === 'AbortError') { finish('已暂停整理，下次可以接着来', 'plain'); return; }
+      if (err && err.name === 'AbortError') { finish('已暂停，下次可以接着整理', 'plain'); return; }
       var id = arcErrId(err);
       // 这一段太长：切小一半重来
       if ((id === 'context' || id === 'toolarge') && arc.mem.budget > ARC_MIN_BUDGET) {
@@ -306,11 +448,106 @@ function arcStartMemory(char, arc) {
         return;
       }
       arc.mem.err = typeof explainError === 'function' ? explainError(err).title : String(err && err.message || err);
-      finish('✗ 整理停在这一段：' + arc.mem.err + '。点「继续整理」可以接着来', 'error');
+      finish('✗ 整理暂停：' + arc.mem.err, 'error');
     });
   }
   step();
 }
+// ---------- 合并重复：导入的记忆里说同一件事的合并成一条 ----------
+// 先在本地按文字相似度把「可能在说同一件事」的分成小组（同一个来源、同在剧情或聊天里的才放一起），
+// 再让模型逐组判断：同一件事合并、细节全部保留；不是同一件事的原样分开。结果条数没变少或解析不出来的组，保持原样
+var ARC_DUP_SIM = 0.42;
+var ARC_DUP_GROUP_MAX = 8;
+var arcDedupBusy = {};
+function arcDupGroups(char) {
+  var by = {};
+  memList(char.id).forEach(function(m) {
+    if (m.source !== 'import' || m.type === 'short') return;
+    (by[(m.from || '') + '|' + (m.scene || '')] = by[(m.from || '') + '|' + (m.scene || '')] || []).push(m);
+  });
+  var groups = [];
+  Object.keys(by).forEach(function(key) {
+    var arr = by[key].slice().sort(function(a, b) { return a.time - b.time; });
+    // 比较时去掉日期和数字：不然「6月1日去了图书馆」和「6月2日感冒了」会因为日期像而被分到一组
+    var tok = arr.map(function(m) { return memTokens(m.text.replace(/[\d０-９]+\s*[-/.:：年月日号点]?/g, ' ')); });
+    var parent = arr.map(function(_, i) { return i; });
+    var find = function(i) { while (parent[i] !== i) i = parent[i] = parent[parent[i]]; return i; };
+    for (var i = 0; i < arr.length; i++) {
+      for (var j = i + 1; j < arr.length && j < i + 800; j++) {
+        if (memCos(tok[i], tok[j]) > ARC_DUP_SIM) parent[find(j)] = find(i);
+      }
+    }
+    var sets = {};
+    arr.forEach(function(m, i) { (sets[find(i)] = sets[find(i)] || []).push(m); });
+    Object.keys(sets).forEach(function(k) {
+      var s = sets[k];
+      for (var x = 0; x < s.length; x += ARC_DUP_GROUP_MAX) {
+        var g = s.slice(x, x + ARC_DUP_GROUP_MAX);
+        if (g.length > 1) groups.push(g);
+      }
+    });
+  });
+  return groups;
+}
+function arcConsolidate(char) {
+  if (arcDedupBusy[char.id]) return Promise.resolve(0);
+  var groups = arcDupGroups(char);
+  if (!groups.length) return Promise.resolve(0);
+  arcDedupBusy[char.id] = true;
+  var n = arcNames(char), merged = 0;
+  // 分批：每批不超过 3500 左右
+  var batches = [[]], used = 0;
+  groups.forEach(function(g) {
+    var t = estTokens(g.map(function(m) { return m.text; }).join('\n'));
+    if (used + t > 3500 && batches[batches.length - 1].length) { batches.push([]); used = 0; }
+    batches[batches.length - 1].push(g);
+    used += t;
+  });
+  var sys = '你是记忆整理助手。下面是「' + n.c + '」的记忆，按组列出；同一组里的几条可能在说同一件事。请逐组处理：\n' +
+    '· 说的是同一件事、同一个事实的，合并成一条；合并后要保留每一条里的全部细节（日期、地点、称呼、数字、物品、原话、原因、情绪），一个都不能丢\n' +
+    '· 只是相似、其实是不同的事（比如不同日子发生的、不同的约定），保持分开，原样输出\n' +
+    '· 不要编造原文没有的内容；原来是「珍贵」的，合并后还是「珍贵」\n' +
+    '每条一行，格式：组号｜日期｜类型｜内容（日期写 YYYY-MM-DD，取这件事最早的日期；类型只能是「长期」或「珍贵」；内容用第三人称，不超过 160 字）。每一组都要输出，只输出这些行。';
+  var chain = Promise.resolve();
+  batches.forEach(function(batch) {
+    chain = chain.then(function() {
+      var user = batch.map(function(g, gi) {
+        return '【第' + (gi + 1) + '组】\n' + g.map(function(m) {
+          return '· ' + arcDateOf(m.time) + '｜' + (m.type === 'precious' ? '珍贵' : '长期') + '｜' + m.text;
+        }).join('\n');
+      }).join('\n\n');
+      return llmRequest([{ role: 'system', content: sys }, { role: 'user', content: user }], { stream: false, cfg: getApiCfg(char), temperature: 0.2 }).then(function(text) {
+        var out = {};
+        String(text || '').split(/\r?\n/).forEach(function(l) {
+          var m = l.replace(/^\s*[-·•*]\s*/, '').match(/^(?:第)?(\d+)(?:组)?\s*[｜|]\s*(.+)$/);
+          if (!m) return;
+          var p = arcParseMems(m[2]);
+          if (p.length) (out[m[1]] = out[m[1]] || []).push(p[0]);
+        });
+        batch.forEach(function(g, gi) {
+          var got = out[gi + 1];
+          if (!got || !got.length || got.length >= g.length) return;   // 没合并或者没写，原样留着
+          var first = g.reduce(function(a, b) { return a.time < b.time ? a : b; });
+          // 原来有珍贵的：合并后至少留一条珍贵（模型没标的话，给第一条）
+          if (g.some(function(m) { return m.type === 'precious'; }) && !got.some(function(x) { return x.type === 'precious'; })) got[0].type = 'precious';
+          var list = memStore[char.id] || [];
+          memStore[char.id] = list.filter(function(m) { return g.indexOf(m) < 0; });
+          got.forEach(function(x, xi) {
+            var nm = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) + xi, type: x.type === 'precious' ? 'precious' : 'long',
+              text: x.text.slice(0, 300), time: x.time || first.time, source: 'import', from: first.from };
+            if (first.scene) nm.scene = first.scene;
+            memStore[char.id].push(nm);
+          });
+          merged += g.length - got.length;
+        });
+        saveMemStore();
+      });
+    });
+  });
+  return chain.then(function() { delete arcDedupBusy[char.id]; return merged; },
+                    function(e) { delete arcDedupBusy[char.id]; if (merged) saveMemStore(); throw e; });
+}
+
 function arcStopMemory(arc) {
   var run = arcRunning[arc.id];
   if (!run) return;
@@ -336,7 +573,7 @@ function renderArchiveList(char) {
     var head = document.createElement('div');
     head.className = 'mem-sum-head';
     var info = document.createElement('span');
-    info.textContent = a.from + ' 小手机 · ' + a.msgs.length + ' 条 · ' + arcRange(a);
+    info.textContent = '来自 ' + a.from + ' · ' + a.msgs.length + ' 条 · ' + arcRange(a);
     var del = document.createElement('button');
     del.textContent = '删除';
     del.addEventListener('click', function() {
@@ -354,7 +591,8 @@ function renderArchiveList(char) {
     st.className = 'arc-state';
     var running = !!arcRunning[a.id];
     var total = a.mem.done ? 0 : (a.mem.seg || 0) + arcChunkCount(a, a.mem.pos, a.mem.budget || ARC_BUDGET, n);
-    st.textContent = a.mem.done ? '已整理成记忆，记下 ' + a.mem.count + ' 条'
+    st.textContent = a.mem.done ? '已整理成记忆，记下 ' + a.mem.count + ' 条' + (a.mem.merged ? '，合并了 ' + a.mem.merged + ' 条重复的' : '')
+      : running && a.mem.dedup ? '快好了，正在合并重复的记忆…'
       : running ? '整理中… 第 ' + Math.min((a.mem.seg || 0) + 1, total) + ' / ' + total + ' 段，已记下 ' + a.mem.count + ' 条'
       : a.mem.err ? '停在第 ' + ((a.mem.seg || 0) + 1) + ' / ' + total + ' 段：' + a.mem.err
       : a.mem.pos > 0 ? '整理了 ' + (a.mem.seg || 0) + ' / ' + total + ' 段，已记下 ' + a.mem.count + ' 条'
@@ -389,7 +627,7 @@ var arcPending = null;   // { char, parsed, file }
 document.getElementById('arcImportBtn').addEventListener('click', function() {
   if (editingCharIndex < 0) { showToast('请先保存角色', 'error'); return; }
   var char = charList[editingCharIndex];
-  pickFile('.json,.jsonl,.txt,.docx,application/json,text/plain', function(file) {
+  pickFile('.json,.jsonl,.txt,.md,.csv,.docx,application/json,text/plain,text/csv,text/markdown', function(file) {
     var read = /\.docx$/i.test(file.name)
       ? file.arrayBuffer().then(function(b) { return readDocxText(b); })
       : file.text();
@@ -397,6 +635,11 @@ document.getElementById('arcImportBtn').addEventListener('click', function() {
       var parsed = arcParse(t, file.name, char);
       if (!parsed.msgs.length) throw new Error('里面没有聊天内容');
       parsed.msgs.sort(function(a, b) { return (a.time || 0) - (b.time || 0); });
+      // 之前导入过的消息（时间和内容都一样）跳过，只留新的
+      var seen = arcSeenKeys(char.id), all = parsed.msgs.length;
+      parsed.msgs = parsed.msgs.filter(function(m) { return !(m.time && seen[arcMsgKey(m)]); });
+      parsed.skipped = all - parsed.msgs.length;
+      if (!parsed.msgs.length) { showToast('这些记录之前都导入过了', 'plain'); return; }
       arcPending = { char: char, parsed: parsed, file: file.name, mode: 'import' };
       openArcPreview();
     }).catch(function(err) {
@@ -404,14 +647,32 @@ document.getElementById('arcImportBtn').addEventListener('click', function() {
     });
   });
 });
+function arcMsgKey(m) { return m.time + '|' + String(m.t).slice(0, 40); }
+function arcSeenKeys(charId) {
+  var k = {};
+  arcListOf(charId).forEach(function(a) { a.msgs.forEach(function(m) { if (m.time) k[arcMsgKey(m)] = 1; }); });
+  return k;
+}
 function arcSampleLine(m, n) {
   var who = m.r === 'user' ? n.u : m.r === 'char' ? n.c : m.r === 'status' ? n.c + '的状态栏' : '系统';
   var t = m.t.replace(/\s+/g, ' ');
   return who + '：' + (t.length > 60 ? t.slice(0, 60) + '…' : t);
 }
 function openArcPreview() {
+  var p = arcPending;
+  document.getElementById('arcPrevFrom').value = p.parsed.from || p.file.replace(/\.[^.]+$/, '').slice(0, 16);
+  document.getElementById('arcPrevMem').checked = true;
+  document.getElementById('arcPrevStatus').checked = true;
+  document.getElementById('arcPrevCareful').checked = false;
+  document.getElementById('arcPrevFromRow').style.display = '';
+  document.getElementById('arcPrevMemRow').style.display = '';
+  document.getElementById('arcPrevTitle').textContent = '导入预览';
+  document.getElementById('arcPrevOk').textContent = '导入';
+  arcPrevRender();
+  arcPrevOverlay.classList.add('open');
+}
+function arcPrevRender() {
   var p = arcPending, n = arcNames(p.char), msgs = p.parsed.msgs, s = arcStats(msgs);
-  document.getElementById('arcPrevFrom').value = p.parsed.from || p.file.replace(/\.[^.]+$/, '').slice(0, 12);
   var lines = ['共 ' + msgs.length + ' 条：' + n.u + ' ' + s.user + ' 条 · ' + n.c + ' ' + s.char + ' 条' +
     (s.status ? ' · 状态栏 ' + s.status + ' 条' : '') + (s.sys ? ' · 系统 ' + s.sys + ' 条' : '')];
   var kinds = Object.keys(s.kinds).map(function(k) { return (ARC_KIND_LABEL[k] || k) + ' ' + s.kinds[k]; });
@@ -419,6 +680,7 @@ function openArcPreview() {
   lines.push('时间：' + (s.first ? arcDay(s.first) + ' – ' + arcDay(s.last) : '文件里没有时间'));
   var unk = Object.keys(p.parsed.unknown);
   if (unk.length) lines.push('认不出的内容：' + unk.map(function(k) { return k + ' ' + p.parsed.unknown[k] + ' 条'; }).join('、') + '（会显示成 [' + unk[0] + '] 这样）');
+  if (p.parsed.skipped) lines.push('另外有 ' + p.parsed.skipped + ' 条之前导入过，这次跳过');
   document.getElementById('arcPrevInfo').textContent = lines.join('\n');
   // 每种挑两条看看导入后的样子
   var box = document.getElementById('arcPrevSamples');
@@ -432,16 +694,41 @@ function openArcPreview() {
     d.textContent = arcSampleLine(m, n);
     box.appendChild(d);
   });
+  arcPrevWho(n);
   document.getElementById('arcPrevStatusRow').style.display = s.status ? '' : 'none';
-  document.getElementById('arcPrevMem').checked = true;
-  document.getElementById('arcPrevStatus').checked = true;
-  document.getElementById('arcPrevCareful').checked = false;
-  document.getElementById('arcPrevFromRow').style.display = '';
-  document.getElementById('arcPrevMemRow').style.display = '';
-  document.getElementById('arcPrevTitle').textContent = '导入预览';
-  document.getElementById('arcPrevOk').textContent = '导入';
   arcPrevUpdate();
-  arcPrevOverlay.classList.add('open');
+}
+// 原文里有名字时：列出每个名字，粉色的算 TA 说的，点一下切换（认错了可以改过来）
+function arcPrevWho(n) {
+  var box = document.getElementById('arcPrevWho'), msgs = arcPending.parsed.msgs, whos = {};
+  box.innerHTML = '';
+  msgs.forEach(function(m) {
+    if (!m.who || (m.r !== 'user' && m.r !== 'char')) return;
+    var w = whos[m.who] = whos[m.who] || { n: 0, c: 0 };
+    w.n++;
+    if (m.r === 'char') w.c++;
+  });
+  var keys = Object.keys(whos).sort(function(a, b) { return whos[b].n - whos[a].n; }).slice(0, 12);
+  box.style.display = keys.length ? '' : 'none';
+  if (!keys.length) return;
+  var hint = document.createElement('div');
+  hint.className = 'auto-hint';
+  hint.textContent = '粉色的名字算「' + n.c + '」说的，其他算「' + n.u + '」说的；认错了点一下改';
+  box.appendChild(hint);
+  var row = document.createElement('div');
+  row.className = 'feed-visible-list';
+  keys.forEach(function(k) {
+    var isChar = whos[k].c * 2 > whos[k].n;
+    var chip = document.createElement('span');
+    chip.className = 'feed-visible-chip' + (isChar ? ' on' : '');
+    chip.textContent = k + ' ' + whos[k].n;
+    chip.addEventListener('click', function() {
+      msgs.forEach(function(m) { if (m.who === k && (m.r === 'user' || m.r === 'char')) m.r = isChar ? 'user' : 'char'; });
+      arcPrevRender();
+    });
+    row.appendChild(chip);
+  });
+  box.appendChild(row);
 }
 function arcPrevUpdate() {
   var p = arcPending;
@@ -463,8 +750,9 @@ function openArcMemCfg(char, arc) {
   arcPending = { char: char, arc: arc, mode: 'mem' };
   var s = arcStats(arc.msgs);
   document.getElementById('arcPrevTitle').textContent = '整理成记忆';
-  document.getElementById('arcPrevInfo').textContent = arc.from + ' 小手机 · ' + arc.msgs.length + ' 条 · ' + arcRange(arc);
+  document.getElementById('arcPrevInfo').textContent = '来自 ' + arc.from + ' · ' + arc.msgs.length + ' 条 · ' + arcRange(arc);
   document.getElementById('arcPrevSamples').innerHTML = '';
+  document.getElementById('arcPrevWho').style.display = 'none';
   document.getElementById('arcPrevFromRow').style.display = 'none';
   document.getElementById('arcPrevMemRow').style.display = 'none';
   document.getElementById('arcPrevMem').checked = true;
@@ -485,8 +773,8 @@ document.getElementById('arcPrevOk').addEventListener('click', function() {
     withStatus: document.getElementById('arcPrevStatus').checked, done: false, err: '' };
   var arc = p.arc;
   if (p.mode === 'import') {
-    var from = document.getElementById('arcPrevFrom').value.trim().replace(/小手机$/, '') || '其他';
-    arc = { id: 'arc' + Date.now().toString(36), from: from.slice(0, 12), file: p.file, importTime: Date.now(), msgs: p.parsed.msgs, mem: memCfg };
+    var from = document.getElementById('arcPrevFrom').value.trim().replace(/^来自\s*/, '') || '其他小手机';
+    arc = { id: 'arc' + Date.now().toString(36), from: from.slice(0, 16), file: p.file, importTime: Date.now(), msgs: p.parsed.msgs, mem: memCfg };
     (arcStore[p.char.id] = arcListOf(p.char.id)).push(arc);
   } else {
     arc.mem = Object.assign(arc.mem || {}, memCfg);
@@ -505,7 +793,7 @@ var arcView = null;   // { char, arc, list（筛选后的）, shown }
 var ARC_PAGE = 150;
 function openArcView(char, arc) {
   arcView = { char: char, arc: arc, list: arc.msgs, shown: 0 };
-  document.getElementById('arcViewTitle').textContent = arc.from + ' 小手机 · ' + arc.msgs.length + ' 条';
+  document.getElementById('arcViewTitle').textContent = '来自 ' + arc.from + ' · ' + arc.msgs.length + ' 条';
   document.getElementById('arcViewSearch').value = '';
   arcViewReset();
   arcViewOverlay.classList.add('open');
@@ -538,7 +826,7 @@ function arcViewMore() {
     row.className = 'arc-msg ' + m.r;
     var meta = document.createElement('div');
     meta.className = 'arc-msg-meta';
-    meta.textContent = (m.r === 'user' ? n.u : m.r === 'char' ? n.c : m.r === 'status' ? '状态栏' : '系统') +
+    meta.textContent = (m.d ? '剧情 · ' : '') + (m.r === 'user' ? n.u : m.r === 'char' ? n.c : m.r === 'status' ? '状态栏' : '系统') +
       (m.time ? ' ' + pad(new Date(m.time).getHours()) + ':' + pad(new Date(m.time).getMinutes()) : '');
     var b = document.createElement('div');
     b.className = 'arc-msg-text';
