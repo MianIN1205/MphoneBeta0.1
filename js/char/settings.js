@@ -27,6 +27,14 @@ charList.forEach(function(c) {
   if (c.firstMes && !c.openings) c.openings = [c.firstMes];
   delete c.firstMes;
 });
+// 每次回复条数的默认值从 1~3 改成 2~5（2026-11-02，用户要更像微信一条条发）：还是旧默认值的角色一起改过来，只改一次
+if (!mphoneStore.load('mphone_reply_count_v2', false)) {
+  charList.forEach(function(c) {
+    if (c.chatCfg && c.chatCfg.replyMin === 1 && c.chatCfg.replyMax === 3) { c.chatCfg.replyMin = 2; c.chatCfg.replyMax = 5; }
+  });
+  mphoneStore.save('mphone_reply_count_v2', true);
+  if (typeof saveCharList === 'function') setTimeout(saveCharList, 0);
+}
 
 var chatHistories  = mphoneStore.load('mphone_chat_histories', {});
 var dramaHistories = mphoneStore.load('mphone_drama_histories', {});
@@ -125,7 +133,7 @@ function readBubbleForm() {
 // 聊天设置默认值（第二页）与外观默认值（第三页）
 var DEFAULT_CHAT_CFG = {
   maxMem: 50, attention: 10, autoSum: false, sumEvery: 10,
-  lang: '', translate: false, replyMin: 1, replyMax: 3,
+  lang: '', translate: false, replyMin: 2, replyMax: 5,
   patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false, actionOn: false, ctxTokens: 16000,
   recallOn: false, recallPeek: true, timeOn: true, timeZone: ''
 };
@@ -327,7 +335,7 @@ function readChatCfgForm() {
     var v = parseInt($(id).value, 10);
     return Math.max(min, Math.min(max, isNaN(v) ? def : v));
   };
-  var rMin = num('replyMin', 1, 1, 10), rMax = num('replyMax', 3, 1, 10);
+  var rMin = num('replyMin', 2, 1, 10), rMax = num('replyMax', 5, 1, 10);
   return {
     maxMem:    num('memMax', 50, 1, 1000),
     attention: num('memAttention', 10, 1, 1000),
