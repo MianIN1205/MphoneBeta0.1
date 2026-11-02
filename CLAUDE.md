@@ -18,7 +18,7 @@
 - `js/`：普通脚本（不是模块），按功能分在 6 个文件夹里：`core/` 公共、`desk/` 桌面、`settings/` 设置、`chat/` 聊天、`char/` 角色、`prompt/` 提示词。所有顶层名字都是全局共享的。
   - **加载顺序在 `js/core/boot.js` 的 `MPHONE_SCRIPTS` 里，和文件夹无关，顺序很重要**：后面的脚本会用到前面定义的东西，加载时（不在函数里）调用后面文件的函数会报错；要么用 `typeof` 判断，要么用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。2026-11-01 按功能拆分时保持了原来的加载顺序，所以同一个功能有时会分在两三个文件里（比如角色设置：`char/settings.js`、`char/settings-save.js`、`char/look.js`）。
   - 每个文件第一行写了它管什么，找东西先看第一行。
-  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v23`）。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v24`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。manifest 的 `orientation` 是 `portrait`：写成 `any` 时安卓桌面版会无视系统的方向锁定，躺着就转屏。
   - logo 是用户提供的图（粉色月牙 + 睡觉的小熊 + 蓝色小花），只有两张：`icons/icon.png` 是 App 图标（iPhone、安卓、通知、网页图标都用这一张，用户要求不分开做）：和开屏一样的粉蓝渐变底，logo 带白色边缘光和阴影，占 68%（安卓裁成圆也不会切到），manifest 里是 `any maskable`；`icons/logo.png` 是透明底加白色描边的 logo，小手机页面里（开屏）用。
   - 载入页在 `index.html` 开头（样式内联，小字随机；logo 沿轮廓发白光（用户要的是边缘发光，不是圆形光晕），不要做呼吸、缩放这类循环动画），`js/core/boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
@@ -70,6 +70,7 @@
 | feed / mine / wallet-fav | 动态（朋友圈）和社交圈、「我的」账号、钱包和收藏 |
 | quick-bar / status-panel | 便捷拓展栏（本窗口用的模型预设 / 预设 / 世界书）；状态栏面板（按 HTML 模板的 {{字段}} 画，左右滑看最近 10 轮） |
 | stickers | 表情包：图床链接 / 文档（txt / docx / json / md / csv）导入、分类、打字联想；消息存 `[表情包：名字]` + 图片地址，打不开时显示这句文字；每个角色单独设置能不能发、能用哪些分类、能不能看到图片（`char.stickerCfg`）；导入时压成小图存 `b64` 给 AI 看，读不了记 `b64Fail` |
+| opening | 剧情开场白：剧情空着时「添加开场白」（粘贴，角色卡自带的 `char.openings` 可点选填入）/「随机开场白」（给方向或留空，AI 按人设世界书写，先预览可「换一个」）；存成 `{ role: 'user', narr: true }`（这样能直接 ❄️ 或接着发），显示成居中旁白（render 的 `renderNarration`），发给 AI 标明是中立旁白；存的时候就把 {{char}}/{{user}} 换成名字。角色设置里不再有开场白列表 |
 | calendar | 角色回复里的 `<日程 类型="提醒/闹钟/日程 三选一" 时间="YYYY-MM-DD HH:MM">事</日程>` 记进桌面「纪念日」（`annivs` 里 `remind` / `by` / `charIds`），聊天里出卡片；只记在小手机里，不加到手机系统日历（试过 .ics / Google 日历，用户觉得麻烦） |
 
 ### char/ 角色

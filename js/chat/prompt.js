@@ -324,6 +324,7 @@ function msgTextForAI(m) {
     return '<撤回>' + (m.recalledText || '') + '</撤回>';
   }
   if (m.pat) return patTextForAI(m);
+  if (m.narr) return '【旁白 · 剧情开场】（这是中立的旁白，交代场景，不是用户说的话）\n' + (m.content || '');
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   if (m.cal && typeof calTextForAI === 'function') return calTextForAI(m.cal);
   var c = m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));

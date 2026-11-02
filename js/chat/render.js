@@ -111,6 +111,7 @@ function renderHistMsg(m, list, empty) {
   }
   if (m.recalled && !m._flash) return renderRecallNotice(m, list, empty);
   if (m.pat) return renderPatNotice(m, list, empty);
+  if (m.narr) return renderNarration(m, list, empty);
   if (m.action && typeof renderActionCard === 'function') return renderActionCard(m, list, empty);
   if (m.cal && typeof renderCalCard === 'function') return renderCalCard(m, list, empty);
   if (m.voice) {
@@ -259,6 +260,21 @@ function renderPatNotice(m, list, empty) {
   list.appendChild(el);
   list.scrollTop = list.scrollHeight;
   return el;
+}
+// 剧情开场白：居中的旁白块（不是谁说的话），长按和普通消息一样（见 js/chat/opening.js）
+function renderNarration(m, list, empty) {
+  if (empty) empty.style.display = 'none';
+  var row = document.createElement('div');
+  row.className = 'chat-msg-row cr-narr-row';
+  var b = document.createElement('div');
+  b.className = 'chat-msg-bubble cr-narr';
+  b.textContent = fillMacros(m.content || '', charList[openingChatCharIdx]);
+  row.appendChild(b);
+  row._msg = m;
+  row._extras = [];
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+  return row;
 }
 function patShake(av) {
   if (!av) return;

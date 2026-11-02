@@ -296,33 +296,6 @@ document.getElementById('csCurRow').addEventListener('click', function(e) {
   document.getElementById('csAccList').classList.toggle('open');
 });
 
-// 开场白列表（剧情用）
-function addOpeningInput(text) {
-  var item = document.createElement('div');
-  item.className = 'cs-opening-item';
-  var ta = document.createElement('textarea');
-  ta.className = 'persona-textarea';
-  ta.placeholder = '剧情开始时 TA 说的第一段话…';
-  ta.value = text || '';
-  var del = document.createElement('button');
-  del.className = 'cs-opening-del';
-  del.textContent = '✕';
-  del.addEventListener('click', function() { item.remove(); });
-  item.appendChild(ta);
-  item.appendChild(del);
-  document.getElementById('csOpeningList').appendChild(item);
-  return ta;
-}
-function setOpeningsForm(list) {
-  document.getElementById('csOpeningList').innerHTML = '';
-  (list || []).forEach(function(t) { addOpeningInput(t); });
-}
-function readOpeningsForm() {
-  return Array.from(document.querySelectorAll('#csOpeningList textarea'))
-    .map(function(t) { return t.value.trim(); }).filter(Boolean);
-}
-document.getElementById('csOpeningAdd').addEventListener('click', function() { addOpeningInput('').focus(); });
-
 function setChatCfgForm(c) {
   c = Object.assign({}, DEFAULT_CHAT_CFG, c || {});
   var $ = function(id) { return document.getElementById(id); };
@@ -493,7 +466,6 @@ function fillCharForm(char) {
   document.getElementById('charAlias').value    = char.charAlias     || '';
   document.getElementById('userNickname').value = char.userNickname  || '';
   document.getElementById('charPersona').value  = char.charPersona   || '';
-  setOpeningsForm(char.openings);
   setAvatarBox('charAvatarBox', char.charAvatar, char.charAvatarColor);
   if (typeof fillAssistantForm === 'function') fillAssistantForm(char);
   fillCircleForm(char);
@@ -604,7 +576,6 @@ function readCharForm() {
     charAlias:        document.getElementById('charAlias').value.trim(),
     userNickname:     document.getElementById('userNickname').value.trim(),
     charPersona:      document.getElementById('charPersona').value,
-    openings:         readOpeningsForm(),
     charAvatar:       document.getElementById('charAvatarBox')._img || '',
     userAccountUid:   csAccUid,
     userImpressions:  csImpressions,

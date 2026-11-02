@@ -11,7 +11,7 @@ function snapshotBubble(bubble) {
   var row = bubble.closest('.chat-msg-row');
   var isUser = row && row.classList.contains('user');
   var char = charList[openingChatCharIdx] || {};
-  var author = isUser ? (resolveCharAccount(char).nickname || '我') : (char.charAlias || char.charName || '角色');
+  var author = row && row._msg && row._msg.narr ? '旁白' : isUser ? (resolveCharAccount(char).nickname || '我') : (char.charAlias || char.charName || '角色');
   var img = bubble.querySelector('img');
   if (img) return { kind: 'image', text: '', images: [img.src], author: author };
   if (bubble.querySelector('.voice-bubble-inner')) {
@@ -45,7 +45,8 @@ function snapshotBubble(bubble) {
       // 按消息类型显示可用操作：图片、表情包、语音不能编辑；自己和角色的消息都能撤回
       var m = ctxTarget.msg;
       var isLatest = !!m && !ctxTarget.isUser && trailingReplyGroup(histOfList(listId)).msgs.indexOf(m) >= 0;
-      var show = {
+      var narr = !!(m && m.narr);
+      var show = narr ? { edit: true, delete: true, select: true, fav: true, copy: true } : {
         quote:  !!m,
         edit:   !!m && !m.imgSrc && !m.sticker,
         recall: !!m && !m.recalled,
@@ -133,6 +134,8 @@ function deleteMsg(t) {
   if (!list.querySelector('.chat-msg-row, .cr-recall-notice')) {
     var empty = list.querySelector('.chat-room-empty, .drama-empty-hint');
     if (empty) empty.style.display = 'flex';
+    list.querySelectorAll('.cr-time-sep').forEach(function(el) { el.remove(); });   // 全删光了，时间也不用留
+    list._lastTime = 0;
   }
 }
 
@@ -172,7 +175,8 @@ document.getElementById('msgEditSave').addEventListener('click', function() {
   if (!text) { shakeEl(ta); return; }
   var t = msgEditTarget;
   t.msg.content = text;
-  setBubbleText(t.bubble, text, !t.isUser, t.listId === 'chatMsgList');
+  if (t.msg.narr) t.bubble.textContent = fillMacros(text, charList[openingChatCharIdx]);
+  else setBubbleText(t.bubble, text, !t.isUser, t.listId === 'chatMsgList');
   saveHistories();
   closeMsgEdit();
   showToast('✓ 已修改', 'success');

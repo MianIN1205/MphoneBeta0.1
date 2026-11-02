@@ -1333,6 +1333,21 @@
       </div>
     </div>
 
+    <!-- 剧情开场白（js/chat/opening.js） -->
+    <div class="mine-acc-overlay" id="openingOverlay">
+      <div class="mine-acc-modal opening-modal">
+        <div class="mine-acc-title" id="openingTitle">添加开场白</div>
+        <div class="opening-presets" id="openingPresets"></div>
+        <textarea class="persona-textarea opening-text" id="openingText"></textarea>
+        <div class="auto-hint" id="openingHint"></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="openingCancel">取消</button>
+          <button class="mine-acc-btn mine-acc-btn-close" id="openingRegen" style="display:none;">换一个</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="openingOk">添加</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 其他小手机的记录：导入预览 / 整理成记忆（js/char/archive.js） -->
     <div class="mine-acc-overlay" id="arcPrevOverlay">
       <div class="mine-acc-modal arc-prev-modal">
@@ -2171,13 +2186,6 @@
           </div>
           <textarea class="persona-textarea" id="charPersona" placeholder="描述角色的性格、背景、说话风格…"></textarea>
           <div class="auto-hint" id="charPersonaFixed" style="display:none;margin-top:6px;">MianIN 的名字和人设是固定的，这里只能看，不能改</div>
-          <div class="card-inner-divider" style="margin:14px 0 12px;"></div>
-          <div class="persona-header">
-            <span class="persona-title-sm">开场白列表</span>
-            <span class="persona-subtitle">剧情用 · OPENINGS</span>
-          </div>
-          <div class="cs-opening-list" id="csOpeningList"></div>
-          <button class="prompt-add-btn" id="csOpeningAdd">+ 添加开场白</button>
         </div>
 
         <!-- USER：人设跟着账号走，这里选本聊天使用的账号 -->

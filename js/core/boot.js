@@ -229,6 +229,7 @@ var MPHONE_SCRIPTS = [
   "js/chat/msg-ops.js",
   "js/settings/backup.js",
   "js/chat/calendar.js",
+  "js/chat/opening.js",
   "js/core/errors.js"
 ];
 

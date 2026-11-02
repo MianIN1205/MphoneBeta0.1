@@ -152,27 +152,22 @@ function renderRoomLists(idx) {
   var dHist = getDramaHistory(idx);
   renderMsgPage(dList, dEmpty, dHist, ROOM_PAGE);
 
-  // 剧情还没开始：从开场白列表里选一段作为开头
-  var openings = charList[idx].openings || [];
-  if (!dHist.length && openings.length) {
+  // 剧情还没开始：添加开场白（粘贴）/ 随机开场白（AI 写），也可以直接发消息开始（见 js/chat/opening.js）
+  if (!dHist.length) {
     var picker = document.createElement('div');
     picker.className = 'drama-opening-picker';
-    picker.innerHTML = '<div class="drama-opening-title">选择一段开场白</div>';
-    openings.forEach(function(text) {
-      var item = document.createElement('div');
-      item.className = 'drama-opening-item';
-      var shown = fillMacros(text, charList[idx]);   // 开场白里的 {{char}} / {{user}} 换成名字
-      item.textContent = shown;
-      item.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var m = { role: 'assistant', content: shown, time: Date.now() };
-        getDramaHistory(idx).push(m);
-        saveHistories();
-        renderHistMsg(m, dList, dEmpty);
-      });
-      picker.appendChild(item);
+    [['add', '添加开场白'], ['rand', '随机开场白']].forEach(function(b) {
+      var btn = document.createElement('button');
+      btn.className = 'drama-opening-btn';
+      btn.textContent = b[1];
+      btn.addEventListener('click', function(e) { e.stopPropagation(); if (typeof openOpening === 'function') openOpening(idx, b[0]); });
+      picker.appendChild(btn);
     });
+    var tip = document.createElement('div');
+    tip.className = 'drama-opening-title';
+    tip.textContent = '也可以直接发消息开始';
     dEmpty.appendChild(picker);
+    dEmpty.appendChild(tip);
   }
   setTimeout(scrollPendingLists, 0);
 }
