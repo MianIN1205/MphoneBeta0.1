@@ -3,7 +3,7 @@
 // 只处理本站文件，AI / 语音 / 生图等外部接口请求完全不经过这里。
 
 // 文件拆分后 css/、js/ 也要预先缓存；改动这个列表时把版本号加一
-const CACHE = 'mphone-v22';
+const CACHE = 'mphone-v23';
 const CSS = ['core/base', 'core/app-screen', 'core/controls', 'core/avatar', 'core/image-picker',
              'desk/statusbar', 'desk/desktop', 'desk/widgets', 'desk/appearance', 'desk/bookshelf',
              'settings/settings', 'settings/mcp', 'desk/desk-apps', 'desk/memory-lib', 'core/dialogs',

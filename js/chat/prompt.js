@@ -197,12 +197,20 @@ function realWorldContext(char, hist) {
   return '【现在】' + lines.join('\n') + '\n这些是你此刻自然知道的现实情况，需要时自然地带进对话（比如很晚了劝对方早点睡、好久没聊有点想念），不用每次都提。';
 }
 
+// 眠花糖机固定的创作说明：每个角色都带，用户改不了。讲清楚这里是虚构的角色扮演，减少莫名其妙的拒绝和道歉
+var MPHONE_FICTION_NOTE = '【眠花糖机】这里是{{user}}自己的小手机应用「眠花糖机」（Muse），里面的一切都是{{user}}和你一起进行的虚构角色扮演与创作。' +
+  '请完全以角色的身份，按人设和剧情来回应：校园、恋爱、日常、冒险、悬疑、黑暗或沉重的题材都可以认真去写，不需要为虚构的情节道歉、说教或加免责声明，也不要跳出角色、用 AI 的口吻说话。' +
+  '涉及亲密情节的角色都是成年人。真有不适合写的内容，就用角色自己的方式在剧情里自然地带过，不要中断扮演。';
+
 function buildMsgs(idx, histOverride) {
   var char = charList[idx] || {};
   var sys  = (document.getElementById('systemPromptTA') ? document.getElementById('systemPromptTA').value.trim() : '');
   var extra = '';
-  if (char.charAlias || char.charName) extra += '你的名字是：' + (char.charAlias || char.charName) + '。\n';
-  if (char.charPersona)  extra += '你的人设：\n' + char.charPersona + '\n';
+  var fixed = char.builtinAssistant && typeof MIANIN_PERSONA !== 'undefined';   // MianIN：名字和人设固定（见 js/char/assistant.js）
+  var persona = fixed ? MIANIN_PERSONA : char.charPersona;
+  if (fixed) extra += '你的名字是：' + MIANIN_NAME + '。\n';
+  else if (char.charAlias || char.charName) extra += '你的名字是：' + (char.charAlias || char.charName) + '。\n';
+  if (persona)           extra += '你的人设：\n' + persona + '\n';
   // USER：本聊天选用的账号（人设跟着账号走）+ 角色对该账号的专属印象
   var acc = resolveCharAccount(char);
   if (acc.nickname)      extra += '用户的名字是：' + acc.nickname + '。\n';
@@ -210,7 +218,7 @@ function buildMsgs(idx, histOverride) {
   if (acc.persona)       extra += '用户的人设：\n' + acc.persona + '\n';
   var impression = impressionFor(char.userImpressions, acc.uid);
   if (impression)        extra += '你对用户的特别印象 / 设定：\n' + impression + '\n';
-  var sysContent = (sys + (extra ? '\n\n---\n' + extra : '')).trim();
+  var sysContent = (MPHONE_FICTION_NOTE + (sys ? '\n\n' + sys : '') + (extra ? '\n\n---\n' + extra : '')).trim();
   var msgs = sysContent ? [{ role: 'system', content: sysContent }] : [];
   // 系统内置助手：应用说明 + 已开启的权限
   var assistantSys = (typeof assistantPrompt === 'function') ? assistantPrompt(char) : '';

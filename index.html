@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <!-- viewport-fit=cover：全屏时铺满刘海 / 底部横条区域；禁止缩放，避免 iPhone 点输入框时页面自动放大 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>眠花糖机</title>
+  <title>眠花糖机 · Muse</title>
   <!-- 安装为桌面程序（PWA）：安卓 / 电脑读 manifest，苹果读 apple-* 标记 -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#FFFFFF">
@@ -71,7 +71,7 @@
   <!-- 载入页：脚本全部加载完后淡出（见 js/core/boot.js） -->
   <div id="bootSplash">
     <img src="icons/logo.png" alt="">
-    <div class="boot-name">眠花糖机</div>
+    <div class="boot-name">眠花糖机 · Muse</div>
     <div class="boot-sub" id="bootSub">正在醒来…</div>
   </div>
   <script>
@@ -2170,6 +2170,7 @@
             <span class="persona-subtitle">AI PERSONA</span>
           </div>
           <textarea class="persona-textarea" id="charPersona" placeholder="描述角色的性格、背景、说话风格…"></textarea>
+          <div class="auto-hint" id="charPersonaFixed" style="display:none;margin-top:6px;">MianIN 的名字和人设是固定的，这里只能看，不能改</div>
           <div class="card-inner-divider" style="margin:14px 0 12px;"></div>
           <div class="persona-header">
             <span class="persona-title-sm">开场白列表</span>
