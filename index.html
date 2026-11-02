@@ -1350,6 +1350,19 @@
       </div>
     </div>
 
+    <!-- 导入世界书（js/prompt/wb-import.js） -->
+    <div class="mine-acc-overlay" id="wbImpOverlay">
+      <div class="mine-acc-modal mig-modal">
+        <div class="mine-acc-title">导入世界书</div>
+        <div class="auto-hint" id="wbImpInfo"></div>
+        <div class="mig-wb-list wb-imp-list" id="wbImpList"></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="wbImpCancel">取消</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="wbImpOk">导入</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 从小手机备份迁移（js/char/migrate.js） -->
     <div class="mine-acc-overlay" id="migOverlay">
       <div class="mine-acc-modal mig-modal">
@@ -1837,6 +1850,8 @@
                 <button class="prompt-add-btn" id="wbAddEntryBtn" style="margin-top:4px;">+ 新建条目</button>
                 <button class="prompt-add-btn" id="wbAddFolderBtn" style="margin-top:4px;">+ 新建文件夹</button>
               </div>
+              <button class="prompt-add-btn" id="wbImportBtn" style="margin-top:8px;width:100%;">导入世界书</button>
+              <div class="auto-hint" style="margin:6px 2px 0;">可以导入眠花糖机的世界书文件、酒馆的世界书 JSON、角色卡（PNG / JSON）里带的世界书，以及 uwu 小手机的完整备份（.ee，只取世界书，按原来的分类分文件夹）。导进来以后在角色设置里关联给角色才会用上。</div>
             </div>
             <!-- 详情视图 -->
             <div class="pf-detail-view" id="wbDetailView">

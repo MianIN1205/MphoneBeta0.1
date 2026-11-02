@@ -155,3 +155,8 @@
 .mig-wb-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,0.03); }
 .mig-wb-list .mig-sub { margin: 4px 0 0; font-weight: 500; color: #a08890; }
 .mig-wb-list .mig-sub:first-child { margin-top: 0; }
+/* 导入世界书（js/prompt/wb-import.js）：文件夹一行、条目缩进 */
+.wb-imp-list { max-height: 360px; }
+.wb-imp-folder { font-weight: 600; color: #6a5560; margin-top: 4px; }
+.wb-imp-folder:first-child { margin-top: 0; }
+.wb-imp-entry { padding-left: 20px; }
