@@ -1854,16 +1854,13 @@
 
           <!-- 思维链 -->
           <div class="prompt-panel" data-ppanel="cot">
-            <div class="cot-switch-row">
-              <div class="cot-switch-info">
-                <span class="cot-switch-title">启用思维链</span>
-                <span class="cot-switch-desc">开着：回复前先用眠花糖机的方式想一想（聊天、剧情各一套），代替模型自带的思考；关着：完全不思考，回得更快</span>
-              </div>
-              <label class="toggle-wrap">
-                <input type="checkbox" id="cotEnableToggle">
-                <span class="toggle-slider"></span>
-              </label>
+            <div class="prompt-section-label">思考方式</div>
+            <div class="pf-radio-row" id="cotModeRow">
+              <button class="pf-radio-btn" data-mode="off">不思考</button>
+              <button class="pf-radio-btn" data-mode="mine">眠花糖机的</button>
+              <button class="pf-radio-btn" data-mode="native">模型自带的</button>
             </div>
+            <div class="auto-hint" style="margin:6px 2px 12px;">不思考：模型自带的思考也尽量关掉，回得最快。眠花糖机的：回复前按眠花糖机的方式想一想（聊天、剧情各一套），代替模型自带的思考。模型自带的：模型有自己的思考就用，没有就直接回。</div>
             <div class="cot-switch-row">
               <div class="cot-switch-info">
                 <span class="cot-switch-title">在聊天里显示思考</span>
@@ -1874,7 +1871,7 @@
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div class="auto-hint" style="margin:6px 2px 0;">不管开不开，都会尽量关掉模型自带的思考（Gemini、GPT 这类支持的）；有的模型没法完全关掉自带思考，比如 Gemini 2.5 Pro、DeepSeek R1。</div>
+            <div class="auto-hint" style="margin:6px 2px 0;">关掉模型自带的思考只对支持的模型有用（Gemini、GPT 这类）；有的模型没法完全关掉，比如 Gemini 2.5 Pro、DeepSeek R1。</div>
           </div>
 
         </div>

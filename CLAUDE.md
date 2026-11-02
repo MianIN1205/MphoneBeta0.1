@@ -5,8 +5,12 @@
 线上地址：https://mianin1205.github.io/MphoneBeta0.1/ （GitHub Pages，仓库 MianIN1205/MphoneBeta0.1，分支 main）
 
 ## 和用户合作的规矩
+- 用户叫「眠眠」，叫 Claude「简然」（不用自称简然，正常说话）。回复温柔、简洁，先照顾情绪；她做了很多事时说声辛苦了。不确定的事直接说不知道，不编。
 - 所有回复、总结、按钮都用中文。
 - 每次提交 / 推送前都要先问，用户同意了才推。不要再提“局域网服务器”方案（用户已拒绝）。
+  - 用户说「推吧」= 推到开发分支 `claude/github-0.2-repo-backup-f9ydcx`，再推到 `main`（`git push origin <分支>:main`），一次做完。只回「好」「ok」这类不算同意推。
+  - 大改之前用户可能要求先备份：把当前线上的 main 推成一条新分支（如 `backup-2026-11-03`）。存档：`backup-0.2`、`archive-2026-11-01`（拆分重构前）、私有仓库 MianIN1205/mphonebeta0.2。
+- 用户的私人资料（人设、世界书、聊天记录、备份文件）不要写进代码或提交到仓库（仓库是公开的）；要给她的文件放在 scratchpad 用 SendUserFile 发。破限类内容不写、不帮忙搬运（她自己的东西让她自己在小手机里导入）。
 - 不要擅自改用户已有的设计：空状态提示、占位图标、“开发中”这类文字都是故意留的；改界面文字、交互前先问。
 - 已定的交互：输入框里的 ↵ 是换行，键盘回车只发送用户消息不叫 AI，❄️ 才请求回复（生成中变 ⏹）；表情键和加号键弹出同样高度的底部抽屉；MianIN 是内置默认角色兼系统助手。
 - 界面动效要克制：淡入 + 轻微缩放，不要回弹、不要花哨。
@@ -91,10 +95,20 @@
 | 文件 | 内容 |
 |---|---|
 | wb-import | 世界书「导入世界书」：眠花糖机世界书文件（`{ app: "mphone", type: "worldbook", folders: [{ name, entries }] }`）、酒馆世界书 JSON（`entries`，位置照导入角色卡的换算）、角色卡 PNG / JSON 里的 `character_book`、uwu 完整备份 .ee（用 migrate 的 `migScan`，按原分类分文件夹）；先列出来勾选，文件夹按名字合并，名字和内容都一样的跳过 |
-| tabs / worldbook / cot / presets / scene | Prompt 页的文件夹标签、世界书、思维链（页面上只有「启用」「在聊天里显示思考」两个开关；内容固定在 prompt.js 的 `COT_CHAT` / `COT_DRAMA`，`cotRules` 只在正式回复时加；`takeThink` 把 `<thinking>` / `<think>` 摘出来存 `m.think`，不显示成气泡、不再发给模型，开了显示就在回复前放一条小折叠条 `renderThinkBar`；关掉 = 完全不思考）、预设（可导入酒馆预设；**只用在剧情窗口**，聊天窗口和各种活动只用系统提示词 + 世界书，用户定的）、系统提示词（`DEFAULT_SYSTEM_PROMPT` 在 scene.js：管角色语气风格和互动规范，灵活不 OOC；只有一个框、里面分类写（你是谁 / 语气 / 互动 / 聊天窗口 / 剧情窗口 / 其他活动），用户明确不要分窗口、不要预设切换；可改，点「保存」存 `mphone_system_prompt`，「恢复默认」回默认；以前的两个场景框 `mphone_scene_chat/drama` 已合并进来，`scenePrompt` 只告诉角色现在在哪个窗口。剧情窗口描写用户用第二人称；用户心里把剧情窗口当「剧情演绎」，但不改名，并希望小手机和现实生活有联系） |
+| tabs / worldbook / cot / presets / scene | Prompt 页的文件夹标签、世界书、思维链（页面上只有「思考方式」三选一 `mphone_cot_mode`：不思考 off / 眠花糖机的 mine / 模型自带的 native，和「在聊天里显示思考」开关；off 和 mine 会用 `llmThinkOff` 关掉模型自带思考，native 不关、有就用；内容固定在 prompt.js 的 `COT_CHAT` / `COT_DRAMA`，`cotRules` 只在正式回复时加；`takeThink` 把 `<thinking>` / `<think>` 摘出来存 `m.think`，不显示成气泡、不再发给模型，开了显示就在回复前放一条小折叠条 `renderThinkBar`；关掉 = 完全不思考）、预设（可导入酒馆预设；**只用在剧情窗口**，聊天窗口和各种活动只用系统提示词 + 世界书，用户定的）、系统提示词（`DEFAULT_SYSTEM_PROMPT` 在 scene.js：管角色语气风格和互动规范，灵活不 OOC；只有一个框、里面分类写（你是谁 / 语气 / 互动 / 聊天窗口 / 剧情窗口 / 其他活动），用户明确不要分窗口、不要预设切换；可改，点「保存」存 `mphone_system_prompt`，「恢复默认」回默认；以前的两个场景框 `mphone_scene_chat/drama` 已合并进来，`scenePrompt` 只告诉角色现在在哪个窗口。剧情窗口描写用户用第二人称；用户心里把剧情窗口当「剧情演绎」，但不改名，并希望小手机和现实生活有联系） |
 
 世界书：新条目默认位置「自动」（`wbResolvePos`：常驻的放前、关键词触发的放中，都不插进聊天记录），可手动改前 / 中 / 后。同一位置的条目合成一段，开头是 `WB_WRAP`（只当背景，不复述、不反复提、不说「设定」「世界书」）。关键词只在最近 6 条里**用户**的消息中找，角色自己提到的不触发，避免 TA 反复绕着同一个设定说（用户反馈过）。各功能自己的提示词（动态、日记、总结等）写死在代码里，用户说不用拿出来。
+
+## 用户定下的风格（改相关功能前先看）
+- 聊天窗口：像微信，一句一条、短、不加句号；带空行或长句会被代码拆开（reply.js 的 `chatSplitLines` / `chatSplitLong`）。描写只放在开了「线上动作描写」时的 *星号* 小灰字里。
+- 剧情窗口：剧情演绎，第二人称写用户，可以长段；预设只在这里用。
+- 系统提示词只有一个框（分类写，不要分窗口、不要预设切换），默认版在 `js/prompt/scene.js` 的 `DEFAULT_SYSTEM_PROMPT`。
+- 动态：用户的动态只有角色评论；角色的动态有 TA 生活里的 NPC（1～4 个、每人 1～3 句）评论，角色看心情回。没有 ❄️ 按钮，角色过一会儿自己来，回了弹 plain 小通知。
+- MianIN（祂）：人设固定在代码里；角色只读不改。
+- 桌面「花房 / 星星瓶 / 灯塔 / 见面」还空着，用户在构思，别替她编功能。
 
 ## 测试
 - 内置浏览器面板里 service worker 注册不上（控制台有 “fetching the script” 报错），这是环境问题，不是 bug。
 - 没有真实 API 时，用假的 `fetch` 或 `llmRequest` 测试流程，测完把测试数据清掉。
+- 云端会话里：在仓库目录 `python3 -m http.server 8772` 起服务，用 Playwright（`NODE_PATH=$(npm root -g)`，`require('playwright')`）打开 http://localhost:8772/ 跑；等 `!document.getElementById('bootSplash')` 再操作，先关掉备份提醒（`backupMeta.remindDays = 0; backupRemindOverlay.classList.remove('open')`）。截图放 `screens/`（已在 .git/info/exclude 里，不提交）。
+- Playwright 读不到权限是 600 的文件（setFiles 会静默失败），测用户给的文件前先复制一份 chmod 644。

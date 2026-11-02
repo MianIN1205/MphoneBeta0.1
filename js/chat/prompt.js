@@ -211,9 +211,9 @@ var MPHONE_FICTION_NOTE = '【眠花糖机】这里是{{user}}自己的小手机
 
 // =============================================
 // 思维链（底层固定在代码里，Prompt 页只有开关）：
-// · 开着：每次正式回复前让模型在最开头用 <thinking></thinking> 写一小段中文思考（聊天、剧情各一套），代替模型自带的思考；
-//   请求时同时尽量关掉模型自带的思考（js/core/llm.js 的 llmThinkOff）
-// · 关着：不加这段，模型自带的思考也尽量关掉 —— 完全不思考，回得快
+// · 思考方式「眠花糖机的」：每次正式回复前让模型在最开头用 <thinking></thinking> 写一小段中文思考（聊天、剧情各一套），
+//   代替模型自带的思考；请求时同时尽量关掉模型自带的思考（js/core/llm.js 的 llmThinkOff）
+// · 「不思考」：不加这段，模型自带的思考也尽量关掉 —— 回得快；「模型自带的」：不加这段，也不去关，模型有就用（见 js/prompt/cot.js）
 // · 回复里的思考会被摘出来存在第一条消息的 m.think 上：不显示成气泡、不再发给模型；Prompt 页可以开「在聊天里显示思考」，
 //   开了就在那次回复前面放一条很小的折叠条（js/chat/render.js 的 renderThinkBar）
 // =============================================
@@ -228,7 +228,7 @@ var COT_DRAMA = '【回复前先想一想】在回复最开头，用 <thinking><
   '- {{char}}按人设和此刻的心情会怎么反应：说什么、做什么、心里想什么\n' +
   '- 这一轮怎么往下推进，哪些细节要和前文对上；不要替{{user}}决定行动和结果';
 function cotRules(isDrama) {
-  var on = typeof cotEnableToggle !== 'undefined' && cotEnableToggle.checked;
+  var on = typeof cotModeNow === 'function' && cotModeNow() === 'mine';
   return on ? [{ role: 'system', content: isDrama ? COT_DRAMA : COT_CHAT }] : [];
 }
 // 从回复里摘出思考：<thinking>…</thinking>、有的模型直接把自带思考写成 <think>…</think>；只有开头没有结尾的就把那个标签去掉
