@@ -45,7 +45,8 @@ function llmPrepare(msgs, cfg, caps) {
     if (Array.isArray(c)) {
       c = c.map(function(p) {
         if (p.type === 'image_url' && !caps.image) return { type: 'text', text: '[图片：当前模型看不到图片内容]' };
-        if (p.type === 'input_audio' && !caps.audio) return null;   // 前面的文字部分已经写了「[语音消息]」或转写
+        // 模型听不到音频：有转写就换成转写文字，没有就去掉（前面的文字部分已经写了「[语音消息]」）
+        if (p.type === 'input_audio' && !caps.audio) return p._transcript ? { type: 'text', text: '（这条语音说的是：' + p._transcript + '）' } : null;
         return p;
       }).filter(Boolean);
       if (c.every(function(p) { return p.type === 'text'; })) c = partsText(c);

@@ -90,15 +90,28 @@ function autoSendMessage(idx) {
     var ago = mins >= 60 ? Math.round(mins / 60) + ' 小时' : mins + ' 分钟';
     gap = pending.length ? '对方最后一条消息是大约 ' + ago + '前发来的。' : '距离你们上次聊天大约过去了 ' + ago + '。';
   }
+  // 你还没回 TA 的时候：把 TA 自己最近发出的几条摆出来，说清楚这些已经发过了，接着往下说，不要重说一遍、不要重新回答之前的话
+  var mine = [];
+  if (!pending.length) {
+    for (var i = hist.length - 1; i >= 0 && hist[i].role === 'assistant' && mine.length < 6; i--) {
+      if (!hist[i].recalled && !hist[i].cal && !hist[i].action && !hist[i].pat) mine.unshift(msgTextForAI(hist[i]));
+    }
+  }
   var ask = pending.length
     ? '对方发来的 ' + pending.length + ' 条消息你还没有回复（就是聊天记录最后那几条，拍一拍也算）。请你以「' + charAuthor(char).name + '」的身份' +
       '先自然地回应这些消息；回应完如果还想继续聊，再决定要不要开启新的话题。自然简短，符合人设与当前关系。只输出消息内容本身。'
+    : mine.length
+    ? '你上次发的这几条，对方到现在还没回：\n' + mine.map(function(t) { return '「' + t + '」'; }).join('\n') + '\n' +
+      '这些已经发出去了。请你以「' + charAuthor(char).name + '」的身份，像真人隔了一会儿再发微信那样接着往下说：' +
+      '可以追一句、问问对方在忙什么、分享你这会儿在做的事、或者自然地换个话题。' +
+      '不要把上面的话重说一遍或者换个说法再说，也不要重新回答对方更早说过的话。自然简短，符合人设与当前关系。只输出消息内容本身。'
     : '请你以「' + charAuthor(char).name + '」的身份主动给对方发一条消息，' +
-      '可以是分享日常、想念、追问之前的话题等，自然简短，符合人设与当前关系' + (last && last.role === 'assistant' ? '（对方还没回复你上一条消息）' : '') + '。只输出消息内容本身。';
-  var msgs = charContextMsgs(idx).concat([{
-    role: 'system',
-    content: '【主动消息】现在是 ' + nowText(char) + '。' + gap + ask
-  }]).concat(chatFormatRules(char));
+      '可以是分享日常、想念、追问之前的话题等，自然简短，符合人设与当前关系。只输出消息内容本身。';
+  // 这段要求放在最后、用「用户」身份但标明不是对方说的：有的接口（比如 Claude）最后一条是角色自己的话时，会当成要接着写那条，像卡住了重说一遍
+  var msgs = charContextMsgs(idx).concat(chatFormatRules(char)).concat([{
+    role: 'user',
+    content: '（这是小手机的系统提示，不是对方发来的消息）\n【主动消息】现在是 ' + nowText(char) + '。' + gap + ask
+  }]);
   return callApiOnce(msgs, char).then(function(text) {
     text = stripQuotes(text);
     var viewing = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;

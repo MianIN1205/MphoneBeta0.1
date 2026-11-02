@@ -289,7 +289,7 @@
               <button class="pf-radio-btn" data-mode="audio">发送音频</button>
             </div>
           </div>
-          <div class="auto-hint">只有注意力范围内的图片和语音会以原样发送，更早的用文字代替。「转成文字」先用语音API页的语音识别，接口不支持（如 Gemini）时改让聊天模型听写；没转出文字的语音会直接把录音发给模型。「发送音频」需要模型支持音频输入（如 GPT-4o 音频版、Gemini）</div>
+          <div class="auto-hint">只有注意力范围内的图片和语音会以原样发送，更早的用文字代替。「转成文字」先用语音API页的语音识别，接口不支持（如 Gemini）时改让聊天模型听写；没转出文字的语音会直接把录音发给模型。「发送音频」：能听音频的模型（如 GPT-4o 音频版、Gemini）直接听录音，不看转写；听不了的模型自动改用转写文字（录完会先转好）</div>
           <div class="api-test-row">
             <button class="action-btn btn-apply" id="mediaTestImgBtn">测试识图</button>
             <button class="action-btn btn-apply" id="mediaTestAudioBtn">测试语音</button>

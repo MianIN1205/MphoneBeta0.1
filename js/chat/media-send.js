@@ -128,7 +128,7 @@ function resolveMediaParts(msgs) {
       jobs.push(voiceToWavBase64(part._voiceSrc).then(function(b64) {
         msg.content[i] = { type: 'input_audio', input_audio: { data: b64, format: 'wav' } };
       }, function() {
-        msg.content[i] = { type: 'text', text: '（这段语音无法转换格式）' };
+        msg.content[i] = { type: 'text', text: part._transcript ? '（这条语音说的是：' + part._transcript + '）' : '（这段语音无法转换格式）' };
       }));
     });
   });

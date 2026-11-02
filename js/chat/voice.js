@@ -375,8 +375,10 @@ function stopRecording() {
       getChatHistory(openingChatCharIdx).push(m);
       saveHistories();
       var row = renderHistMsg(m, document.getElementById('chatMsgList'), document.getElementById('chatRoomEmpty'));
-      // 「转成文字」模式：录完自动转写
-      if (mediaCfg.voiceMode === 'text' && sttReady()) {
+      // 「转成文字」模式：录完自动转写；「发送音频」模式下，现在用的模型听不了音频时也先转好，发的时候用转写
+      var hearCfg = typeof getApiCfg === 'function' ? getApiCfg(charList[openingChatCharIdx]) : null;
+      var cantHear = mediaCfg.voiceMode === 'audio' && hearCfg && hearCfg.model && typeof llmCaps === 'function' && !llmCaps(hearCfg).audio;
+      if ((mediaCfg.voiceMode === 'text' || cantHear) && sttReady()) {
         transcribeVoiceMsg(m, row && row._voiceTranscriptEl).catch(function(err) {
           showToast('✗ 语音转写失败：' + err.message, 'error');
         });

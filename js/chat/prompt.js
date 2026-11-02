@@ -364,9 +364,11 @@ function msgContentForAI(m, rich, char) {
     parts.push({ type: 'image_url', image_url: { url: m.imgSrc } });
     return parts;
   }
-  // 「发送音频」模式，或「转成文字」但还没转出文字（比如接口不支持语音识别）时，直接把录音发过去
+  // 「发送音频」模式，或「转成文字」但还没转出文字（比如接口不支持语音识别）时，直接把录音发过去：
+  // 文字部分不带转写，让能听的模型自己听；转写放在音频块上，模型听不了时（js/core/llm.js 的 llmPrepare）换成转写文字
   if (m.voice && (mediaCfg.voiceMode === 'audio' || !m.transcript)) {
-    return [{ type: 'text', text: text }, { type: 'input_audio', _voiceSrc: m.voice.src }];
+    var head = msgTextForAI(Object.assign({}, m, { transcript: '' }));
+    return [{ type: 'text', text: head }, { type: 'input_audio', _voiceSrc: m.voice.src, _transcript: m.transcript || '' }];
   }
   return text;
 }
