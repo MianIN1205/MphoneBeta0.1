@@ -15,13 +15,15 @@ var wbAddEntryBtn= document.getElementById('wbAddEntryBtn');
 var wbPanelList  = document.getElementById('wbPanelList');
 var wbDetailDelete = document.getElementById('wbDetailDelete');
 
-// 世界书条目：{ id, name, keywords, content, pos: 'before' | 'middle' | 'after', folderId: '' = 未分类 }
+// 世界书条目：{ id, name, keywords, content, pos: 'auto' | 'before' | 'middle' | 'after', folderId: '' = 未分类 }
+// 自动（新条目默认）：常驻条目放「前」当底色，关键词触发的放「中」（预设后面、聊天记录前面），都不插进聊天记录里，不抢戏
 // 文件夹：{ id, name }
 var wbEntries = mphoneStore.load('mphone_worldbook', []);
 var wbFolders = mphoneStore.load('mphone_wb_folders', []);
 var wbEditingId = null;   // null = 新建
 var wbOpenFolders = {};   // 列表里展开的文件夹（默认全部收起）
-var WB_POS_LABEL = { before: '前', middle: '中', after: '后' };
+var WB_POS_LABEL = { auto: '自动', before: '前', middle: '中', after: '后' };
+function wbResolvePos(e) { return e.pos === 'auto' ? (e.keywords ? 'middle' : 'before') : (e.pos || 'before'); }
 var WB_NONE = '';         // 未分类
 
 function saveWbEntries() {
@@ -189,7 +191,7 @@ function openWbDetail(id, folderId) {
   });
   sel.value = entry ? (entry.folderId || WB_NONE) : (folderId || WB_NONE);
   if (sel.selectedIndex < 0) sel.value = WB_NONE;
-  var pos = entry ? entry.pos : 'before';
+  var pos = entry ? (entry.pos || 'before') : 'auto';
   wbInjectPos.querySelectorAll('.pf-radio-btn').forEach(function(b) {
     b.classList.toggle('selected', b.dataset.val === pos);
   });
@@ -207,7 +209,7 @@ wbDetailSave.addEventListener('click', function() {
     name:     wbEntryName.value.trim() || '未命名',
     keywords: wbEntryKeywords.value.trim(),
     content:  wbEntryContent.value.trim(),
-    pos:      posBtn ? posBtn.dataset.val : 'before',
+    pos:      posBtn ? posBtn.dataset.val : 'auto',
     folderId: document.getElementById('wbEntryFolder').value
   };
   var entry = null;
@@ -249,7 +251,9 @@ function getActiveWbEntries(char, hist) {
   if (!ids.length && !folders.length) return [];
   var known = {};
   wbFolders.forEach(function(f) { known[f.id] = true; });
-  var recent = hist.slice(-6).map(function(m) { return m.content || ''; }).join('\n').toLowerCase();
+  // 关键词只在最近 6 条里你说的话（和开场旁白）中找：角色自己提到的不算，免得 TA 提一次 → 触发 → 又提一次，反复绕着同一个设定说
+  var recent = hist.slice(-6).filter(function(m) { return m.role === 'user'; })
+    .map(function(m) { return typeof m.content === 'string' ? m.content : ''; }).join('\n').toLowerCase();
   return wbEntries.filter(function(e) {
     var fid = (e.folderId && known[e.folderId]) ? e.folderId : WB_NONE;
     var linked = ids.indexOf(e.id) >= 0 || folders.indexOf(fid) >= 0;

@@ -202,6 +202,10 @@ var MPHONE_FICTION_NOTE = '【眠花糖机】这里是{{user}}自己的小手机
   '请完全以角色的身份，按人设和剧情来回应：校园、恋爱、日常、冒险、悬疑、黑暗或沉重的题材都可以认真去写，不需要为虚构的情节道歉、说教或加免责声明，也不要跳出角色、用 AI 的口吻说话。' +
   '涉及亲密情节的角色都是成年人。真有不适合写的内容，就用角色自己的方式在剧情里自然地带过，不要中断扮演。';
 
+// 世界书的统一开头：角色只把它当背景，不要一遍遍念出来
+var WB_WRAP = '【背景设定】下面是这个世界、地点、人物和事物的设定，是你心里清楚的背景知识，不是对话里正在发生的事。' +
+  '只在剧情自然需要时体现出来；不要复述、不要逐条提起，同一个设定不要反复强调，也不要说出「设定」「世界书」这类词。';
+
 function buildMsgs(idx, histOverride) {
   var char = charList[idx] || {};
   var sys  = (document.getElementById('systemPromptTA') ? document.getElementById('systemPromptTA').value.trim() : '');
@@ -273,10 +277,16 @@ function buildMsgs(idx, histOverride) {
   var memSys = (typeof memoryContextFor === 'function') ? memoryContextFor(char, history) : '';
   if (memSys) msgs.push({ role: 'system', content: memSys });
 
-  // 世界书：按注入位置分组（前 = 紧跟系统提示，中 = 预设条目之后，后 = 聊天记录之后）
-  var wbByPos = { before: [], middle: [], after: [] };
+  // 世界书：按注入位置分组（前 = 紧跟系统提示，中 = 预设条目之后，后 = 聊天记录之后；自动见 wbResolvePos）
+  // 同一个位置的合成一段「背景设定」，并说清楚这是心里知道的背景：不复述、不反复提、不说「设定」「世界书」
+  var wbGroups = { before: [], middle: [], after: [] };
   getActiveWbEntries(char, history).forEach(function(e) {
-    (wbByPos[e.pos] || wbByPos.before).push({ role: 'system', content: '【世界书 · ' + e.name + '】\n' + e.content });
+    var p = typeof wbResolvePos === 'function' ? wbResolvePos(e) : (e.pos || 'before');
+    (wbGroups[p] || wbGroups.before).push('【' + e.name + '】\n' + e.content);
+  });
+  var wbByPos = {};
+  Object.keys(wbGroups).forEach(function(p) {
+    wbByPos[p] = wbGroups[p].length ? [{ role: 'system', content: WB_WRAP + '\n\n' + wbGroups[p].join('\n\n') }] : [];
   });
   msgs = msgs.concat(wbByPos.before);
 
