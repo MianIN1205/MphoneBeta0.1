@@ -148,6 +148,9 @@ function updateUnreadTotal() {
   charList.forEach(function(c) { if (c.inChat) total += chatUnread[c.id] || 0; });
   badge.textContent = total > 99 ? '99+' : total;
   badge.classList.toggle('show', total > 0);
+  // 桌面上的 Chat 图标：有未读就一个小红点，不显示数字
+  var dock = document.querySelector('#dockChat .dock-icon');
+  if (dock) dock.classList.toggle('has-unread', total > 0);
 }
 
 // 删除会话：只从列表移走（保留记录），或连聊天记录一起删除

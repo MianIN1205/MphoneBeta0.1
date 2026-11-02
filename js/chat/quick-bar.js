@@ -36,7 +36,7 @@ function renderQuickBar() {
   var nWb = (char.worldbookFolders || []).length;
   var val = function(k, t) { crQuickBar.querySelector('[data-qb="' + k + '"] .cr-qb-val').textContent = t; };
   val('api', api ? api.name : '跟随全局');
-  val('preset', pre ? pre.name : '跟随全局');
+  val('preset', (pre ? pre.name : '跟随全局') + (typeof currentCrSubView !== 'undefined' && currentCrSubView !== 'contacts' ? '（剧情用）' : ''));
   val('wb', nWb ? nWb + ' 本' : '未选');
   if (crQuickOpen) renderQuickPop();
 }

@@ -304,9 +304,10 @@ function buildMsgs(idx, histOverride) {
   });
   msgs = msgs.concat(wbByPos.before);
 
-  // 注入当前预设中已启用的提示词条目（按条目各自的 role 身份发送）
+  // 注入当前预设中已启用的提示词条目（按条目各自的 role 身份发送）。预设只给剧情窗口用（用户定的）：聊天窗口和各种活动只用世界书
   var curPreset = (typeof charPromptPreset === 'function') ? charPromptPreset(char) : (stPresets && stPresets[stActivePresetIdx]);
-  if (curPreset && Array.isArray(curPreset.entries)) {
+  var forDrama = (histOverride || getActiveHistory(idx)) === getDramaHistory(idx);
+  if (forDrama && curPreset && Array.isArray(curPreset.entries)) {
     curPreset.entries.forEach(function(entry) {
       if (entry && entry.enabled && entry.content && entry.content.trim()) {
         var r = (entry.role === 'user' || entry.role === 'assistant') ? entry.role : 'system';
