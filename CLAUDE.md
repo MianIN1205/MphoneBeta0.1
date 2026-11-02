@@ -18,7 +18,7 @@
 - `js/`：普通脚本（不是模块），按功能分在 6 个文件夹里：`core/` 公共、`desk/` 桌面、`settings/` 设置、`chat/` 聊天、`char/` 角色、`prompt/` 提示词。所有顶层名字都是全局共享的。
   - **加载顺序在 `js/core/boot.js` 的 `MPHONE_SCRIPTS` 里，和文件夹无关，顺序很重要**：后面的脚本会用到前面定义的东西，加载时（不在函数里）调用后面文件的函数会报错；要么用 `typeof` 判断，要么用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。2026-11-01 按功能拆分时保持了原来的加载顺序，所以同一个功能有时会分在两三个文件里（比如角色设置：`char/settings.js`、`char/settings-save.js`、`char/look.js`）。
   - 每个文件第一行写了它管什么，找东西先看第一行。
-  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v25`）。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v26`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。manifest 的 `orientation` 是 `portrait`：写成 `any` 时安卓桌面版会无视系统的方向锁定，躺着就转屏。
   - logo 是用户提供的图（粉色月牙 + 睡觉的小熊 + 蓝色小花），只有两张：`icons/icon.png` 是 App 图标（iPhone、安卓、通知、网页图标都用这一张，用户要求不分开做）：和开屏一样的粉蓝渐变底，logo 带白色边缘光和阴影，占 68%（安卓裁成圆也不会切到），manifest 里是 `any maskable`；`icons/logo.png` 是透明底加白色描边的 logo，小手机页面里（开屏）用。
   - 载入页在 `index.html` 开头（样式内联，小字随机；logo 沿轮廓发白光（用户要的是边缘发光，不是圆形光晕），不要做呼吸、缩放这类循环动画），`js/core/boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
@@ -80,6 +80,7 @@
 | settings / settings-save / look | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）表单和默认值 `DEFAULT_CHAT_CFG`；保存 / 删除角色；美化页 |
 | memory / summary / backup | 角色记忆（短期 / 长期 / 珍贵，可选向量检索，按 token 预算注入）、关系里程碑（记忆多时分批整理）；按回合总结；单个角色的记忆备份（含档案） |
 | archive | 其他小手机的记录（扩展页「导入聊天记录」）：认 uwu（`uwu-chat-history`，`[某某的消息：…]` 去壳，`isStatusUpdate` 是状态栏）、眠花糖机角色备份、ChatGPT（mapping）/ Claude（chat_messages）官网导出、酒馆 .jsonl、任意 JSON（找像消息的对象）、CSV、微信 / QQ 两行式 txt、「名字：内容」的 txt / md / docx；用户要求兼容的格式尽量多。先预览再导入，预览里点名字改「谁是 TA」；同一份记录再导时按时间 + 内容跳过已导入的。原文存在 `mphone_archives`（只给用户翻看，不发给 AI），列表和记忆库都写「来自 xxx」（`from` 存完整名字，如「uwu 小手机」）；可选分段整理成长期记忆（`m.source = 'import'`、`m.from`、时间用原聊天日期，角色看到时带「在 xxx 里」）。整理完自动 `arcConsolidate`：导入的记忆按来源分组、去掉数字后按相似度分小组，让模型把同一件事合并（细节全留），条数没变少或解析失败就保持原样（用户要求导入后记忆库不要堆太多重复的）。用户要求整理完整、准确、不爆 token：一件事一条、写具体细节、禁止空泛句；每段约 5000 token，太长自动减半，偶发错误重试，失败停在那一段可「继续整理」；可选逐段核对（次数翻倍） |
+| migrate | 「从小手机备份迁移」（扩展页）：读 uwu / ovo 小手机的完整备份（.ee = gzip 的一行一个 JSON，header `format` 含 stream-backup；`chat-start` 是角色资料，`chat-history` 是消息，`worldBooks` 是世界书），流式解压读两遍，不读 API / 密钥。迁到当前角色：人设、头像替换；勾选的世界书按原分类建文件夹、内容一样的不重复建、逐条关联；聊天记录存成档案（和导入聊天记录同一套，导过的跳过）。默认勾这个角色关联的世界书，原来全局的和其他的不勾 |
 | auto | 自主活动：主动发消息、聊天后发动态、调度。主动消息的要求放在最后一条、用 user 身份并标明「系统提示，不是对方发来的」（最后一条是角色自己的话时 Claude 等会当成要续写，像卡住重说一遍）；用户没回时把角色最近发的几条列出来，要求接着往下说、不重说、不重新回答旧话题（用户反馈过）。`callApiOnce(msgs, char)`（在 chat/feed）传角色时用 TA 自己的模型预设 |
 | import | 导入酒馆角色卡 PNG / JSON、Word |
 | assistant | 内置助手 MianIN（昵称慕斯、暮暮，用户称祂「祂」；原本是用户酒馆预设里的织梦者，「暮色」是祂编织的幻境，不是祂本人）。名字和人设固定在 `MIANIN_NAME` / `MIANIN_PERSONA`，小手机里只能看不能改（用户要求）。能力：加世界书、改 CSS、看报错；`ASSISTANT_GUIDE` 是给祂的应用说明，加新功能时顺手补一句 |
