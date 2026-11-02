@@ -39,6 +39,11 @@ function commitAssistantReply(hist, raw, list, empty) {
     raw = raw.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
   }
   var parts = raw.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean);
+  // 聊天窗口：角色忘了用 ||| 分条、而是用空行隔开了几段时，按空行拆成几条气泡（用了 ||| 的，气泡里的空行照原样留着）
+  if (rc && chatHistories[rc.id] === hist && parts.length === 1 && raw.indexOf('|||') < 0 &&
+      Object.assign({}, DEFAULT_CHAT_CFG, rc.chatCfg || {}).replyMax > 1) {
+    parts = parts[0].split(/\n[ \t]*\n+/).map(function(p) { return p.trim(); }).filter(Boolean);
+  }
   // 聊天窗口：<撤回>…</撤回> 拆成单独一条，先显示两秒再变成撤回提示
   if (rc && chatHistories[rc.id] === hist) parts = splitRecallParts(parts);
   // 聊天窗口：回复里的「[表情包：名字]」拆成单独的表情包消息（见 js/chat/stickers.js）
