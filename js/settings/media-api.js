@@ -68,6 +68,10 @@ function apiError(res) {
     } catch (_) {}
     var err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
     err.status = res.status;   // 状态码：报错分析（js/core/errors.js）按它判断原因
+    // 完整的原始返回，报错弹窗里「展开完整报错」看的就是它
+    err.body = t;
+    err.statusText = res.statusText || '';
+    err.url = res.url || '';
     throw err;
   });
 }
