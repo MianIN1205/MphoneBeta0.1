@@ -114,3 +114,24 @@
 .err-info-raw-wrap { display: none; }
 .err-info-raw-wrap.open { display: block; }
 .err-info-raw { margin: 0; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,0.04); font-size: 11px; color: #777; white-space: pre-wrap; word-break: break-all; max-height: 140px; overflow-y: auto; font-family: inherit; }
+/* 其他小手机的记录：导入预览、查看档案（js/char/archive.js） */
+.arc-prev-modal { overflow-y: auto; max-height: 82%; }
+.arc-prev-modal .auto-row { margin: 0; }
+.arc-prev-info { font-size: 12.5px; color: #555; line-height: 1.65; white-space: pre-wrap; }
+.arc-prev-samples { display: flex; flex-direction: column; gap: 4px; max-height: 118px; overflow-y: auto; flex-shrink: 0; }
+.arc-prev-samples:empty { display: none; }
+.arc-sample { font-size: 11.5px; color: #666; padding: 5px 9px; border-radius: 9px; background: rgba(0,0,0,0.035); line-height: 1.45; word-break: break-all; }
+.arc-sample.user { background: rgba(240,190,205,0.22); }
+.arc-sample.status, .arc-sample.sys { color: #999; }
+.arc-view-modal { height: 82%; max-height: 82%; width: 310px; }
+.arc-view-search { flex: none; }
+.arc-view-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+.arc-day { align-self: center; font-size: 11px; color: #aaa; margin: 4px 0 -2px; }
+.arc-msg { display: flex; flex-direction: column; max-width: 84%; align-self: flex-start; gap: 2px; }
+.arc-msg.user { align-self: flex-end; align-items: flex-end; }
+.arc-msg.status, .arc-msg.sys { align-self: stretch; max-width: none; }
+.arc-msg-meta { font-size: 10.5px; color: #b5a5ab; padding: 0 4px; }
+.arc-msg-text { font-size: 13px; color: #333; line-height: 1.5; padding: 7px 11px; border-radius: 14px; background: rgba(255,255,255,0.95); white-space: pre-wrap; word-break: break-word; }
+.arc-msg.user .arc-msg-text { background: rgba(240,190,205,0.45); }
+.arc-msg.status .arc-msg-text, .arc-msg.sys .arc-msg-text { font-size: 11.5px; color: #888; background: rgba(0,0,0,0.035); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+.arc-msg.status .arc-msg-text.open { display: block; }

@@ -103,6 +103,10 @@
 .mem-sum-head button {
   border: none; background: none; color: #c08aa0; font-size: 11px; cursor: pointer; font-family: inherit;
 }
+.arc-state { font-size: 12px; color: #777; margin-top: 4px; }
+.arc-state.err { color: #c47a84; }
+.arc-acts { display: flex; gap: 14px; margin-top: 6px; }
+.arc-acts button { border: none; background: none; padding: 0; color: #c08aa0; font-size: 12px; cursor: pointer; font-family: inherit; }
 .mem-sum-text {
   width: 100%; box-sizing: border-box; margin-top: 4px;
   border: none; background: transparent; resize: vertical;

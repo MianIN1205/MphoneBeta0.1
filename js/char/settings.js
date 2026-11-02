@@ -516,6 +516,7 @@ function fillCharForm(char) {
   setChatCfgForm(char.chatCfg);
   renderCharWbLinks(char.worldbookIds || [], char.worldbookFolders || []);
   renderMemSummaries(char);
+  if (typeof renderArchiveList === 'function') renderArchiveList(char);
 }
 
 // 扩展页 — 记忆权限：开关、读取条数、可写入的类型、短期保留天数、动态是否记入

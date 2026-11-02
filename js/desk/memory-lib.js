@@ -76,7 +76,7 @@ function renderMemLib() {
     badge.textContent = (m.type === 'precious' ? '💎 ' : '') + MEM_TYPE_NAME[m.type];
     var meta = document.createElement('span');
     meta.className = 'mem-meta';
-    meta.textContent = (MEM_SOURCE_NAME[m.source] || '') + (m.scene === 'drama' ? ' · 剧情空间' : '') + ' · ' + memAgo(m.time) +
+    meta.textContent = memSourceText(m) + (m.scene === 'drama' ? ' · 剧情空间' : '') + ' · ' + (m.source === 'import' ? memDateText(m.time).split(' ')[0] : memAgo(m.time)) +
       (m.type === 'short' && m.expires ? ' · ' + Math.max(1, Math.ceil((m.expires - Date.now()) / MEM_DAY)) + ' 天后忘掉' : '');
     head.appendChild(badge);
     head.appendChild(meta);
@@ -260,7 +260,7 @@ function memDocxCharParas(char) {
     paras.push({ text: (type === 'precious' ? '💎 珍贵的记忆' : MEM_TYPE_NAME[type] + '记忆') + '（' + list.length + ' 条）', size: 28, bold: true, color: '5A4249', after: 120 });
     if (!list.length) paras.push({ text: '（还没有）', size: 20, color: 'AAAAAA', after: 200 });
     list.forEach(function(m) {
-      paras.push({ text: memDateText(m.time) + '　·　' + (MEM_SOURCE_NAME[m.source] || '') +
+      paras.push({ text: memDateText(m.time) + '　·　' + memSourceText(m) +
         (m.type === 'short' && m.expires ? '　·　' + memDateText(m.expires) + ' 忘掉' : ''), size: 18, color: '998888', after: 20 });
       paras.push({ text: m.text, size: 22, after: 160 });
     });

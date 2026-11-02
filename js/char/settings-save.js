@@ -124,6 +124,7 @@ charDelOkBtn.addEventListener('click', function() {
   var removed = charList.splice(editingCharIndex, 1)[0];
   if (removed) {
     delete chatHistories[removed.id]; delete dramaHistories[removed.id]; saveHistories();
+    if (typeof arcStore !== 'undefined' && arcStore[removed.id]) { delete arcStore[removed.id]; saveArcStore(); }
     delete chatUnread[removed.id]; mphoneStore.save('mphone_unread', chatUnread);
     charList.forEach(function(c) { if (c.circle) c.circle = c.circle.filter(function(id) { return id !== removed.id; }); });
   }

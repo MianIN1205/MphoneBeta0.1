@@ -11,7 +11,12 @@ var memStore = mphoneStore.load('mphone_memories', {});   // { 角色id: [{ id, 
 var memEmbedModel = mphoneStore.load('mphone_mem_embed_model', '');
 var MEM_TYPE_NAME = { short: '短期', long: '长期', precious: '珍贵' };
 var MEM_TYPE_RANK = { short: 0, long: 1, precious: 2 };
-var MEM_SOURCE_NAME = { chat: '聊天', feed: '动态', self: 'TA 自己记的', user: '你加的', diary: '日记' };
+var MEM_SOURCE_NAME = { chat: '聊天', feed: '动态', self: 'TA 自己记的', user: '你加的', diary: '日记', import: '其他小手机' };
+// 从别的小手机导入的记忆（m.from = 那个小手机的名字，见 js/char/archive.js）
+function memSourceText(m) { return m.source === 'import' && m.from ? '在' + m.from + '小手机里' : (MEM_SOURCE_NAME[m.source] || ''); }
+function memWhereText(m) {
+  return (m.scene === 'drama' ? '发生在剧情空间' : '') + (m.source === 'import' && m.from ? (m.scene === 'drama' ? '，' : '') + '在' + m.from + '小手机里' : '');
+}
 var MEM_DAY = 86400000;
 
 function saveMemStore() { mphoneStore.save('mphone_memories', memStore); }
@@ -50,25 +55,27 @@ function memList(charId) {
   return kept;
 }
 // 记下一条；和已有的很像时只更新时间（类型取更重要的那个）
+// data: { type, text, source, scene, time（导入时用原来聊天的时间）, from（导入自哪个小手机）, noMilestone（导入时最后统一整理）, dupAt（多像算重复，默认 0.85） }
 function memAdd(char, data) {
   var text = String((data && data.text) || '').trim().slice(0, 300);
   if (!char || !text) return null;
   var cfg = memCfgOf(char), type = MEM_TYPE_NAME[data.type] ? data.type : 'long';
   var tv = memTokens(text);
-  var dup = memList(char.id).filter(function(m) { return memCos(tv, memTokens(m.text)) > 0.85; })[0];
+  var dup = memList(char.id).filter(function(m) { return memCos(tv, memTokens(m.text)) > (data.dupAt || 0.85); })[0];
   if (dup) {
-    dup.time = Date.now();
+    if (!data.time) dup.time = Date.now();
     if (MEM_TYPE_RANK[type] > MEM_TYPE_RANK[dup.type]) { dup.type = type; delete dup.expires; }
     if (dup.type === 'short') dup.expires = Date.now() + cfg.shortDays * MEM_DAY;
     saveMemStore();
     return dup;
   }
-  var m = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), type: type, text: text, time: Date.now(), source: data.source || 'chat' };
+  var m = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), type: type, text: text, time: data.time || Date.now(), source: data.source || 'chat' };
   if (data.scene === 'drama') m.scene = 'drama';   // 在剧情空间里记下的
+  if (data.from) m.from = String(data.from).slice(0, 20);
   if (type === 'short') m.expires = Date.now() + cfg.shortDays * MEM_DAY;
   (memStore[char.id] = memStore[char.id] || []).push(m);
   saveMemStore();
-  if (type !== 'short') setTimeout(function() { memMaybeMilestone(char); }, 0);
+  if (type !== 'short' && !data.noMilestone) setTimeout(function() { memMaybeMilestone(char); }, 0);
   return m;
 }
 
@@ -90,30 +97,47 @@ function memMaybeMilestone(char) {
   if (!api.url || !api.key || !api.model) return;
   memBuildMilestone(char).catch(function(err) { console.warn('[Mphone] 整理关系里程碑失败:', err); });
 }
+// 记忆很多时（比如导入了别的小手机的记录）分成几批，每批接着上一批整理出的里程碑往下整理，一次不会塞太多
+var MILESTONE_BATCH_TOKENS = 6000;
 function memBuildMilestone(char) {
   var list = memImportant(char.id);
   if (!list.length) return Promise.reject(new Error('还没有长期或珍贵的记忆'));
   memMilestoneBusy[char.id] = true;
   var ms = memMilestones[char.id] || {};
-  var userName = (typeof resolveCharAccount === 'function' && resolveCharAccount(char).nickname) || '用户';
-  var prompt = '你是记忆整理助手。下面是「' + memCharName(char) + '」和「' + userName + '」之间的长期记忆，请整理出他们关系里的重要节点（关系里程碑）。\n' +
-    (ms.text ? '\n之前整理过的里程碑：\n' + ms.text + '\n' : '') +
-    '\n长期记忆（按时间从早到晚）：\n' + list.map(function(m) {
-      return '· ' + memDateText(m.time).split(' ')[0] + ' ' + m.text + (m.scene === 'drama' ? '（剧情空间）' : '');
-    }).join('\n') +
-    '\n\n要求：\n- 只保留会长期影响关系的事：初次认识、确认关系、重要约定、纪念日、第一次见面、同居、吵架后和好、分手或复合等\n' +
-    '- 不写日常闲聊、一时的情绪和普通的喜好\n- 之前整理过的里程碑，没有被新的记忆推翻就保留\n' +
-    '- 发生在剧情空间的事在后面注明（剧情空间）\n- 每条一行，格式「时间 · 事件」，按时间先后，最多 12 条\n' +
-    '- 只输出里程碑本身；如果还没有这样的节点，只输出「暂无」';
-  return llmRequest([{ role: 'user', content: prompt }], { stream: false, cfg: getApiCfg(char) }).then(function(text) {
-    text = String(text || '').trim();
-    if (/^暂无/.test(text)) text = '';
+  var lines = list.map(function(m) {
+    var where = memWhereText(m);
+    return '· ' + memDateText(m.time).split(' ')[0] + ' ' + m.text + (where ? '（' + where + '）' : '');
+  });
+  var batches = [[]], used = 0;
+  lines.forEach(function(l) {
+    var t = estTokens(l);
+    if (used + t > MILESTONE_BATCH_TOKENS && batches[batches.length - 1].length) { batches.push([]); used = 0; }
+    batches[batches.length - 1].push(l);
+    used += t;
+  });
+  var chain = Promise.resolve(ms.text || '');
+  batches.forEach(function(b) { chain = chain.then(function(prev) { return memMilestoneStep(char, prev, b); }); });
+  return chain.then(function(text) {
     memMilestones[char.id] = { text: text.slice(0, 1500), time: Date.now(), basedOn: list.length };
     saveMilestones();
     if (memLibChar === char.id) renderMemLib();
     return text;
   }).then(function(t) { delete memMilestoneBusy[char.id]; return t; },
           function(e) { delete memMilestoneBusy[char.id]; throw e; });
+}
+function memMilestoneStep(char, prevText, lines) {
+  var userName = (typeof resolveCharAccount === 'function' && resolveCharAccount(char).nickname) || '用户';
+  var prompt = '你是记忆整理助手。下面是「' + memCharName(char) + '」和「' + userName + '」之间的长期记忆，请整理出他们关系里的重要节点（关系里程碑）。\n' +
+    (prevText ? '\n之前整理过的里程碑：\n' + prevText + '\n' : '') +
+    '\n长期记忆（按时间从早到晚）：\n' + lines.join('\n') +
+    '\n\n要求：\n- 只保留会长期影响关系的事：初次认识、确认关系、重要约定、纪念日、第一次见面、同居、吵架后和好、分手或复合等\n' +
+    '- 不写日常闲聊、一时的情绪和普通的喜好\n- 之前整理过的里程碑，没有被新的记忆推翻就保留\n' +
+    '- 发生在剧情空间、或者在别的小手机里的事，在后面照原样注明\n- 每条一行，格式「时间 · 事件」，按时间先后，最多 12 条\n' +
+    '- 只输出里程碑本身；如果还没有这样的节点，只输出「暂无」';
+  return llmRequest([{ role: 'user', content: prompt }], { stream: false, cfg: getApiCfg(char) }).then(function(text) {
+    text = String(text || '').trim();
+    return /^暂无/.test(text) ? '' : text;
+  });
 }
 
 // ---------- 想起：按相关程度挑几条 ----------
@@ -147,7 +171,7 @@ function memoryContextFor(char, hist) {
   if (!cfg.on) return '';
   var out = '';
   if (cfg.read) {
-    var precious = memList(char.id).filter(function(m) { return m.type === 'precious'; }).slice(-12);
+    var precious = memList(char.id).filter(function(m) { return m.type === 'precious'; }).sort(function(a, b) { return a.time - b.time; }).slice(-12);
     var rec = memRecall(char, memQueryOf(hist), cfg.topK, { skipPrecious: true });
     // 相关的不够数时，用最近记下的补上，问得比较笼统时也想得起东西
     if (rec.length < cfg.topK) {
@@ -168,9 +192,10 @@ function memoryContextFor(char, hist) {
     }
     var lines = [];
     if (msText) lines.push('📌 你们关系里的重要节点：\n' + msText);
-    if (precious.length) lines.push('💎 珍贵的回忆：\n' + precious.map(function(m) { return '· ' + m.text + (m.scene === 'drama' ? '（发生在剧情空间）' : ''); }).join('\n'));
+    if (precious.length) lines.push('💎 珍贵的回忆：\n' + precious.map(function(m) { var w = memWhereText(m); return '· ' + m.text + (w ? '（' + w + '）' : ''); }).join('\n'));
     if (rec.length) lines.push('想起来的记忆：\n' + rec.map(function(r) {
-      return '· ' + r.m.text + '（' + memAgo(r.m.time) + (r.m.type === 'short' ? '，最近的事' : '') + (r.m.scene === 'drama' ? '，发生在剧情空间' : '') + '）';
+      var w = memWhereText(r.m);
+      return '· ' + r.m.text + '（' + memAgo(r.m.time) + (r.m.type === 'short' ? '，最近的事' : '') + (w ? '，' + w : '') + '）';
     }).join('\n'));
     if (lines.length) {
       // 讲清楚：这些是角色自己的记忆，「用户」指的是谁

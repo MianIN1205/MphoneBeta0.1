@@ -1,4 +1,4 @@
-// 眠花糖机 — 单个角色的记忆备份：导出 / 恢复角色设置、记录和总结
+// 眠花糖机 — 单个角色的记忆备份：导出 / 恢复角色设置、记录、总结、记忆和其他小手机的档案
 
 // ---------- 记忆备份：单个角色的设置 + 记录 + 总结 ----------
 function downloadJson(obj, name) {
@@ -23,7 +23,8 @@ document.getElementById('memExportBtn').addEventListener('click', function() {
     app: 'mphone', type: 'char', version: 1, char: c,
     chat: chatHistories[char.id] || [], drama: dramaHistories[char.id] || [],
     mems: (typeof memStore !== 'undefined' && memStore[char.id]) || [],
-    milestone: (typeof memMilestones !== 'undefined' && memMilestones[char.id]) || null
+    milestone: (typeof memMilestones !== 'undefined' && memMilestones[char.id]) || null,
+    archives: (typeof arcStore !== 'undefined' && arcStore[char.id]) || []
   }, (char.charAlias || 'char') + '-记忆备份-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.json');
   showToast('✓ 已导出', 'success');
 });
@@ -42,6 +43,7 @@ document.getElementById('memRestoreBtn').addEventListener('click', function() {
         dramaHistories[cur.id] = b.drama || [];
         if (Array.isArray(b.mems) && typeof memStore !== 'undefined') { memStore[cur.id] = b.mems; saveMemStore(); }
         if (b.milestone && typeof memMilestones !== 'undefined') { memMilestones[cur.id] = b.milestone; saveMilestones(); }
+        if (Array.isArray(b.archives) && typeof arcStore !== 'undefined') { arcStore[cur.id] = b.archives; saveArcStore(); }
         saveCharList();
         saveHistories();
         fillCharForm(restored);

@@ -222,6 +222,7 @@ var MPHONE_SCRIPTS = [
   "js/desk/widgets.js",
   "js/char/memory.js",
   "js/desk/memory-lib.js",
+  "js/char/archive.js",
   "js/chat/quick-bar.js",
   "js/chat/status-panel.js",
   "js/chat/stickers.js",

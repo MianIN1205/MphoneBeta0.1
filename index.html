@@ -1333,6 +1333,49 @@
       </div>
     </div>
 
+    <!-- 其他小手机的记录：导入预览 / 整理成记忆（js/char/archive.js） -->
+    <div class="mine-acc-overlay" id="arcPrevOverlay">
+      <div class="mine-acc-modal arc-prev-modal">
+        <div class="mine-acc-title" id="arcPrevTitle">导入预览</div>
+        <div class="arc-prev-info" id="arcPrevInfo"></div>
+        <div class="arc-prev-samples" id="arcPrevSamples"></div>
+        <div class="auto-row" id="arcPrevFromRow">
+          <span class="auto-row-label">来自哪个小手机</span>
+          <input class="field-input" type="text" id="arcPrevFrom" maxlength="12" style="width:96px;flex:none;">
+        </div>
+        <div class="auto-row" id="arcPrevMemRow">
+          <span class="auto-row-label">顺便整理成记忆</span>
+          <label class="st-toggle-wrap"><input type="checkbox" id="arcPrevMem" checked><span class="st-toggle-slider"></span></label>
+        </div>
+        <div id="arcPrevMemSub">
+          <div class="auto-row" id="arcPrevStatusRow">
+            <span class="auto-row-label">带上状态栏（心声、日记）</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="arcPrevStatus" checked><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-row">
+            <span class="auto-row-label">逐段核对（更准，次数翻倍）</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="arcPrevCareful"><span class="st-toggle-slider"></span></label>
+          </div>
+        </div>
+        <div class="auto-hint" id="arcPrevCost"></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="arcPrevCancel">取消</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="arcPrevOk">导入</button>
+        </div>
+      </div>
+    </div>
+    <!-- 其他小手机的记录：查看档案 -->
+    <div class="mine-acc-overlay" id="arcViewOverlay">
+      <div class="mine-acc-modal arc-view-modal">
+        <div class="mine-acc-title" id="arcViewTitle">档案</div>
+        <input class="field-input arc-view-search" type="text" id="arcViewSearch" placeholder="搜一搜">
+        <div class="arc-view-list" id="arcViewList"></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-add" id="arcViewClose">关闭</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 记忆库：问问 TA 记得什么 -->
     <div class="mine-acc-overlay" id="memAskOverlay">
       <div class="mine-acc-modal diary-read-modal">
@@ -2364,7 +2407,7 @@
           <button class="char-action-btn char-upload-btn" id="memExportBtn">导出备份</button>
           <button class="char-action-btn char-upload-btn" id="memRestoreBtn">恢复备份</button>
         </div>
-        <div class="auto-hint" style="padding:0 4px;">备份包含角色设置、聊天与剧情记录、总结；恢复会覆盖当前角色的这些内容</div>
+        <div class="auto-hint" style="padding:0 4px;">备份包含角色设置、聊天与剧情记录、总结、记忆和其他小手机的档案；恢复会覆盖当前角色的这些内容</div>
 
       </div>
 
@@ -2576,6 +2619,14 @@
             </div>
           </div>
           <div class="auto-hint">记忆分三种：短期（几天内有用的事，到期自动忘掉）、长期（一直记得的事实和经历）、珍贵（特别重要的回忆，每次聊天都会想起）。TA 可以在回复里悄悄记下新记忆，你在桌面「记忆库」里能看到、修改和删除。向量记忆：用接口的向量模型找相关记忆（在记忆库里填模型），关着时用本地文字相似度。关系里程碑：长期和珍贵的记忆每多 10 条，自动把你们关系里的重要节点整理一次（会多调用一次接口），每次聊天都会想起。记忆最多占用：想起的记忆超过这个长度时少想起几条，0 = 不限制。</div>
+        </div>
+
+        <!-- 其他小手机的记录（js/char/archive.js） -->
+        <div class="section-label">其他小手机的记录</div>
+        <div class="settings-card">
+          <button class="custom-css-apply-btn" id="arcImportBtn">导入聊天记录</button>
+          <div class="mem-sum-list" id="arcList"></div>
+          <div class="auto-hint" style="margin-top:8px;">支持 uwu 导出的聊天记录（.json），也能读酒馆的 .jsonl、一般的 JSON，和每行「名字：内容」的 txt / docx。原文存成档案，只给你翻看，不会发给 TA；整理成记忆后，TA 会记得这些事，也知道是在那个小手机里发生的。</div>
         </div>
 
         <!-- 每日日记 -->
