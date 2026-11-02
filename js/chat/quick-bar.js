@@ -26,6 +26,31 @@ function charPromptPreset(char) {
 
 function crQuickChar() { return charList[openingChatCharIdx]; }
 
+// ---------- 状态栏预设：在角色设置「美化 → 状态栏」里存，在聊天窗口的便捷拓展栏里一点就换 ----------
+// mphone_status_presets = [{ id, name, fields, tpl, css }]；「默认」是自带的，不存
+var statusPresets = mphoneStore.load('mphone_status_presets', []);
+function saveStatusPresets() { mphoneStore.save('mphone_status_presets', statusPresets); }
+function statusBuiltin() { return { id: '', name: '默认', fields: DEFAULT_LOOK.statusFields, tpl: DEFAULT_STATUS_TPL, css: '' }; }
+// 角色现在用的是哪个：关了 → null；和某个预设一样 → 那个；都不一样 → 'custom'
+function charStatusPreset(char) {
+  var l = Object.assign({}, DEFAULT_LOOK, (char && char.look) || {});
+  if (!l.statusOn) return null;
+  var tpl = statusTplOf(l);
+  var all = [statusBuiltin()].concat(statusPresets);
+  for (var i = 0; i < all.length; i++) {
+    if ((all[i].tpl || '') === (tpl || '') && (all[i].tpl || all[i].fields === l.statusFields) && (all[i].css || '') === (l.statusCss || '')) return all[i];
+  }
+  return 'custom';
+}
+function applyStatusPreset(char, p) {
+  var l = Object.assign({}, DEFAULT_LOOK, char.look || {});
+  char.look = p ? Object.assign(l, { statusOn: true, statusFields: p.fields || DEFAULT_LOOK.statusFields, statusTpl: p.tpl || '', statusCss: p.css || '' })
+                : Object.assign(l, { statusOn: false });
+  saveCharList();
+  if (typeof applyChatRoomStyle === 'function' && charList[openingChatCharIdx] === char) applyChatRoomStyle(char);
+  if (typeof refreshStatusPanel === 'function') refreshStatusPanel();
+}
+
 function renderQuickBar() {
   var char = crQuickChar();
   var on = !!(char && char.chatCfg && char.chatCfg.quickBar);
@@ -36,8 +61,13 @@ function renderQuickBar() {
   var nWb = (char.worldbookFolders || []).length;
   var val = function(k, t) { crQuickBar.querySelector('[data-qb="' + k + '"] .cr-qb-val').textContent = t; };
   val('api', api ? api.name : '跟随全局');
-  val('preset', (pre ? pre.name : '跟随全局') + (typeof currentCrSubView !== 'undefined' && currentCrSubView !== 'contacts' ? '（剧情用）' : ''));
+  var drama = typeof currentCrSubView !== 'undefined' && currentCrSubView === 'contacts';
+  crQuickBar.querySelector('[data-qb="preset"]').style.display = drama ? '' : 'none';
+  crQuickBar.querySelector('[data-qb="status"]').style.display = drama ? 'none' : '';
+  val('preset', pre ? pre.name : '跟随全局');
   val('wb', nWb ? nWb + ' 本' : '未选');
+  var sp = charStatusPreset(char);
+  val('status', !sp ? '关' : sp === 'custom' ? '自定义' : sp.name);
   if (crQuickOpen) renderQuickPop();
 }
 
@@ -71,6 +101,45 @@ function setQuickField(key, value) {
   renderQuickBar();
 }
 
+// 角色设置「美化 → 状态栏」里的预设小标签：点一下套用到表单，长按删除
+function renderStatusPresetChips() {
+  var box = document.getElementById('statusPresetChips');
+  if (!box) return;
+  box.innerHTML = '';
+  [statusBuiltin()].concat(statusPresets).forEach(function(p) {
+    var chip = document.createElement('span');
+    chip.className = 'feed-visible-chip';
+    chip.textContent = p.name;
+    bindPress(chip, function() {
+      document.getElementById('statusOn').checked = true;
+      document.getElementById('statusSub').classList.add('open');
+      document.getElementById('statusFields').value = p.fields || DEFAULT_LOOK.statusFields;
+      document.getElementById('statusTpl').value = p.tpl || '';
+      document.getElementById('statusCss').value = p.css || '';
+      showToast('已套用「' + p.name + '」，点保存生效', 'plain');
+    }, p.id ? function() {
+      openConfirm('删除状态栏预设「' + p.name + '」？', function() {
+        statusPresets = statusPresets.filter(function(x) { return x !== p; });
+        saveStatusPresets();
+        renderStatusPresetChips();
+      });
+    } : function() {});
+    box.appendChild(chip);
+  });
+}
+document.getElementById('statusPresetSave').addEventListener('click', function() {
+  var name = document.getElementById('statusPresetName').value.trim();
+  if (!name) { shakeEl(document.getElementById('statusPresetName')); return; }
+  var p = { id: 'sp' + Date.now().toString(36), name: name, fields: document.getElementById('statusFields').value.trim() || DEFAULT_LOOK.statusFields,
+    tpl: document.getElementById('statusTpl').value.trim(), css: document.getElementById('statusCss').value };
+  statusPresets = statusPresets.filter(function(x) { return x.name !== name; }).concat([p]);
+  saveStatusPresets();
+  document.getElementById('statusPresetName').value = '';
+  renderStatusPresetChips();
+  showToast('✓ 已存为「' + name + '」', 'success');
+});
+renderStatusPresetChips();
+
 function renderQuickPop() {
   var char = crQuickChar();
   crQuickPop.innerHTML = '';
@@ -102,6 +171,15 @@ function renderQuickPop() {
       });
     });
     if (!groups.length) crQuickPop.insertAdjacentHTML('beforeend', '<div class="cr-qb-empty">还没有世界书</div>');
+  } else if (crQuickOpen === 'status') {
+    var now = charStatusPreset(char);
+    var pick = function(p) { applyStatusPreset(char, p); closeQuickPop(); renderQuickBar(); };
+    quickItem('关闭', '这个角色不带状态栏', !now, function() { pick(null); });
+    if (now === 'custom') quickItem('自定义', '角色设置里改过的', true, function() { closeQuickPop(); });
+    [statusBuiltin()].concat(statusPresets).forEach(function(p) {
+      quickItem(p.name, p.tpl ? 'HTML 模板' : '字段：' + p.fields, now === p || (now && now !== 'custom' && now.id === p.id && now.name === p.name), function() { pick(p); });
+    });
+    if (!statusPresets.length) crQuickPop.insertAdjacentHTML('beforeend', '<div class="cr-qb-empty">可以在角色设置「美化 → 状态栏」里把现在的样子「存为预设」</div>');
   }
 }
 

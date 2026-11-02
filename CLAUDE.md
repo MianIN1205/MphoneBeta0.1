@@ -31,7 +31,7 @@
 | boot | `mphoneStore`（IndexedDB 键值存储，键名都以 `mphone_` 开头）、载入页、脚本加载清单 `MPHONE_SCRIPTS` |
 | utils | 公共工具：`openConfirm` 确认弹窗（全站共用）、`closeOnBackdrop` 点遮罩关闭、`bindPress` 点一下 / 长按、`downloadBlob` / `shareOrDownload` 保存文件、`zipReadEntry` / `readDocxText` 读 zip 和 docx、时间格式（`fmtMsgTime` / `fmtListTime` / `fmtAgo` / `durText`）、左滑操作 `bindSwipeActions`、`showToast(msg, type)`（半透明：success 绿、error 红、plain 白底深灰字） |
 | api-errors | 接口报错记录（不记密钥），供 MianIN 答疑 |
-| llm | `llmRequest` 统一调用各家模型（Claude 原生接口，其余走 OpenAI 兼容），以及工具调用循环 |
+| llm | `llmRequest` 统一调用各家模型（Claude 原生接口，其余走 OpenAI 兼容），以及工具调用循环。`llmThinkOff`：所有请求都尽量关掉模型自带的思考（Gemini `reasoning_effort: none`、GPT-5 minimal、o 系列 low），400 / 422 时去掉重发并记进 `mphone_think_block` |
 | mcp | MCP 客户端（Streamable HTTP） |
 | image-picker / image-viewer | 通用图片选择弹窗、图片全屏查看 |
 | errors | 报错分析：`ERROR_TABLE` 报错对照表（按状态码 / 原文关键词归类，每类写好原因和办法，按顺序取第一条对上的），`showErrNotice` 在聊天里加一行和拍一拍一样大的「⚠️ 回复失败：…」（只在界面上，不存记录），点开 `#errInfoOverlay` 看分析；下面两个各自折叠的：「原始报错」（简短，原来的样子）和「完整报错代码」（状态行、接口、错误本身、接口返回的完整原文，JSON 排版、等宽字体；`apiError` 把原文存在 `err.body`；连不上时是出错位置；只把密钥打码 `errRedact`，不截断；代码在小框里自己滚动，下面有「复制这段代码」；两段都展开时框会按剩余空间变矮，整个弹窗始终放得下）。「复制报错」两段一起复制。不在当前对话时改成红色提示。加载清单里排最后 |
@@ -69,7 +69,7 @@
 | input / voice / media-send | 输入栏（回车只发自己的、↵ 换行、引用、❄️）；语音：点麦克风弹出录音小条 `#voicePop`（✕ 取消、🎙 按住录音、时长、波纹、提示），按住 200ms 开始录，松手发送，滑到 ✕ 松手取消（用户不要再长按麦克风本身）；转写；识图与语音发给 AI。「发送音频」模式：能听的模型只收录音（base64 WAV），文字部分不带转写；听不了的（`llmCaps` 判断或被拒后记住）在 `llmPrepare` 里换成转写文字，录完时若当前模型听不了会先转写（用户要求：能听就别靠转文字） |
 | msg-menu / msg-ops | 长按菜单；多选（批量删除 / 合并收藏）、删除本轮、从这里重新生成、清空记录。撤回：`m.recalledBy` 为 `user`（你撤回的，自己或角色的消息）或 `char`（角色写 `<撤回>…</撤回>`，先显示两秒再变撤回提示，角色设置可开「偷看」） |
 | feed / mine / wallet-fav | 动态（朋友圈）和社交圈（角色发动态后 `charNpcComments`：TA 生活里的人 1～4 个、每人 1～3 句来评论，作者 `{ type: "npc", ownerId }` 只有本人认识，名字记在 `char.feedNpcs`；角色看心情回全部 / 一部分 / 不回；用户的动态只有角色来评论。没有 ❄️ 按钮了：用户发动态 / 评论后 `feedScheduleReply` 记 `post._due`（几十秒到几分钟后），`feedTick` 到点 `requestFeedInteraction(post, { auto: true })`，回了弹 plain 小通知）、「我的」账号、钱包和收藏 |
-| quick-bar / status-panel | 便捷拓展栏（本窗口用的模型预设 / 预设 / 世界书）；状态栏面板（按 HTML 模板的 {{字段}} 画，左右滑看最近 10 轮） |
+| quick-bar / status-panel | 便捷拓展栏（聊天窗口：模型 / 世界书 / 状态栏；剧情窗口：模型 / 预设 / 世界书。状态栏预设 `mphone_status_presets`，在角色设置「美化 → 状态栏」存，拓展栏一点就换，自带「默认」；`charStatusPreset` 判断当前用的是哪个）；状态栏面板（按 HTML 模板的 {{字段}} 画，左右滑看最近 10 轮） |
 | stickers | 表情包：图床链接 / 文档（txt / docx / json / md / csv）导入（带分类的 json —— 眠花糖机表情包文件 `{ app: "mphone", type: "stickers", cats: [{ name, items: [{ name, url }] }] }` 或 uwu 那种每项带 group 的 —— 直接按分类全部导入，`stkGroupedFromJson` / `stkImportGrouped`）、分类、打字联想；消息存 `[表情包：名字]` + 图片地址，打不开时显示这句文字；每个角色单独设置能不能发、能用哪些分类、能不能看到图片（`char.stickerCfg`）；导入时压成小图存 `b64` 给 AI 看，读不了记 `b64Fail` |
 | opening | 剧情开场白：剧情空着时「添加开场白」（粘贴，角色卡自带的 `char.openings` 可点选填入）/「随机开场白」（给方向或留空，AI 按人设世界书写，先预览可「换一个」）；存成 `{ role: 'user', narr: true }`（这样能直接 ❄️ 或接着发），显示成居中旁白（render 的 `renderNarration`），发给 AI 标明是中立旁白；存的时候就把 {{char}}/{{user}} 换成名字。角色设置里不再有开场白列表 |
 | calendar | 角色回复里的 `<日程 类型="提醒/闹钟/日程 三选一" 时间="YYYY-MM-DD HH:MM">事</日程>` 记进桌面「纪念日」（`annivs` 里 `remind` / `by` / `charIds`），聊天里出卡片；只记在小手机里，不加到手机系统日历（试过 .ics / Google 日历，用户觉得麻烦） |
@@ -91,7 +91,7 @@
 | 文件 | 内容 |
 |---|---|
 | wb-import | 世界书「导入世界书」：眠花糖机世界书文件（`{ app: "mphone", type: "worldbook", folders: [{ name, entries }] }`）、酒馆世界书 JSON（`entries`，位置照导入角色卡的换算）、角色卡 PNG / JSON 里的 `character_book`、uwu 完整备份 .ee（用 migrate 的 `migScan`，按原分类分文件夹）；先列出来勾选，文件夹按名字合并，名字和内容都一样的跳过 |
-| tabs / worldbook / cot / presets / scene | Prompt 页的文件夹标签、世界书、思维链、预设（可导入酒馆预设；**只用在剧情窗口**，聊天窗口和各种活动只用系统提示词 + 世界书，用户定的）、系统提示词（`DEFAULT_SYSTEM_PROMPT` 在 scene.js：管角色语气风格和互动规范，灵活不 OOC；只有一个框、里面分类写（你是谁 / 语气 / 互动 / 聊天窗口 / 剧情窗口 / 其他活动），用户明确不要分窗口、不要预设切换；可改，点「保存」存 `mphone_system_prompt`，「恢复默认」回默认；以前的两个场景框 `mphone_scene_chat/drama` 已合并进来，`scenePrompt` 只告诉角色现在在哪个窗口。剧情窗口描写用户用第二人称；用户心里把剧情窗口当「剧情演绎」，但不改名，并希望小手机和现实生活有联系） |
+| tabs / worldbook / cot / presets / scene | Prompt 页的文件夹标签、世界书、思维链（页面上只有「启用」「在聊天里显示思考」两个开关；内容固定在 prompt.js 的 `COT_CHAT` / `COT_DRAMA`，`cotRules` 只在正式回复时加；`takeThink` 把 `<thinking>` / `<think>` 摘出来存 `m.think`，不显示成气泡、不再发给模型，开了显示就在回复前放一条小折叠条 `renderThinkBar`；关掉 = 完全不思考）、预设（可导入酒馆预设；**只用在剧情窗口**，聊天窗口和各种活动只用系统提示词 + 世界书，用户定的）、系统提示词（`DEFAULT_SYSTEM_PROMPT` 在 scene.js：管角色语气风格和互动规范，灵活不 OOC；只有一个框、里面分类写（你是谁 / 语气 / 互动 / 聊天窗口 / 剧情窗口 / 其他活动），用户明确不要分窗口、不要预设切换；可改，点「保存」存 `mphone_system_prompt`，「恢复默认」回默认；以前的两个场景框 `mphone_scene_chat/drama` 已合并进来，`scenePrompt` 只告诉角色现在在哪个窗口。剧情窗口描写用户用第二人称；用户心里把剧情窗口当「剧情演绎」，但不改名，并希望小手机和现实生活有联系） |
 
 世界书：新条目默认位置「自动」（`wbResolvePos`：常驻的放前、关键词触发的放中，都不插进聊天记录），可手动改前 / 中 / 后。同一位置的条目合成一段，开头是 `WB_WRAP`（只当背景，不复述、不反复提、不说「设定」「世界书」）。关键词只在最近 6 条里**用户**的消息中找，角色自己提到的不触发，避免 TA 反复绕着同一个设定说（用户反馈过）。各功能自己的提示词（动态、日记、总结等）写死在代码里，用户说不用拿出来。
 

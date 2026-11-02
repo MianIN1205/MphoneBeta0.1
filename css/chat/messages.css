@@ -277,3 +277,10 @@
 }
 .chat-msg-avatar.cr-pat-shake { animation: crPatShake 0.36s ease; }
 .cr-pat-notice { color: #a89aa0; }
+/* 思维链折叠条（js/chat/render.js 的 renderThinkBar）：很小、灰色，点开看思考 */
+.cr-think-bar { align-self: flex-start; max-width: 80%; margin: 2px 0 -2px 48px; flex-shrink: 0; }
+.cr-think-head { display: inline-block; font-size: 11px; color: #a89aa0; padding: 2px 8px; border-radius: 9px; background: rgba(0,0,0,0.035); cursor: pointer; }
+.cr-think-head::after { content: ' ▸'; }
+.cr-think-bar.open .cr-think-head::after { content: ' ▾'; }
+.cr-think-body { display: none; margin-top: 4px; font-size: 11.5px; color: #8a7f84; line-height: 1.6; white-space: pre-wrap; padding: 6px 10px; border-radius: 10px; background: rgba(0,0,0,0.035); }
+.cr-think-bar.open .cr-think-body { display: block; }

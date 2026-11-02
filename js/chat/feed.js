@@ -426,6 +426,7 @@ feedCommentInput.addEventListener('keydown', function(e) {
 function callApiOnce(messages, char) {
   // 按接口类型自动适配（见 js/core/llm.js）
   return llmRequest(messages, { stream: false, cfg: char ? getApiCfg(char) : undefined }).then(function(text) {
+    text = typeof takeThink === 'function' ? takeThink(text).text : String(text || '');
     if (!text) throw new Error('未收到回复内容');
     return String(text).trim();
   });

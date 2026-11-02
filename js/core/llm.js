@@ -22,6 +22,18 @@ function llmCaps(cfg) {
   var b = llmMediaBlock[cfg.model] || {};
   return { image: !noImage && !b.image, audio: !noAudio && !b.audio };
 }
+// 尽量关掉模型自带的思考（眠花糖机的思维链是自己写的，见 js/chat/prompt.js；关掉思维链时也不要模型自己想）
+// Claude 官方接口默认就不思考；OpenAI 兼容接口里 Gemini、GPT-5、o 系列可以用 reasoning_effort 调低。
+// 中转或模型不认这个参数报错时，自动去掉再发一次，并记住这个模型（mphone_think_block）
+var llmThinkBlock = mphoneStore.load('mphone_think_block', {});
+function llmThinkOff(cfg) {
+  if (llmProvider(cfg) === 'anthropic' || llmThinkBlock[cfg.model]) return null;
+  var m = llmModelName(cfg);
+  if (/gemini/.test(m)) return { reasoning_effort: 'none' };
+  if (/gpt-5/.test(m)) return { reasoning_effort: 'minimal' };
+  if (/(^|[-\/])o[1-9]\b/.test(m)) return { reasoning_effort: 'low' };
+  return null;
+}
 // 需要「系统提示合并成一条、用户和角色交替、最后一条是用户」的接口
 function llmStrict(cfg) {
   return llmProvider(cfg) === 'anthropic' || /claude|deepseek-reasoner|deepseek-r1/.test(llmModelName(cfg));
@@ -116,6 +128,7 @@ function llmBuild(prepared, cfg, opts) {
     return { url: base + '/messages', init: { method: 'POST', headers: headers, body: JSON.stringify(body), signal: opts.signal } };
   }
   var obody = { model: cfg.model, messages: prepared.messages, stream: !!opts.stream };
+  if (opts.thinkOff) Object.assign(obody, opts.thinkOff);
   var temp = opts.temperature !== undefined ? opts.temperature : cfg.temp;
   if (llmSendTemperature(cfg) && typeof temp === 'number' && !isNaN(temp)) obody.temperature = temp;
   return { url: base + '/chat/completions', init: {
@@ -280,14 +293,27 @@ function llmRequest(msgs, opts) {
     });
   }
   var provider = llmProvider(cfg);
+  var thinkOff = llmThinkOff(cfg);
   function attempt(caps) {
     var prepared = llmPrepare(msgs, cfg, caps);
-    return resolveMediaParts(prepared.messages).then(function() {
-      var req = llmBuild(prepared, cfg, opts);
-      return fetch(req.url, req.init);
-    }).then(function(res) {
-      if (!res.ok) return apiError(res);
-      return llmRead(res, provider, opts.onText);
+    var once = function(off) {
+      return resolveMediaParts(prepared.messages).then(function() {
+        var req = llmBuild(prepared, cfg, Object.assign({}, opts, { thinkOff: off }));
+        return fetch(req.url, req.init);
+      }).then(function(res) {
+        if (!res.ok) return apiError(res);
+        return llmRead(res, provider, opts.onText);
+      });
+    };
+    if (!thinkOff) return once(null);
+    // 「关掉自带思考」的参数被拒（400 之类）：去掉再发一次，成功了就记住这个模型以后不再带
+    return once(thinkOff).catch(function(err) {
+      if ((err && err.name === 'AbortError') || !err || !(err.status === 400 || err.status === 422)) throw err;
+      return once(null).then(function(t) {
+        llmThinkBlock[cfg.model] = true;
+        mphoneStore.save('mphone_think_block', llmThinkBlock);
+        return t;
+      });
     });
   }
   var caps = opts.keepMedia ? { image: true, audio: true } : llmCaps(cfg);

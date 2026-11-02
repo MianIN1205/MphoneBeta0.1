@@ -11,10 +11,11 @@ function getDramaHistory(idx) { var k = charKey(idx); if (!dramaHistories[k]) dr
 function stripMsg(m) {
   var o = { role: m.role, content: m.content, imgSrc: m.imgSrc, sticker: m.sticker, status: m.status, time: m.time,
             quote: m.quote, recalled: m.recalled, recalledText: m.recalledText, recalledBy: m.recalledBy,
-            voice: m.voice, transcript: m.transcript, action: m.action, recap: m.recap, pat: m.pat, patSuffix: m.patSuffix, cal: m.cal };
+            voice: m.voice, transcript: m.transcript, action: m.action, recap: m.recap, pat: m.pat, patSuffix: m.patSuffix, cal: m.cal,
+            narr: m.narr, think: m.think };
   if (m.alts) {
     o.alts = m.alts.map(function(group) {
-      return group.map(function(g) { return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, action: g.action, recap: g.recap, pat: g.pat, cal: g.cal,
+      return group.map(function(g) { return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, action: g.action, recap: g.recap, pat: g.pat, cal: g.cal, think: g.think,
                                               recalled: g.recalled, recalledText: g.recalledText, recalledBy: g.recalledBy }; });
     });
     o.altIdx = m.altIdx;

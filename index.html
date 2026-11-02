@@ -1857,15 +1857,24 @@
             <div class="cot-switch-row">
               <div class="cot-switch-info">
                 <span class="cot-switch-title">启用思维链</span>
-                <span class="cot-switch-desc">开启后按需向模型注入思维链规则</span>
+                <span class="cot-switch-desc">开着：回复前先用眠花糖机的方式想一想（聊天、剧情各一套），代替模型自带的思考；关着：完全不思考，回得更快</span>
               </div>
               <label class="toggle-wrap">
                 <input type="checkbox" id="cotEnableToggle">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div class="prompt-section-label">思维链提示词</div>
-            <textarea class="prompt-textarea" id="cotPromptTA" rows="12" placeholder="在此输入思维链（Chain of Thought）引导提示词，例如要求模型在回复前先进行心理活动、情境分析或逻辑推演…"></textarea>
+            <div class="cot-switch-row">
+              <div class="cot-switch-info">
+                <span class="cot-switch-title">在聊天里显示思考</span>
+                <span class="cot-switch-desc">开着时，每次回复前面有一条很小的「💭 思考」，点开才看得到</span>
+              </div>
+              <label class="toggle-wrap">
+                <input type="checkbox" id="cotShowToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="auto-hint" style="margin:6px 2px 0;">不管开不开，都会尽量关掉模型自带的思考（Gemini、GPT 这类支持的）；有的模型没法完全关掉自带思考，比如 Gemini 2.5 Pro、DeepSeek R1。</div>
           </div>
 
         </div>
@@ -1928,6 +1937,7 @@
           <button class="cr-qb-chip" data-qb="api"><span class="cr-qb-key">模型</span><span class="cr-qb-val"></span></button>
           <button class="cr-qb-chip" data-qb="preset"><span class="cr-qb-key">预设</span><span class="cr-qb-val"></span></button>
           <button class="cr-qb-chip" data-qb="wb"><span class="cr-qb-key">世界书</span><span class="cr-qb-val"></span></button>
+          <button class="cr-qb-chip" data-qb="status"><span class="cr-qb-key">状态栏</span><span class="cr-qb-val"></span></button>
           <div class="cr-qb-pop" id="crQuickPop"></div>
         </div>
         <!-- 聊天子视图 -->
@@ -2644,6 +2654,12 @@
             <div class="bubble-section-label" style="margin-bottom:6px;">状态栏美化（CSS，作用于 .cr-status-card）</div>
             <textarea class="custom-css-textarea" id="statusCss" rows="4"
               placeholder="/* 例：.cr-status-card { background: #fff7e6; } */"></textarea>
+            <div class="bubble-section-label" style="margin:10px 0 6px;">状态栏预设（点一下套用到上面，聊天窗口的便捷拓展栏也能直接换）</div>
+            <div class="feed-visible-list" id="statusPresetChips"></div>
+            <div class="auto-row" style="margin-top:8px;">
+              <input class="field-input" type="text" id="statusPresetName" maxlength="16" placeholder="给现在的样子起个名字">
+              <button class="mine-acc-btn mine-acc-btn-add" id="statusPresetSave" style="flex:none;padding:8px 14px;">存为预设</button>
+            </div>
           </div>
         </div>
         </div>

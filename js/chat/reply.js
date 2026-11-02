@@ -11,6 +11,8 @@ function takeStatus(text) {
 // 把角色的一次原始回复拆成多条消息（||| 分隔）并取出 <status>，写入记录并显示
 function commitAssistantReply(hist, raw, list, empty) {
   var status = '', headStatus = '', recap = '', patBack = false;
+  var th = takeThink(raw);   // 思维链：摘出来存在第一条上，不显示成气泡（见 js/chat/prompt.js）
+  raw = th.text;
   var st = takeStatus(raw);
   raw = st.text; status = st.status;
   raw = raw.replace(/<签名>([\s\S]*?)<\/签名>/g, function(_, s) { headStatus = s.replace(/\s+/g, ' ').trim().slice(0, 20); return ''; });
@@ -51,6 +53,7 @@ function commitAssistantReply(hist, raw, list, empty) {
     return typeof p === 'string' ? { role: 'assistant', content: p, time: now } : Object.assign({ role: 'assistant', time: now }, p);
   });
   if (added.length && status) added[added.length - 1].status = status;
+  if (added.length && th.think) added[0].think = th.think;
   if (added.length && recap) added[added.length - 1].recap = recap;
   actions.forEach(function(a) { added.push({ role: 'assistant', content: '', action: a, time: now }); });
   calItems.forEach(function(c) { added.push({ role: 'assistant', content: '', cal: c, time: now }); });
@@ -233,7 +236,7 @@ function sendMsg(userText, requestOnly, onDone) {
   var mcpTools = (typeof mcpActiveTools === 'function') ? mcpActiveTools() : [];
   // 开了向量记忆时先算好这次对话的向量（失败就用本地相似度）
   (typeof memPrepare === 'function' ? memPrepare(replyChar, hist) : Promise.resolve()).then(function() {
-    return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : dramaFormatRules(charList[replyCharIdx])), {
+    return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : dramaFormatRules(charList[replyCharIdx]), cotRules(!isChatView)), {
     stream: true,
     signal: ctrl.signal,
     cfg: cfg,
@@ -245,7 +248,8 @@ function sendMsg(userText, requestOnly, onDone) {
       if (!started) { typing.bubble.innerHTML = ''; started = true; }
       aiText = full;
       // 操作块不直接显示原始代码，写完后会变成确认卡片
-      typing.bubble.textContent = aiText.replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
+      typing.bubble.textContent = aiText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
+        .replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
         .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
         .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, '').trim();
       if (activeList) activeList.scrollTop = 999999;

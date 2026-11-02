@@ -109,6 +109,7 @@ function renderHistMsg(m, list, empty) {
     list.querySelectorAll('.cr-alt-switch').forEach(function(el) { el.remove(); });
     list._altTime = 0;
   }
+  var thinkBar = m.think && m.role === 'assistant' ? renderThinkBar(m, list) : null;
   if (m.recalled && !m._flash) return renderRecallNotice(m, list, empty);
   if (m.pat) return renderPatNotice(m, list, empty);
   if (m.narr) return renderNarration(m, list, empty);
@@ -124,7 +125,7 @@ function renderHistMsg(m, list, empty) {
         : (m.sticker && typeof appendStickerMsg === 'function') ? appendStickerMsg(role, m, list, empty)
         : appendMsg(role, m.content, false, list, empty);
   r.row._msg = m;
-  r.row._extras = [];
+  r.row._extras = thinkBar ? [thinkBar] : [];
   if (m.quote) r.row._extras.push(appendQuoteBlock(list, m.quote, role));
   if (m.alts && m.alts.length > 1) { r.row._extras.push(appendAltSwitch(list, m)); list._altTime = m.time || 1; }
   // 角色刚发就撤回的：先正常显示两秒半，再换成「撤回了一条消息」
@@ -216,7 +217,7 @@ function trailingReplyGroup(hist) {
 
 function cloneGroup(group) {
   return group.map(function(g) {
-    return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, recap: g.recap, pat: g.pat, cal: g.cal,
+    return { role: g.role, content: g.content, sticker: g.sticker, status: g.status, time: g.time, recap: g.recap, pat: g.pat, cal: g.cal, think: g.think,
              recalled: g.recalled, recalledText: g.recalledText, recalledBy: g.recalledBy,
              action: g.action ? JSON.parse(JSON.stringify(g.action)) : undefined };
   });
@@ -275,6 +276,23 @@ function renderNarration(m, list, empty) {
   list.appendChild(row);
   list.scrollTop = list.scrollHeight;
   return row;
+}
+// 思维链折叠条：Prompt → 思维链 开了「在聊天里显示思考」才有，放在那次回复的第一条前面，点开看思考全文
+function renderThinkBar(m, list) {
+  if (!mphoneStore.load('mphone_cot_show', false)) return null;
+  var bar = document.createElement('div');
+  bar.className = 'cr-think-bar';
+  var head = document.createElement('div');
+  head.className = 'cr-think-head';
+  head.textContent = '💭 思考';
+  var body = document.createElement('div');
+  body.className = 'cr-think-body';
+  body.textContent = m.think;
+  head.addEventListener('click', function() { bar.classList.toggle('open'); });
+  bar.appendChild(head);
+  bar.appendChild(body);
+  list.appendChild(bar);
+  return bar;
 }
 function patShake(av) {
   if (!av) return;
