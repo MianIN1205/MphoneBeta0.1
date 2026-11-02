@@ -18,6 +18,7 @@ function closeCrPlusPanel() {
     if (p[1]) p[1].classList.remove('active');
   });
   if (crBottomBar) crBottomBar.classList.remove('panel-open');
+  if (typeof closeVoicePop === 'function') closeVoicePop();
 }
 
 // 切换某个底部抽屉；同一时间只展开一个

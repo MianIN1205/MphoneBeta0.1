@@ -1,17 +1,15 @@
-// 眠花糖机 — 语音：长按麦克风录音、语音气泡、波形、转写
+// 眠花糖机 — 语音：点麦克风弹出录音小条（按住录、松手发、滑到 ✕ 取消）、语音气泡、波形、转写
 
 // =============================================
-// 麦克风键 — 长按录音 → 语音气泡
+// 麦克风键 — 点一下弹出录音小条，按住 🎙 录音 → 语音气泡
 // =============================================
 var crMicBtn      = document.getElementById('crMicBtn');
-var MIC_HOLD_MS   = 500;
 var _micTimer     = null;
 var _mediaRecorder= null;
 var _audioChunks  = [];
 var _recordStart  = 0;
 var _micStream    = null;
 var _micHolding   = false;
-var _micStartX    = 0, _micStartY = 0;
 
 // 麦克风授权后一直保持连接，离开聊天窗口或切到后台才释放：在同一次聊天里只问一次权限
 // （网页拿不到永久权限；安卓选「使用应用时允许」会被浏览器记住，iPhone 会经常重新询问）
@@ -35,33 +33,13 @@ document.addEventListener('visibilitychange', function() {
   if (document.hidden) releaseMic();
 });
 
-// 录音浮窗 refs
-var _recOverlay    = document.getElementById('recOverlay');
+// 录音小条里的时长和波纹
 var _recTimerEl    = document.getElementById('recTimer');
 var _recLiveCanvas = document.getElementById('recLiveCanvas');
 var _recTimerInt   = null;
 var _recAnimFrame  = null;
 var _recAnalyser   = null;
 var _recAudioCtx   = null;
-
-function startRecOverlay() {
-  _recOverlay.classList.add('active');
-  var t = 0;
-  _recTimerEl.textContent = '0:00';
-  _recTimerInt = setInterval(function() {
-    t++;
-    var m = Math.floor(t / 60), s = t % 60;
-    _recTimerEl.textContent = m + ':' + String(s).padStart(2, '0');
-  }, 1000);
-}
-
-function stopRecOverlay() {
-  _recOverlay.classList.remove('active');
-  clearInterval(_recTimerInt);
-  cancelAnimationFrame(_recAnimFrame);
-  if (_recAudioCtx) { try { _recAudioCtx.close(); } catch(e){} _recAudioCtx = null; }
-  _recAnalyser = null;
-}
 
 function startLiveWaveform(stream) {
   try {
@@ -75,7 +53,8 @@ function startLiveWaveform(stream) {
     var cvs = _recLiveCanvas;
     var W = cvs.width, H = cvs.height;
     var ctx = cvs.getContext('2d');
-    var BAR_W = 3, GAP = 2;
+    var k = cvs.width / (cvs.clientWidth || cvs.width);   // 高清屏上画布是两倍大，柱子跟着放大
+    var BAR_W = 3 * k, GAP = 2 * k;
     var barCount = Math.floor(W / (BAR_W + GAP));
     function draw() {
       _recAnimFrame = requestAnimationFrame(draw);
@@ -320,13 +299,75 @@ function transcribeVoiceMsg(m, el) {
   }).then(function(t) { delete m._transcribing; return t; }, function(e) { delete m._transcribing; throw e; });
 }
 
-// 麦克风长按录音事件绑定
-crMicBtn.addEventListener('pointerdown', function(e) {
+// =============================================
+// 点麦克风：输入栏上方弹出一个小条 [✕ 取消] [🎙 按住说话] [时长] [波纹] [提示]
+// · 按住 🎙 开始录音，松手就发送；录音时把手指滑到左边的红色 ✕ 上再松手，就是取消
+// · 再点一次麦克风、点别处、打开表情 / 加号抽屉、切到剧情，小条都会收起
+// =============================================
+var voicePop    = document.getElementById('voicePop');
+var voiceRecBtn = document.getElementById('voiceRecBtn');
+var voiceCancel = document.getElementById('voiceCancel');
+var voiceHint   = document.getElementById('voiceHint');
+var VOICE_HOLD_MS = 200;   // 按住这么久才开始录，免得轻点一下就录
+var _voiceArmed = false;   // 手指在 ✕ 上
+
+function voiceHintText(t) { if (voiceHint) voiceHint.textContent = t; }
+function openVoicePop() {
+  if (typeof closeCrPlusPanel === 'function') closeCrPlusPanel();
+  voicePop.classList.add('open');
+  crMicBtn.classList.add('active');
+  voiceHintText('按住说话');
+  _recTimerEl.textContent = '0:00';
+  var c = _recLiveCanvas.getContext('2d'); c.clearRect(0, 0, _recLiveCanvas.width, _recLiveCanvas.height);
+}
+function closeVoicePop() {
+  if (!voicePop.classList.contains('open')) return;
+  if (_micHolding) finishRecording(false);
+  voicePop.classList.remove('open');
+  crMicBtn.classList.remove('active');
+}
+crMicBtn.addEventListener('click', function() {
+  if (voicePop.classList.contains('open')) closeVoicePop(); else openVoicePop();
+});
+// 点小条和麦克风以外的地方：收起
+document.addEventListener('pointerdown', function(e) {
+  if (!voicePop.classList.contains('open') || _micHolding) return;
+  if (voicePop.contains(e.target) || crMicBtn.contains(e.target)) return;
+  closeVoicePop();
+});
+new MutationObserver(function() {
+  if (!appChatRoom.classList.contains('active')) closeVoicePop();
+}).observe(appChatRoom, { attributes: true, attributeFilter: ['class'] });
+
+function startRecOverlay() {
+  voicePop.classList.add('recording');
+  voiceHintText('松手发送');
+  var t = 0;
+  _recTimerEl.textContent = '0:00';
+  _recTimerInt = setInterval(function() {
+    t++;
+    var m = Math.floor(t / 60), s = t % 60;
+    _recTimerEl.textContent = m + ':' + String(s).padStart(2, '0');
+  }, 1000);
+}
+function stopRecOverlay() {
+  voicePop.classList.remove('recording');
+  voiceCancel.classList.remove('armed');
+  _voiceArmed = false;
+  voiceHintText('按住说话');
+  clearInterval(_recTimerInt);
+  cancelAnimationFrame(_recAnimFrame);
+  if (_recAudioCtx) { try { _recAudioCtx.close(); } catch(e){} _recAudioCtx = null; }
+  _recAnalyser = null;
+}
+
+// 按住 🎙：开始录音
+voiceRecBtn.addEventListener('pointerdown', function(e) {
   e.preventDefault();
-  // 捕获指针：手指/鼠标移出按钮后松开也能收到 pointerup
-  try { crMicBtn.setPointerCapture(e.pointerId); } catch (_) {}
-  _micStartX = e.clientX; _micStartY = e.clientY;
+  // 捕获指针：手指滑出按钮（比如滑到 ✕ 上）也能收到松手
+  try { voiceRecBtn.setPointerCapture(e.pointerId); } catch (_) {}
   _micHolding = false;
+  clearTimeout(_micTimer);
   _micTimer = setTimeout(function() {
     _micHolding = true;
     getMicStream()
@@ -340,7 +381,6 @@ crMicBtn.addEventListener('pointerdown', function(e) {
         };
         _mediaRecorder.start();
         _recordStart = Date.now();
-        crMicBtn.classList.add('recording');
         startRecOverlay();
         startLiveWaveform(stream);
       })
@@ -349,12 +389,26 @@ crMicBtn.addEventListener('pointerdown', function(e) {
         showToast('✗ 无法访问麦克风', 'error');
         _micHolding = false;
       });
-  }, MIC_HOLD_MS);
+  }, VOICE_HOLD_MS);
 });
+// 录音时手指在不在 ✕ 上
+voiceRecBtn.addEventListener('pointermove', function(e) {
+  if (!_micHolding) return;
+  var r = voiceCancel.getBoundingClientRect(), pad = 12;
+  var on = e.clientX >= r.left - pad && e.clientX <= r.right + pad && e.clientY >= r.top - pad && e.clientY <= r.bottom + pad;
+  if (on === _voiceArmed) return;
+  _voiceArmed = on;
+  voiceCancel.classList.toggle('armed', on);
+  voiceHintText(on ? '松手取消' : '松手发送');
+  if (on && navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
+});
+voiceRecBtn.addEventListener('pointerup', function() { finishRecording(!_voiceArmed); });
+voiceRecBtn.addEventListener('pointercancel', function() { finishRecording(false); });
+voiceRecBtn.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
-function stopRecording() {
+// 结束录音：send = true 发出去，false 丢掉
+function finishRecording(send) {
   clearTimeout(_micTimer);
-  crMicBtn.classList.remove('recording');
   stopRecOverlay();
   if (!_micHolding || !_mediaRecorder || _mediaRecorder.state === 'inactive') {
     _micHolding = false; return;
@@ -362,10 +416,11 @@ function stopRecording() {
   _micHolding = false;
   var duration = (Date.now() - _recordStart) / 1000;
   _mediaRecorder.onstop = function() {
+    if (!appChatRoom.classList.contains('active') || document.hidden) releaseMic();
+    if (!send) { showToast('已取消', 'plain'); return; }
     // iPhone Safari 录的是 audio/mp4，其他浏览器多为 audio/webm，按录音器实际格式保存
     var type = (_mediaRecorder.mimeType || 'audio/webm').split(';')[0];
     var blob = new Blob(_audioChunks, { type: type });
-    if (!appChatRoom.classList.contains('active') || document.hidden) releaseMic();
     if (duration < 0.6) { showToast('录音时间太短', 'error'); return; }
     if (openingChatCharIdx === -1) return;
     var reader = new FileReader();
@@ -388,10 +443,3 @@ function stopRecording() {
   };
   _mediaRecorder.stop();
 }
-
-crMicBtn.addEventListener('pointerup',     stopRecording);
-crMicBtn.addEventListener('pointercancel', stopRecording);
-crMicBtn.addEventListener('pointermove', function(e) {
-  var dx = e.clientX - _micStartX, dy = e.clientY - _micStartY;
-  if (dx * dx + dy * dy > 400) stopRecording();
-});

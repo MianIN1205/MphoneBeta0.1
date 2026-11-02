@@ -1975,6 +1975,22 @@
       </div>
 
       <div class="chat-room-bottom" id="crBottomBar">
+        <!-- 点麦克风弹出的录音小条：按住 🎙 录音，松手发送，滑到 ✕ 取消（js/chat/voice.js） -->
+        <div class="voice-pop" id="voicePop">
+          <button class="voice-cancel" id="voiceCancel" aria-label="取消录音">
+            <svg viewBox="0 0 24 24"><line x1="7" y1="7" x2="17" y2="17"></line><line x1="17" y1="7" x2="7" y2="17"></line></svg>
+          </button>
+          <button class="voice-rec-btn" id="voiceRecBtn" aria-label="按住说话">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+            </svg>
+          </button>
+          <span id="recTimer">0:00</span>
+          <canvas id="recLiveCanvas" width="192" height="60"></canvas>
+          <span class="voice-hint" id="voiceHint">按住说话</span>
+        </div>
         <!-- 表情键（仅聊天界面显示） -->
         <button class="cr-icon-btn cr-chat-only" id="crEmojiToggleBtn" aria-label="表情">
           <svg viewBox="0 0 24 24">
@@ -2194,11 +2210,6 @@
         </div>
       </div>
 
-      <!-- 录音浮窗（长按麦克风时居中显示） -->
-      <div id="recOverlay">
-        <span id="recTimer">0:00</span>
-        <canvas id="recLiveCanvas" width="140" height="44"></canvas>
-      </div>
 
     </div>
 

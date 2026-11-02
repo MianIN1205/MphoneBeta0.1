@@ -165,29 +165,42 @@
 }
 .voice-transcript:empty::before { content: attr(data-placeholder); color: #bbb; }
 
-/* 录音浮窗 */
-#recOverlay {
-  display: none;
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 500;
-  background: rgba(255,248,252,0.95);
+/* 录音小条：点麦克风后在输入栏上方淡入（js/chat/voice.js） */
+.voice-pop {
+  position: absolute; left: 10px; bottom: calc(100% + 8px); z-index: 6;
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 14px 7px 7px; border-radius: 30px;
+  background: rgba(255,248,252,0.96);
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
-  border: 1px solid rgba(255,255,255,0.88);
-  padding: 18px 24px 16px;
-  min-width: 170px;
-  flex-direction: column; align-items: center; gap: 12px;
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: 0 6px 24px rgba(120,70,80,0.16), 0 2px 6px rgba(0,0,0,0.06);
+  opacity: 0; transform: scale(0.96); transform-origin: left bottom; pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
-#recOverlay.active { display: flex; }
-#recTimer {
-  font-size: 22px; font-weight: 600;
-  color: rgba(190,60,90,0.88); letter-spacing: 1.5px;
-  font-variant-numeric: tabular-nums;
+.voice-pop.open { opacity: 1; transform: none; pointer-events: auto; }
+.voice-pop button { border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
+.voice-pop svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.voice-cancel {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(224,90,100,0.13); color: #e05a64;
+  visibility: hidden; transition: background 0.15s, color 0.15s, transform 0.15s;
 }
-#recLiveCanvas { display: block; }
+.voice-cancel svg { width: 15px; height: 15px; }
+.voice-pop.recording .voice-cancel { visibility: visible; }
+.voice-cancel.armed { background: #e05a64; color: #fff; transform: scale(1.12); }
+.voice-rec-btn {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(208,88,88,0.12); color: #d05858;
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  transition: background 0.15s, color 0.15s;
+}
+.voice-rec-btn svg { width: 21px; height: 21px; }
+.voice-pop.recording .voice-rec-btn { background: #d05858; color: #fff; }
+#recTimer { font-size: 14px; font-weight: 600; color: rgba(190,60,90,0.88); font-variant-numeric: tabular-nums; min-width: 32px; }
+#recLiveCanvas { display: block; width: 96px; height: 30px; }
+.voice-hint { font-size: 11.5px; color: #a8909c; white-space: nowrap; }
+.voice-pop.recording .voice-hint { color: #c06070; }
+.cr-icon-btn#crMicBtn.active svg { stroke: #d05858; }
 
 /* chat-msg-row 需要 position:relative */
 .chat-msg-row { position: relative; }
