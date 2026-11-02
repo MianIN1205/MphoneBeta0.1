@@ -177,7 +177,7 @@ function renderFeedPost(post, me) {
     el.appendChild(imgs);
   }
 
-  // 操作：点赞 / 评论 / ❄️ 请求角色互动
+  // 操作：收藏 / 点赞 / 评论（角色会过一会儿自己来回应，见 feedScheduleReply）
   var actions = document.createElement('div');
   actions.className = 'feed-post-actions';
   var liked = post.likes.some(function(a) { return sameAuthor(a, me); });
@@ -194,11 +194,6 @@ function renderFeedPost(post, me) {
   cmtBtn.className = 'feed-act-btn';
   cmtBtn.textContent = '评论';
   cmtBtn.addEventListener('click', function() { openFeedComment(post, null); });
-  var snowBtn = document.createElement('button');
-  snowBtn.className = 'feed-act-btn' + (post._busy ? ' busy' : '');
-  snowBtn.textContent = '❄️';
-  snowBtn.title = '请求角色互动';
-  snowBtn.addEventListener('click', function() { requestFeedInteraction(post); });
   var favBtn = document.createElement('button');
   var faved = isFavRef(post.id);
   favBtn.className = 'feed-act-btn' + (faved ? ' liked' : '');
@@ -207,7 +202,6 @@ function renderFeedPost(post, me) {
   actions.appendChild(favBtn);
   actions.appendChild(likeBtn);
   actions.appendChild(cmtBtn);
-  actions.appendChild(snowBtn);
   el.appendChild(actions);
 
   if (post.likes.length || post.comments.length) {
@@ -357,6 +351,7 @@ document.getElementById('feedComposeSend').addEventListener('click', function() 
     likes: [],
     comments: []
   });
+  feedScheduleReply(feedPosts[0], 40, 240);   // 能看到的角色过一会儿来点赞、评论
   saveFeed();
   renderFeed();
   feedComposeOverlay.classList.remove('open');
@@ -415,6 +410,7 @@ function sendFeedComment() {
     id: genFeedId('c'), author: getMineAccount(), text: text, time: Date.now(),
     replyTo: feedCommentTarget.replyTo
   });
+  feedScheduleReply(feedCommentTarget.post, 30, 180);   // 被你评论 / 回复的角色过一会儿来回你
   saveFeed();
   closeFeedComment();
   renderFeed();
@@ -624,8 +620,30 @@ function charInteract(post, idx) {
   });
 }
 
-// ❄️：用户动态 → 可见角色依次互动；角色动态 → 作者回复评论（其他角色也可能来互动）
-function requestFeedInteraction(post) {
+// 到点了：用户动态 → 可见角色依次互动；角色动态 → 作者回复评论（其他角色也可能来互动）
+// ---------- 角色过一会儿自己来回应（不用点按钮） ----------
+// 你发了动态、发了评论后，记下一个时间 post._due（几十秒到几分钟后，随机）；到点时需要回应的角色依次来点赞、评论、回复，
+// 回了就在顶上弹一条小通知。小手机关着时不会回，下次打开时补上
+function feedScheduleReply(post, minSec, maxSec) {
+  var at = Date.now() + (minSec + Math.random() * (maxSec - minSec)) * 1000;
+  post._due = post._due ? Math.min(post._due, at) : at;
+}
+function feedTick() {
+  var now = Date.now();
+  feedPosts.forEach(function(post) {
+    if (post._due && post._due <= now && !post._busy) {
+      delete post._due;
+      saveFeed();
+      requestFeedInteraction(post, { auto: true });
+    }
+  });
+}
+setInterval(feedTick, 15000);
+if (typeof onMphoneReady === 'function') onMphoneReady(function() { setTimeout(feedTick, 5000); });
+
+// opts.auto：到点自动来的，没人要回就不提示，回了就弹「某某评论了你的动态」
+function requestFeedInteraction(post, opts) {
+  opts = opts || {};
   if (post._busy) return;
   var targets = [];
   charList.forEach(function(char, idx) {
@@ -633,20 +651,30 @@ function requestFeedInteraction(post) {
     var canSee = charCanSeePost(char, post);
     if (canSee && charNeedsToRespond(post, me)) targets.push(idx);
   });
-  if (!targets.length) { showToast('暂时没有需要回应的角色', 'success'); return; }
+  if (!targets.length) { if (!opts.auto) showToast('暂时没有需要回应的角色', 'success'); return; }
+  var mine = post.author.type === 'user';
   post._busy = true;
   renderFeed();
   var chain = Promise.resolve();
   var errors = 0;
   targets.forEach(function(idx) {
     chain = chain.then(function() {
-      return charInteract(post, idx).catch(function(err) { errors++; console.warn('[Mphone] 动态互动失败:', err); });
+      var before = post.comments.length, liked = post.likes.length;
+      return charInteract(post, idx).then(function() {
+        if (!opts.auto) return;
+        var me = charAuthor(charList[idx]);
+        var said = post.comments.slice(before).filter(function(c) { return sameAuthor(c.author, me); });
+        var toYou = said.some(function(c) { return c.replyTo && c.replyTo.type === 'user'; });
+        var msg = said.length ? (toYou ? '回复了你' : mine ? '评论了你的动态' : '在动态下说了话')
+          : post.likes.length > liked && mine ? '赞了你的动态' : '';
+        if (msg) { showToast('「' + me.name + '」' + msg, 'plain'); saveFeed(); renderFeed(); }
+      }).catch(function(err) { errors++; console.warn('[Mphone] 动态互动失败:', err); });
     });
   });
   chain.then(function() {
     delete post._busy;
     saveFeed();
     renderFeed();
-    if (errors) showToast('✗ 有 ' + errors + ' 个角色互动失败', 'error');
+    if (errors && !opts.auto) showToast('✗ 有 ' + errors + ' 个角色互动失败', 'error');
   });
 }
