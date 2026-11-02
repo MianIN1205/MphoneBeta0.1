@@ -108,10 +108,7 @@ function autoSendMessage(idx) {
     : '请你以「' + charAuthor(char).name + '」的身份主动给对方发一条消息，' +
       '可以是分享日常、想念、追问之前的话题等，自然简短，符合人设与当前关系。只输出消息内容本身。';
   // 这段要求放在最后、用「用户」身份但标明不是对方说的：有的接口（比如 Claude）最后一条是角色自己的话时，会当成要接着写那条，像卡住了重说一遍
-  var msgs = charContextMsgs(idx).concat(chatFormatRules(char)).concat([{
-    role: 'user',
-    content: '（这是小手机的系统提示，不是对方发来的消息）\n【主动消息】现在是 ' + nowText(char) + '。' + gap + ask
-  }]);
+  var msgs = charContextMsgs(idx).concat(chatFormatRules(char)).concat([activityAsk('【主动消息】现在是 ' + nowText(char) + '。' + gap + ask)]);
   return callApiOnce(msgs, char).then(function(text) {
     text = stripQuotes(text);
     var viewing = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;

@@ -452,14 +452,13 @@ function stripQuotes(s) {
 function generateCharPost(idx) {
   var char = charList[idx];
   if (!char) return Promise.reject(new Error('角色不存在'));
-  var msgs = charContextMsgs(idx).concat([{
-    role: 'system',
-    content: '【发动态】现在是 ' + nowText(char) + '。请你以「' + charAuthor(char).name + '」的身份，发一条朋友圈 / 微博式的个人动态。' +
-             '内容可以和最近的聊天、生活、心情相关，口吻自然，符合人设，一般不超过 100 字。只输出动态正文，不要加引号、标题或任何说明。' +
-             '想配图的话，在正文后面用 <文字图>画面描述</文字图> 附上 1～3 张「文字图」（用一两句话描述照片里的画面，比如：窗外的晚霞，橘粉色的云）；不配图也可以。'
-  }]);
+  var msgs = charContextMsgs(idx).concat([activityAsk(
+    '【发动态】现在是 ' + nowText(char) + '。请你以「' + charAuthor(char).name + '」的身份，发一条朋友圈式的个人动态。' +
+    '像真人发朋友圈：内容可以和最近的聊天、生活、心情相关；一两句到几小句，口语，可以分行，一般不超过 100 字；不写动作描写和 *星号*，不加 # 话题标签。' +
+    '想配图的话，在正文后面用 <文字图>画面描述</文字图> 附上 1～3 张「文字图」（用一两句话描述照片里的画面，比如：窗外的晚霞，橘粉色的云）；不配图也可以。'
+  )]);
   return callApiOnce(msgs, char).then(function(text) {
-    text = memExtractTags(char, text);   // TA 顺手记下的记忆
+    text = memExtractTags(char, text).replace(/\*[^*\n]+\*/g, '').replace(/#[^#\s]{1,20}#?/g, '').replace(/[ \t]{2,}/g, ' ');   // TA 顺手记下的记忆；动作描写、# 话题标签去掉
     var textImgs = [];
     text = text.replace(/<文字图>([\s\S]*?)<\/文字图>/g, function(_, t) { if (t.trim()) textImgs.push(t.trim()); return ''; });
     feedPosts.unshift({
@@ -548,15 +547,16 @@ function charInteract(post, idx) {
     ? [{ role: 'user', content: [{ type: 'text', text: '（这是这条动态附带的图片）' }].concat(
         post.images.map(function(src) { return { type: 'image_url', image_url: { url: src } }; })) }]
     : [];
-  var msgs = charContextMsgs(idx).concat(imgMsg, [{
-    role: 'system',
-    content: '【动态互动】现在是 ' + nowText(char) + '。你（' + me.name + '）在刷动态时看到了' + (isOwn ? '自己发的' : '下面这条') + '动态：\n\n' +
-             feedPostAsText(post, char) + '\n\n' +
-             '请以角色身份决定是否点赞，并写一条简短评论；如果评论区里有人回复了你或评论了你的动态，就回复对方。' +
-             '只输出 JSON：{"like": true 或 false, "comment": "评论内容"}，不想评论时 comment 为空字符串。'
-  }]);
+  var msgs = charContextMsgs(idx).concat(imgMsg, [activityAsk(
+    '【动态互动】现在是 ' + nowText(char) + '。你（' + me.name + '）在刷动态时看到了' + (isOwn ? '自己发的' : '下面这条') + '动态：\n\n' +
+    feedPostAsText(post, char) + '\n\n' +
+    '请以角色身份决定是否点赞，并写一条评论；如果评论区里有人回复了你或评论了你的动态，就回复对方。' +
+    '评论像真人在朋友圈下面回复：一两句口语，一般不超过 30 字，不写动作描写和 *星号*。' +
+    '只输出 JSON：{"like": true 或 false, "comment": "评论内容"}，不想评论时 comment 为空字符串。'
+  )]);
   return callApiOnce(msgs, char).then(function(text) {
     var r = parseInteraction(memExtractTags(char, text));
+    r.comment = r.comment.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ').trim();
     if (r.like && !isOwn && !post.likes.some(function(a) { return sameAuthor(a, me); })) post.likes.push(me);
     if (r.comment) {
       // 回复对象：最近一条 @ 自己或评论自己动态的用户评论

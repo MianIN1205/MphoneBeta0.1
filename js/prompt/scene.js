@@ -1,8 +1,10 @@
-// 眠花糖机 — Prompt：系统提示词（可改、可保存、可恢复默认）和场景说明（聊天窗口 = 隔着屏幕；剧情窗口 = 剧情空间）
+// 眠花糖机 — Prompt：系统提示词（一整份，可改、可保存、可恢复默认；里面分类写好角色是谁、语气、互动、两个窗口、其他活动）
 
 // =============================================
-// 系统提示词：只有一份，改完点「保存」，点「恢复默认」回到下面这版（2026-11-03 和用户一起定的：管角色语气风格和跟用户的互动，灵活但不 OOC）
-// 两个窗口都用；聊天窗口怎么分条、剧情窗口怎么描写，放在下面的场景说明和代码里的回复格式
+// 系统提示词只有一个框（用户要求：可以分类，但不要分窗口），改完点「保存」，点「恢复默认」回到下面这版
+// · 2026-11-03 和用户一起定的：管角色语气风格和跟用户的互动，灵活但不 OOC；关系和边界暂时不写
+// · 聊天窗口 / 剧情窗口的说明也在里面；每次发消息时代码再加一句「你现在在哪个窗口」（scenePrompt）
+// · 聊天窗口怎么分条、表情包、状态栏这类格式写在代码里（js/chat/prompt.js 的 chatFormatRules）
 // =============================================
 var DEFAULT_SYSTEM_PROMPT = [
   '【你是谁】',
@@ -22,14 +24,47 @@ var DEFAULT_SYSTEM_PROMPT = [
   '- 记住对方刚说过的话：已经回答过的不再问，说过的事不装作不知道，也不重复自己上一轮说过的话。',
   '- 有选择地回应：可以只回一句，可以反问、接梗、说说自己的事、换个话题，也可以只是陪着；不用每次都把话题抛回给对方。',
   '- 情绪有起伏、有惯性：开心、别扭、吃醋、疲惫，会带进接下来的对话，不会每轮重置。',
-  '- 不替{{user}}编没说过的事：对方没讲的经历、行为和想法不要替 TA 补上，想知道就问。'
+  '- 不替{{user}}编没说过的事：对方没讲的经历、行为和想法不要替 TA 补上，想知道就问。',
+  '',
+  '【聊天窗口：隔着屏幕的线上聊天】',
+  '- 你和{{user}}正隔着手机屏幕，用聊天软件互发消息：看不到对方、碰不到对方，只能用文字、表情包、语音和图片表达。',
+  '- 像平时发微信一样：一句一条，短、口语，想说的多就分几条发，不写成长段。',
+  '- 不写拥抱、牵手、摸头这类身体接触，也不写两人同处一室；想表达亲近，就用聊天的方式（语气、表情包、发图、语音）。',
+  '- 可以说想见面、约好见面，但真正的见面不在这里发生。剧情窗口里发生过的事你都记得，可以自然提起，但清楚那是在剧情里，现在你们仍然隔着屏幕。',
+  '',
+  '【剧情窗口：剧情演绎】',
+  '- 这里不受屏幕限制：你和{{user}}可以身处同一个地方，面对面说话，也可以有近距离的接触。',
+  '- 用叙事的方式推进：可以描写动作、神态、环境和旁白，自由发展线下剧情和 if 线。',
+  '- 描写{{user}}时用第二人称「你」；{{char}}和其他人用名字或「他 / 她」。',
+  '- 可以按剧情需要引入其他人物、地点和事件；但不要替{{user}}决定行动和结果。',
+  '- 线上聊天里的事你也记得，可以作为前情自然延续。',
+  '',
+  '【在小手机里的其他事】',
+  '- 主动发消息、发动态、评论、写日记、回忆往事时，都还是同一个你：口吻、用词、性格和聊天时一致，只是场合不同。',
+  '- 每件事按它自己的格式要求来写，只输出要求的内容，不加解释、标题或多余的引号。'
 ].join('\n');
+
 var sysPromptTA = document.getElementById('systemPromptTA');
-// 以前存下的还是旧版默认（没改过）时，换成新的默认；改过的照旧
 (function() {
   var saved = mphoneStore.load('mphone_system_prompt', null);
+  // 以前存下的还是旧版默认（没改过）：换成新的默认
   var oldDefault = typeof saved === 'string' && saved.indexOf('你是一个高沉浸感的角色扮演 AI') === 0 && saved.indexOf('【内容边界】') > 0 && Math.abs(saved.length - 820) < 60;
   if (oldDefault) { mphoneStore.remove('mphone_system_prompt'); saved = null; }
+  // 以前的两个场景说明框（2026-11-03 合进系统提示词）：改过的接到自己的系统提示词后面，没改过的不用管
+  var sceneChat = mphoneStore.load('mphone_scene_chat', ''), sceneDrama = mphoneStore.load('mphone_scene_drama', '');
+  if ((sceneChat || sceneDrama) && typeof saved === 'string' && saved.trim()) {
+    saved = saved.replace(/\s+$/, '') + (sceneChat ? '\n\n' + sceneChat.trim() : '') + (sceneDrama ? '\n\n' + sceneDrama.trim() : '');
+    mphoneStore.save('mphone_system_prompt', saved);
+  } else if (sceneChat || sceneDrama) {
+    // 系统提示词没改过、场景改过：用默认版，把里面的两个窗口换成自己写的
+    var mine = DEFAULT_SYSTEM_PROMPT;
+    if (sceneChat) mine = mine.replace(/【聊天窗口：[\s\S]*?(?=\n\n【)/, sceneChat.trim());
+    if (sceneDrama) mine = mine.replace(/【剧情窗口：[\s\S]*?(?=\n\n【)/, sceneDrama.trim());
+    saved = mine;
+    mphoneStore.save('mphone_system_prompt', saved);
+  }
+  mphoneStore.remove('mphone_scene_chat');
+  mphoneStore.remove('mphone_scene_drama');
   sysPromptTA.value = (typeof saved === 'string' && saved.trim()) ? saved : DEFAULT_SYSTEM_PROMPT;
 })();
 document.getElementById('sysPromptSave').addEventListener('click', function() {
@@ -44,32 +79,9 @@ document.getElementById('sysPromptReset').addEventListener('click', function() {
   showToast('✓ 已恢复默认', 'success');
 });
 
-// =============================================
-// Prompt — 场景说明：聊天窗口 = 隔着屏幕的线上；剧情窗口 = 可以见面、自由发展的剧情空间
-// 发消息时按窗口放进提示词（见 js/chat/prompt.js buildMsgs）；清空就恢复默认
-// =============================================
-var DEFAULT_SCENE_CHAT = [
-  '【当前场景：线上聊天】',
-  '你和{{user}}此刻正隔着手机屏幕，用聊天软件互发消息。你们不在同一个空间：看不到对方、碰不到对方，只能通过文字、表情、语音和图片来表达。',
-  '- 不要写拥抱、牵手、摸头这类身体接触，也不要写两人同处一室的动作描写；想表达亲近，就用聊天的方式（语气、表情、发图、语音）。',
-  '- 可以说想见面、约好见面，但真正的见面不在这里发生。',
-  '- 如果你们在「剧情空间」里有过近距离的经历，你都记得，可以自然地提起、回味；但你清楚那是在剧情空间里发生的，现在你们仍然隔着屏幕。'
-].join('\n');
-var DEFAULT_SCENE_DRAMA = [
-  '【当前场景：剧情空间】',
-  '这里是一个特殊的空间，不受手机屏幕的限制：你和{{user}}可以身处同一个地方，面对面交谈，也可以有近距离的接触。',
-  '- 用叙事的方式推进：可以描写动作、神态、环境和旁白，自由发展线下剧情和 if 线。',
-  '- 描写{{user}}时用第二人称「你」；{{char}}和其他人用名字或「他 / 她」。',
-  '- 可以按剧情需要引入其他角色、地点和事件，让故事有更多发展；但不要替{{user}}决定行动和结果。',
-  '- 你清楚自己现在身处剧情空间。线上聊天里的事你也记得，可以作为前情自然延续。'
-].join('\n');
-[['sceneChatTA', 'mphone_scene_chat', DEFAULT_SCENE_CHAT], ['sceneDramaTA', 'mphone_scene_drama', DEFAULT_SCENE_DRAMA]].forEach(function(s) {
-  var ta = document.getElementById(s[0]);
-  ta.value = mphoneStore.load(s[1], '') || s[2];
-  ta.addEventListener('input', function() { mphoneStore.save(s[1], this.value.trim() ? this.value : ''); });
-  ta.addEventListener('blur', function() { if (!this.value.trim()) this.value = s[2]; });
-});
+// 每次发消息时告诉角色现在在哪个窗口（两个窗口的具体说明都在系统提示词里）
 function scenePrompt(isDrama) {
-  var v = document.getElementById(isDrama ? 'sceneDramaTA' : 'sceneChatTA').value.trim();
-  return v || (isDrama ? DEFAULT_SCENE_DRAMA : DEFAULT_SCENE_CHAT);
+  return isDrama
+    ? '【现在】你和{{user}}在剧情窗口（剧情演绎），按系统提示词里「剧情窗口」那部分来。'
+    : '【现在】你和{{user}}在聊天窗口（隔着屏幕的线上聊天），按系统提示词里「聊天窗口」那部分来。';
 }

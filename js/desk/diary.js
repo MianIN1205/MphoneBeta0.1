@@ -71,10 +71,12 @@ diaryDelBtn.addEventListener('click', function() {
 // 让角色写一篇今天的日记，存进「日记」；日记里藏一句当天的要点，记成一条长期记忆（来源「日记」）
 function writeCharDiary(idx) {
   var char = charList[idx], name = char.charAlias || char.charName || '角色';
-  var msgs = charContextMsgs(idx).concat([{ role: 'system', content:
-    '【写日记】现在是 ' + nowText(char) + '。请你以「' + name + '」的身份，用第一人称写一篇今天的私人日记：可以写今天发生的事、和用户的聊天、心情和没说出口的想法，口吻符合人设，200～400 字。' +
+  var msgs = charContextMsgs(idx).concat([activityAsk(
+    '【写日记】现在是 ' + nowText(char) + '。请你以「' + name + '」的身份，用第一人称写一篇今天的私人日记：可以写今天发生的事、和用户的聊天、心情和没说出口的想法，200～400 字。' +
+    '日记是写给自己看的，可以比聊天时更坦白，但还是你自己的口吻和用词，分几段写。' +
     '第一行只写日记标题（不超过 12 个字，不加书名号和「标题」二字），然后空一行写正文。只输出日记本身。' +
-    '日记写完后另起一行写 <要点>用一句话概括今天最值得记住的事（30 字以内）</要点>，这一行不会出现在日记里。' }]);
+    '日记写完后另起一行写 <要点>用一句话概括今天最值得记住的事（30 字以内）</要点>，这一行不会出现在日记里。'
+  )]);
   return callApiOnce(msgs, char).then(function(text) {
     var point = '';
     text = String(text).replace(/<要点>([\s\S]*?)<\/要点>/g, function(_, s) { point = s.replace(/\s+/g, ' ').trim(); return ''; });

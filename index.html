@@ -1720,18 +1720,12 @@
           <!-- 系统 -->
           <div class="prompt-panel active" data-ppanel="system">
             <div class="prompt-section-label">系统提示词</div>
-            <textarea class="prompt-textarea" id="systemPromptTA" rows="16" placeholder="在此输入发送给模型的系统指令，定义角色的总体行为规则…"></textarea>
+            <textarea class="prompt-textarea" id="systemPromptTA" rows="20" placeholder="在此输入发送给模型的系统指令，定义角色的总体行为规则…"></textarea>
             <div class="api-test-row">
               <button class="action-btn btn-preset" id="sysPromptReset" style="flex:1;padding:12px 0;">恢复默认</button>
               <button class="action-btn btn-apply" id="sysPromptSave" style="flex:1;padding:12px 0;">保存</button>
             </div>
-            <div class="auto-hint" style="margin:6px 2px 0;">改完点「保存」才会记住；「恢复默认」回到眠花糖机自带的那版。两个窗口都会用到。提示词、人设、预设、世界书、开场白里都可以用 {{char}} 指角色、{{user}} 指你，发送时自动换成名字。</div>
-
-            <div class="prompt-section-label" style="margin-top:14px;">聊天窗口场景（线上）</div>
-            <textarea class="prompt-textarea" id="sceneChatTA" rows="7"></textarea>
-            <div class="prompt-section-label" style="margin-top:14px;">剧情窗口场景（剧情空间）</div>
-            <textarea class="prompt-textarea" id="sceneDramaTA" rows="7"></textarea>
-            <div class="auto-hint" style="margin:6px 2px 0;">告诉角色现在在哪个窗口：聊天窗口隔着屏幕，剧情窗口可以见面、自由发展。两边的记忆互通。清空就恢复默认。</div>
+            <div class="auto-hint" style="margin:6px 2px 0;">角色是谁、说话的语气、怎么和你互动、聊天窗口和剧情窗口各自怎么写、发动态写日记这些，都在这一份里，可以分类改。改完点「保存」才会记住；「恢复默认」回到眠花糖机自带的那版。提示词、人设、预设、世界书、开场白里都可以用 {{char}} 指角色、{{user}} 指你，发送时自动换成名字。</div>
           </div>
 
           <!-- 预设（类 SillyTavern 提示词条目管理） -->

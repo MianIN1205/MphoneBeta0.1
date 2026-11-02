@@ -86,9 +86,54 @@ function chatSplitLines(parts) {
       else out.push(pending);
     }
   });
-  return out.map(function(p) {
+  // 一行里太长的，再按句子、逗号拆成几条短的
+  var res = [];
+  out.forEach(function(p) { if (typeof p === 'string') chatSplitLong(p).forEach(function(x) { res.push(x); }); else res.push(p); });
+  return res.map(function(p) {
     return typeof p === 'string' ? p.replace(/([^。.…])。(\s*(?:\*[^*]+\*)?\s*)$/, '$1$2') : p;
   });
+}
+// 一条太长（超过 CHAT_BUBBLE_MAX 字）就拆开：先按句号、问号、感叹号断句，还长就按逗号、顿号、分号断，
+// 再把太碎的小段拼回去，每条尽量不超过 CHAT_BUBBLE_MAX 字。引号、括号里面不断开；有链接、表情包、翻译的不动
+var CHAT_BUBBLE_MAX = 16;   // 手机上一个气泡一行大约 14～16 个字
+function chatSplitLong(p) {
+  var m = p.match(/^((?:\*[^*]+\*\s*)*)([\s\S]*)$/), lead = m[1], body = m[2].trim();
+  if (body.length <= CHAT_BUBBLE_MAX || !/[\u4e00-\u9fff]/.test(body) || /https?:|\[表情包|〔译〕|<\/?[a-z撤日]/i.test(body)) return [p];
+  // 切成小段：在句末标点后、或者（引号外的）逗号顿号分号后断开，标点留在前一段
+  var pieces = [], buf = '', depth = 0;
+  var OPEN = '「『“‘（(【《', CLOSE = '」』”’）)】》';
+  for (var i = 0; i < body.length; i++) {
+    var ch = body[i];
+    buf += ch;
+    if (OPEN.indexOf(ch) >= 0) depth++;
+    else if (CLOSE.indexOf(ch) >= 0) depth = Math.max(0, depth - 1);
+    var next = body[i + 1] || '';
+    var endSentence = /[。！？!?～~]/.test(ch) && !/[。！？!?～~」』”’）)]/.test(next);
+    var endClause = /[，、；,;]/.test(ch);
+    if (depth === 0 && (endSentence || endClause)) { pieces.push({ t: buf, hard: endSentence }); buf = ''; }
+  }
+  if (buf.trim()) pieces.push({ t: buf, hard: true });
+  // 拼回去：一句话（到句末标点）没超过上限就整句一条；超过了才在逗号处断
+  var chunks = [], cur = '';
+  pieces.forEach(function(pc) {
+    var t = pc.t.trim();
+    if (!t) return;
+    if (cur && (cur + t).length > CHAT_BUBBLE_MAX) { chunks.push(cur); cur = ''; }
+    cur += t;
+    if (pc.hard) { chunks.push(cur); cur = ''; }
+  });
+  if (cur) chunks.push(cur);
+  // 句尾的逗号、顿号、分号去掉；只剩一两个字的并到下一条前面
+  chunks = chunks.map(function(c) { return c.replace(/[，、；,;]+$/, '').trim(); }).filter(Boolean);
+  var merged = [];
+  chunks.forEach(function(c) {
+    var last = merged[merged.length - 1];
+    if (last !== undefined && last.length <= 2 && (last + c).length <= CHAT_BUBBLE_MAX + 4) merged[merged.length - 1] = last + ' ' + c;
+    else merged.push(c);
+  });
+  if (!merged.length) return [p];
+  if (lead) merged[0] = lead.trim() + ' ' + merged[0];
+  return merged;
 }
 
 // 角色回复里的 <撤回>内容</撤回>：拆成单独一条「刚发就撤回」的消息
