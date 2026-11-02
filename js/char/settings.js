@@ -488,6 +488,7 @@ function fillCharForm(char) {
 
   // 导入角色卡带的世界书：先暂存，保存角色时才写入
   csPendingWb = char.pendingWb || null;
+  csPendingArc = char.pendingArc || null;   // 从小手机备份导入时带的聊天记录：保存角色时存成档案
 
   csLookParts = lookPartsOf(char);
   csLookView = 'chat';
@@ -606,6 +607,7 @@ function readCharForm() {
 // 角色设置 — 关联世界书：按文件夹显示，可整个文件夹关联，也可展开后单独勾选条目
 // csPendingWb：导入角色卡时暂存的世界书（保存角色时才真正写入）
 var csPendingWb = null;
+var csPendingArc = null;
 
 function renderCharWbLinks(ids, folderIds) {
   var wrap = document.getElementById('wbContent');
@@ -617,7 +619,7 @@ function renderCharWbLinks(ids, folderIds) {
     pending.className = 'wb-link-folder';
     pending.innerHTML = '<div class="wb-link-folder-head wb-link-pending"><label>' +
       '<input type="checkbox" id="wbPendingCb" checked><span></span></label></div>';
-    pending.querySelector('span').textContent = '（导入）' + csPendingWb.entries.length + ' 条，保存角色时创建文件夹';
+    pending.querySelector('span').textContent = '（导入）' + csPendingWb.entries.length + ' 条，保存角色时' + (csPendingWb.entries.some(function(e) { return e.folderName; }) ? '按原来的分类放进文件夹并关联' : '创建文件夹');
     pending.querySelector('input').addEventListener('change', updateCharWbCount);
     wrap.appendChild(pending);
   } else if (!groups.length) {

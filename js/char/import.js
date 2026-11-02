@@ -1,4 +1,4 @@
-// 眠花糖机 — 导入角色：酒馆角色卡 PNG / JSON、Word 文档
+// 眠花糖机 — 导入角色：酒馆角色卡 PNG / JSON、Word 文档、uwu 小手机完整备份（.ee，见 js/char/migrate.js）
 
 // ---------- 角色导入：酒馆角色卡 PNG / JSON、Word 文档 ----------
 var contactsAddPopup = document.getElementById('contactsAddPopup');
@@ -17,15 +17,20 @@ document.getElementById('contactsNewBtn').addEventListener('click', function(e) 
 document.getElementById('contactsImportBtn').addEventListener('click', function(e) {
   e.stopPropagation();
   contactsAddPopup.classList.remove('open');
-  pickFile('.png,.json,.docx,image/png,application/json', function(file) {
+  pickFile('.png,.json,.docx,.ee,.gz,image/png,application/json,application/gzip', function(file) {
     importCharFile(file)
-      .then(function(draft) { openCharSetting(-1, draft); showToast('✓ 已读取，确认后点「保存」', 'success'); })
+      .then(function(draft) { if (!draft) return; openCharSetting(-1, draft); showToast('✓ 已读取，确认后点「保存」', 'success'); })
       .catch(function(err) { showToast('✗ ' + (err.message || '无法读取该文件'), 'error'); });
   });
 });
 
 function importCharFile(file) {
   var name = file.name.toLowerCase();
+  // uwu 小手机的完整备份（gzip）：先选要导入哪个角色、带哪些东西
+  if (/\.(ee|gz)$/.test(name)) {
+    if (typeof migPickFromBackup !== 'function') return Promise.reject(new Error('读不了这种备份'));
+    return migPickFromBackup(file);
+  }
   if (/\.docx$/.test(name)) {
     return file.arrayBuffer().then(readDocxText).then(function(text) {
       if (!text.trim()) throw new Error('文档里没有文字');
@@ -46,7 +51,7 @@ function importCharFile(file) {
       }).then(function(avatar) { return cardToDraft(JSON.parse(json), avatar); });
     });
   }
-  return Promise.reject(new Error('只支持 PNG / JSON / DOCX'));
+  return Promise.reject(new Error('只支持 PNG / JSON / DOCX，或者小手机的完整备份（.ee）'));
 }
 
 // 酒馆角色卡（V1 / V2 / V3）→ 角色草稿；自带的世界书条目一并导入并关联

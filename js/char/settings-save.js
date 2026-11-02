@@ -31,17 +31,42 @@ charSaveBtn.addEventListener('click', function() {
     // 导入的世界书：确认添加角色时才建同名文件夹写入，并整体关联
     var pendingCb = document.getElementById('wbPendingCb');
     if (csPendingWb && pendingCb && pendingCb.checked) {
-      var folder = { id: genWbId('wf'), name: data.charAlias || data.charName || '导入角色' };
-      wbFolders.push(folder);
-      csPendingWb.entries.forEach(function(e) {
-        wbEntries.push(Object.assign({ id: genWbId('wb'), folderId: folder.id }, e));
-      });
+      if (csPendingWb.entries.some(function(e) { return e.folderName; })) {
+        // 从小手机备份来的：按原来的分类放进同名文件夹（有就合并），一模一样的条目不重复建，逐条关联
+        data.worldbookIds = data.worldbookIds || [];
+        csPendingWb.entries.forEach(function(e) {
+          var exist = wbEntries.filter(function(x) { return x.name === e.name && x.content === e.content; })[0];
+          if (!exist) {
+            var f = wbFolders.filter(function(x) { return x.name === e.folderName; })[0];
+            if (!f) { f = { id: genWbId('wf'), name: e.folderName }; wbFolders.push(f); }
+            exist = Object.assign({ id: genWbId('wb'), folderId: f.id }, e);
+            delete exist.folderName;
+            wbEntries.push(exist);
+          }
+          if (data.worldbookIds.indexOf(exist.id) < 0) data.worldbookIds.push(exist.id);
+        });
+      } else {
+        var folder = { id: genWbId('wf'), name: data.charAlias || data.charName || '导入角色' };
+        wbFolders.push(folder);
+        csPendingWb.entries.forEach(function(e) {
+          wbEntries.push(Object.assign({ id: genWbId('wb'), folderId: folder.id }, e));
+        });
+        data.worldbookFolders = (data.worldbookFolders || []).concat(folder.id);
+      }
       saveWbEntries();
       renderWbList();
-      data.worldbookFolders = (data.worldbookFolders || []).concat(folder.id);
     }
     delete data.pendingWb;
     csPendingWb = null;
+    // 从小手机备份带来的聊天记录：存成这个角色的档案（js/char/archive.js）
+    if (csPendingArc && csPendingArc.msgs && csPendingArc.msgs.length && typeof arcStore !== 'undefined') {
+      arcStore[data.id] = [{ id: 'arc' + Date.now().toString(36), from: csPendingArc.from || 'uwu 小手机', file: csPendingArc.file || '', importTime: Date.now(), msgs: csPendingArc.msgs,
+        mem: { pos: 0, count: 0, seg: 0, budget: ARC_BUDGET, careful: false, withStatus: true, done: false, err: '' } }];
+      saveArcStore();
+      showToast('✓ 聊天记录 ' + csPendingArc.msgs.length + ' 条存成了档案，在角色设置「扩展」页可以查看、整理成记忆', 'success');
+    }
+    delete data.pendingArc;
+    csPendingArc = null;
     charList.push(data);
     syncCharCircle(data);
     saveCharList();

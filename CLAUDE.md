@@ -70,7 +70,7 @@
 | msg-menu / msg-ops | 长按菜单；多选（批量删除 / 合并收藏）、删除本轮、从这里重新生成、清空记录。撤回：`m.recalledBy` 为 `user`（你撤回的，自己或角色的消息）或 `char`（角色写 `<撤回>…</撤回>`，先显示两秒再变撤回提示，角色设置可开「偷看」） |
 | feed / mine / wallet-fav | 动态（朋友圈）和社交圈、「我的」账号、钱包和收藏 |
 | quick-bar / status-panel | 便捷拓展栏（本窗口用的模型预设 / 预设 / 世界书）；状态栏面板（按 HTML 模板的 {{字段}} 画，左右滑看最近 10 轮） |
-| stickers | 表情包：图床链接 / 文档（txt / docx / json / md / csv）导入、分类、打字联想；消息存 `[表情包：名字]` + 图片地址，打不开时显示这句文字；每个角色单独设置能不能发、能用哪些分类、能不能看到图片（`char.stickerCfg`）；导入时压成小图存 `b64` 给 AI 看，读不了记 `b64Fail` |
+| stickers | 表情包：图床链接 / 文档（txt / docx / json / md / csv）导入（带分类的 json —— 眠花糖机表情包文件 `{ app: "mphone", type: "stickers", cats: [{ name, items: [{ name, url }] }] }` 或 uwu 那种每项带 group 的 —— 直接按分类全部导入，`stkGroupedFromJson` / `stkImportGrouped`）、分类、打字联想；消息存 `[表情包：名字]` + 图片地址，打不开时显示这句文字；每个角色单独设置能不能发、能用哪些分类、能不能看到图片（`char.stickerCfg`）；导入时压成小图存 `b64` 给 AI 看，读不了记 `b64Fail` |
 | opening | 剧情开场白：剧情空着时「添加开场白」（粘贴，角色卡自带的 `char.openings` 可点选填入）/「随机开场白」（给方向或留空，AI 按人设世界书写，先预览可「换一个」）；存成 `{ role: 'user', narr: true }`（这样能直接 ❄️ 或接着发），显示成居中旁白（render 的 `renderNarration`），发给 AI 标明是中立旁白；存的时候就把 {{char}}/{{user}} 换成名字。角色设置里不再有开场白列表 |
 | calendar | 角色回复里的 `<日程 类型="提醒/闹钟/日程 三选一" 时间="YYYY-MM-DD HH:MM">事</日程>` 记进桌面「纪念日」（`annivs` 里 `remind` / `by` / `charIds`），聊天里出卡片；只记在小手机里，不加到手机系统日历（试过 .ics / Google 日历，用户觉得麻烦） |
 
@@ -80,7 +80,7 @@
 | settings / settings-save / look | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）表单和默认值 `DEFAULT_CHAT_CFG`；保存 / 删除角色；美化页 |
 | memory / summary / backup | 角色记忆（短期 / 长期 / 珍贵，可选向量检索，按 token 预算注入）、关系里程碑（记忆多时分批整理）；按回合总结；单个角色的记忆备份（含档案） |
 | archive | 其他小手机的记录（扩展页「导入聊天记录」）：认 uwu（`uwu-chat-history`，`[某某的消息：…]` 去壳，`isStatusUpdate` 是状态栏）、眠花糖机角色备份、ChatGPT（mapping）/ Claude（chat_messages）官网导出、酒馆 .jsonl、任意 JSON（找像消息的对象）、CSV、微信 / QQ 两行式 txt、「名字：内容」的 txt / md / docx；用户要求兼容的格式尽量多。先预览再导入，预览里点名字改「谁是 TA」；同一份记录再导时按时间 + 内容跳过已导入的。原文存在 `mphone_archives`（只给用户翻看，不发给 AI），列表和记忆库都写「来自 xxx」（`from` 存完整名字，如「uwu 小手机」）；可选分段整理成长期记忆（`m.source = 'import'`、`m.from`、时间用原聊天日期，角色看到时带「在 xxx 里」）。整理完自动 `arcConsolidate`：导入的记忆按来源分组、去掉数字后按相似度分小组，让模型把同一件事合并（细节全留），条数没变少或解析失败就保持原样（用户要求导入后记忆库不要堆太多重复的）。用户要求整理完整、准确、不爆 token：一件事一条、写具体细节、禁止空泛句；每段约 5000 token，太长自动减半，偶发错误重试，失败停在那一段可「继续整理」；可选逐段核对（次数翻倍） |
-| migrate | 「从小手机备份迁移」（扩展页）：读 uwu / ovo 小手机的完整备份（.ee = gzip 的一行一个 JSON，header `format` 含 stream-backup；`chat-start` 是角色资料，`chat-history` 是消息，`worldBooks` 是世界书），流式解压读两遍，不读 API / 密钥。迁到当前角色：人设、头像替换；勾选的世界书按原分类建文件夹、内容一样的不重复建、逐条关联；聊天记录存成档案（和导入聊天记录同一套，导过的跳过）。默认勾这个角色关联的世界书，原来全局的和其他的不勾 |
+| migrate | 通讯录「导入角色」选 uwu 小手机完整备份时用（用户要的是导入角色时选，不是在已有角色上迁移）：读 uwu / ovo 小手机的完整备份（.ee = gzip 的一行一个 JSON，header `format` 含 stream-backup；`chat-start` 是角色资料，`chat-history` 是消息，`worldBooks` 是世界书），流式解压读两遍，不读 API / 密钥。弹窗选角色、勾人设 / 头像 / 聊天记录 / 世界书（默认勾这个角色关联的，原来全局的和其他的不勾）→ 变成新角色草稿进角色设置；保存时世界书按 `folderName`（原分类）放进同名文件夹、一样的直接关联，聊天记录 `pendingArc` 存成档案 |
 | auto | 自主活动：主动发消息、聊天后发动态、调度。主动消息的要求放在最后一条、用 user 身份并标明「系统提示，不是对方发来的」（最后一条是角色自己的话时 Claude 等会当成要续写，像卡住重说一遍）；用户没回时把角色最近发的几条列出来，要求接着往下说、不重说、不重新回答旧话题（用户反馈过）。`callApiOnce(msgs, char)`（在 chat/feed）传角色时用 TA 自己的模型预设 |
 | import | 导入酒馆角色卡 PNG / JSON、Word |
 | assistant | 内置助手 MianIN（昵称慕斯、暮暮，用户称祂「祂」；原本是用户酒馆预设里的织梦者，「暮色」是祂编织的幻境，不是祂本人）。名字和人设固定在 `MIANIN_NAME` / `MIANIN_PERSONA`，小手机里只能看不能改（用户要求）。能力：加世界书、改 CSS、看报错；`ASSISTANT_GUIDE` 是给祂的应用说明，加新功能时顺手补一句 |

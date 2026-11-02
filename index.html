@@ -1363,10 +1363,10 @@
       </div>
     </div>
 
-    <!-- 从小手机备份迁移（js/char/migrate.js） -->
+    <!-- 导入角色时选了小手机备份：选角色、勾要带的东西（js/char/migrate.js） -->
     <div class="mine-acc-overlay" id="migOverlay">
       <div class="mine-acc-modal mig-modal">
-        <div class="mine-acc-title">从小手机备份迁移</div>
+        <div class="mine-acc-title">从小手机备份导入角色</div>
         <div class="mig-sub">迁哪个角色</div>
         <div class="feed-visible-list" id="migChars"></div>
         <label class="mig-row"><input type="checkbox" id="migPersona"><span id="migPersonaText">人设</span></label>
@@ -1381,7 +1381,7 @@
         <div class="auto-hint" id="migNote"></div>
         <div class="mine-acc-actions">
           <button class="mine-acc-btn mine-acc-btn-close" id="migCancel">取消</button>
-          <button class="mine-acc-btn mine-acc-btn-add" id="migOk">开始迁移</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="migOk">确认</button>
         </div>
       </div>
     </div>
@@ -2753,9 +2753,8 @@
         <div class="section-label">其他小手机的记录</div>
         <div class="settings-card">
           <button class="custom-css-apply-btn" id="arcImportBtn">导入聊天记录</button>
-          <button class="custom-css-apply-btn" id="migBtn" style="margin-top:8px;">从小手机备份迁移</button>
           <div class="mem-sum-list" id="arcList"></div>
-          <div class="auto-hint" style="margin-top:8px;">「导入聊天记录」支持 uwu 小手机、眠花糖机的角色备份、ChatGPT / Claude 官网导出、酒馆 .jsonl、一般的 JSON、CSV，以及微信 / QQ 导出或每行「名字：内容」的 txt / md / docx；导入前会先给你看预览。同一个地方再导一次时，导入过的消息会自动跳过。原文存成档案，只给你翻看，不会发给 TA；整理成记忆后，TA 会记得这些事，也知道是在那个小手机里发生的。「从小手机备份迁移」读 uwu 小手机导出的完整备份（.ee），把一个角色的人设、头像、世界书和聊天记录一起搬到这个角色上，备份里的 API 和密钥不会读。</div>
+          <div class="auto-hint" style="margin-top:8px;">「导入聊天记录」支持 uwu 小手机、眠花糖机的角色备份、ChatGPT / Claude 官网导出、酒馆 .jsonl、一般的 JSON、CSV，以及微信 / QQ 导出或每行「名字：内容」的 txt / md / docx；导入前会先给你看预览。同一个地方再导一次时，导入过的消息会自动跳过。原文存成档案，只给你翻看，不会发给 TA；整理成记忆后，TA 会记得这些事，也知道是在那个小手机里发生的。想把整个角色（人设、头像、世界书、聊天记录）一起搬过来，可以在通讯录右上「导入角色」里选 uwu 小手机的完整备份（.ee）。</div>
         </div>
 
         <!-- 每日日记 -->

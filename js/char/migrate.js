@@ -1,13 +1,14 @@
-// 眠花糖机 — 从别的小手机的完整备份迁移一个角色：人设、头像、世界书、聊天记录（存成档案）
+// 眠花糖机 — 导入角色时选 uwu 小手机的完整备份：选一个角色，把人设、头像、世界书、聊天记录一起变成新角色
 
 // =============================================
 // 认得 uwu / ovo 小手机导出的完整备份（.ee：gzip 压缩，里面一行一个 JSON，header 的 format 是 *-stream-backup）
 // · 第一遍只读角色资料和世界书（聊天记录只数条数），选好要搬的东西后，第二遍才把那个角色的聊天记录取出来
-// · 迁到「当前正在设置的这个角色」上：人设、头像替换；世界书按原来的分类建文件夹、逐条关联给 TA；聊天记录存成档案（见 js/char/archive.js）
+// · 在通讯录「导入角色」里选备份（见 js/char/import.js）→ 这里选角色、勾要带的东西 → 变成新角色的草稿，进角色设置点「保存」才真正加进来；
+//   世界书按原来的分类放进文件夹，聊天记录保存时存成档案（见 js/char/settings-save.js）
 // · 备份里的 API 设置、密钥一概不读
 // =============================================
 var migOverlay = document.getElementById('migOverlay');
-var migState = null;   // { char, file, chars: [{ idx, name, persona, avatar, wbIds, count }], books: [], pick }
+var migState = null;   // { file, chars: [{ idx, name, persona, avatar, wbIds, count }], books: [], pick }
 
 // 一行一行读：gzip 的先解压；读到一行就交给 onObj
 // want(行开头的一小段)：返回 false 的行不解析（备份里有几十 MB 的一行用不到，比如别的小程序的存档），省时间省内存
@@ -87,27 +88,29 @@ function migReadHistory(file, idx) {
   }, function(h) { return /"chat-history"/.test(h); }).then(function() { out.sort(function(a, b) { return (a.time || 0) - (b.time || 0); }); return out; });
 }
 
-// ---------- 弹窗 ----------
-document.getElementById('migBtn').addEventListener('click', function() {
-  if (editingCharIndex < 0) { showToast('请先保存角色', 'error'); return; }
-  var char = charList[editingCharIndex];
-  pickFile('.ee,.gz,.json,.txt,application/gzip,application/json', function(file) {
-    showToast('正在读备份…', 'plain');
-    migScan(file).then(function(r) {
-      if (!r.chars.length) throw new Error('备份里没有角色');
-      var name = char.charAlias || char.charName || '';
-      var pick = r.chars.filter(function(c) { return c.name === name || c.realName === name; })[0] || r.chars[0];
-      migState = { char: char, file: file, chars: r.chars, books: r.books, pick: pick };
-      document.getElementById('migFrom').value = 'uwu 小手机';
-      migRender();
-      migOverlay.classList.add('open');
-    }).catch(function(err) { showToast('✗ 读不出来：' + ((err && err.message) || '格式不认识'), 'error'); });
+// ---------- 弹窗：导入角色时选了备份 → 选角色、勾要带的东西 → 变成新角色的草稿 ----------
+// migPickFromBackup(file) 返回 Promise：选好了给草稿（交给角色设置，点「保存」才真正加进来），取消了给 null
+var migResolve = null;
+function migPickFromBackup(file) {
+  showToast('正在读备份…', 'plain');
+  return migScan(file).then(function(r) {
+    if (!r.chars.length) throw new Error('备份里没有角色');
+    migState = { file: file, chars: r.chars, books: r.books, pick: r.chars.filter(function(c) { return c.count; }).sort(function(a, b) { return b.count - a.count; })[0] || r.chars[0] };
+    document.getElementById('migFrom').value = 'uwu 小手机';
+    migRender();
+    migOverlay.classList.add('open');
+    return new Promise(function(res) { migResolve = res; });
   });
-});
+}
+function migClose(result) {
+  migOverlay.classList.remove('open');
+  migState = null;
+  var r = migResolve; migResolve = null;
+  if (r) r(result || null);
+}
 
 function migRender() {
-  var s = migState, c = s.pick, n = arcNames(s.char);
-  // 角色
+  var s = migState, c = s.pick;
   var row = document.getElementById('migChars');
   row.innerHTML = '';
   s.chars.forEach(function(x) {
@@ -117,7 +120,7 @@ function migRender() {
     chip.addEventListener('click', function() { s.pick = x; migRender(); });
     row.appendChild(chip);
   });
-  document.getElementById('migPersonaText').textContent = '人设（' + c.persona.length + ' 字' + (s.char.charPersona ? '，会替换现在的人设' : '') + '）';
+  document.getElementById('migPersonaText').textContent = '人设（' + c.persona.length + ' 字）';
   document.getElementById('migPersona').checked = !!c.persona;
   document.getElementById('migPersona').disabled = !c.persona;
   document.getElementById('migAvatar').checked = !!c.avatar;
@@ -153,70 +156,40 @@ function migRender() {
     });
   });
   if (!s.books.length) box.innerHTML = '<div class="auto-hint">备份里没有世界书</div>';
-  document.getElementById('migNote').textContent = '都会迁到现在这个角色「' + n.c + '」身上。世界书按原来的分类建文件夹，已经有一模一样的就不重复建。';
+  document.getElementById('migNote').textContent = '会新建一个角色「' + c.name + '」：确认后进角色设置再看一眼，点「保存」才真正加进来。世界书按原来的分类放进文件夹，已经有一模一样的就直接关联，不重复建。';
 }
 
-document.getElementById('migCancel').addEventListener('click', function() { migOverlay.classList.remove('open'); migState = null; });
-closeOnBackdrop(migOverlay, function() { migOverlay.classList.remove('open'); migState = null; });
+document.getElementById('migCancel').addEventListener('click', function() { migClose(null); });
+closeOnBackdrop(migOverlay, function() { migClose(null); });
 
 document.getElementById('migOk').addEventListener('click', function() {
   var s = migState, btn = this;
   if (!s) return;
-  var c = s.pick, char = s.char, done = [];
-  if (charList.indexOf(char) < 0) { migOverlay.classList.remove('open'); return; }
-  // 人设、头像
-  if (document.getElementById('migPersona').checked && c.persona) { char.charPersona = c.persona; done.push('人设'); }
-  if (document.getElementById('migAvatar').checked && c.avatar) { char.charAvatar = c.avatar; done.push('头像'); }
-  // 世界书
+  var c = s.pick;
+  var draft = { charName: c.realName || c.name, charAlias: c.name, charPersona: '' };
+  if (document.getElementById('migPersona').checked) draft.charPersona = c.persona;
+  if (document.getElementById('migAvatar').checked && c.avatar) draft.charAvatar = c.avatar;
+  // 世界书：带上原来的分类，保存角色时按分类放进文件夹（见 js/char/settings-save.js）
   var picked = Array.prototype.filter.call(document.querySelectorAll('#migWbList input'), function(cb) { return cb.checked; }).map(function(cb) { return cb._book; });
-  var added = 0, linked = 0;
-  picked.forEach(function(b) {
-    var name = String(b.name || '未命名').slice(0, 60), content = String(b.content || '');
-    var exist = wbEntries.filter(function(e) { return e.name === name && e.content === content; })[0];
-    if (!exist) {
-      var fname = b.category || '来自小手机';
-      var f = wbFolders.filter(function(x) { return x.name === fname; })[0];
-      if (!f) { f = { id: genWbId('wf'), name: fname }; wbFolders.push(f); }
-      var kw = b.alwaysOn ? '' : Array.isArray(b.keywords) ? b.keywords.join(',') : (typeof b.keywords === 'string' ? b.keywords : '');
-      exist = { id: genWbId('wb'), name: name, keywords: kw, content: content, pos: 'auto', folderId: f.id };
-      if (b.disabled) exist.enabled = false;
-      wbEntries.push(exist);
-      added++;
-    }
-    char.worldbookIds = char.worldbookIds || [];
-    if (char.worldbookIds.indexOf(exist.id) < 0) { char.worldbookIds.push(exist.id); linked++; }
-  });
   if (picked.length) {
-    saveWbEntries();
-    if (typeof renderWbList === 'function') renderWbList();
-    done.push('世界书 ' + picked.length + ' 本' + (added < picked.length ? '（' + (picked.length - added) + ' 本本来就有）' : ''));
+    draft.pendingWb = { entries: picked.map(function(b) {
+      var e = { name: String(b.name || '未命名').slice(0, 60), content: String(b.content || ''), pos: 'auto',
+        keywords: b.alwaysOn ? '' : Array.isArray(b.keywords) ? b.keywords.join(',') : (typeof b.keywords === 'string' ? b.keywords : ''),
+        folderName: String(b.category || '').trim() || '来自小手机' };
+      if (b.disabled) e.enabled = false;
+      return e;
+    }) };
   }
-  saveCharList();
-  if (appCharSetting.classList.contains('active') && charList[editingCharIndex] === char) fillCharForm(char);
-  if (typeof renderChatCharList === 'function') renderChatCharList();
-  // 聊天记录：第二遍读出来，存成档案（之前导入过的跳过）
-  var wantHist = document.getElementById('migHistory').checked && c.count > 0;
   var from = document.getElementById('migFrom').value.trim().replace(/^来自\s*/, '') || 'uwu 小手机';
-  var finish = function(extra) {
-    migOverlay.classList.remove('open');
-    migState = null;
-    btn.disabled = false; btn.textContent = '开始迁移';
-    if (extra) done.push(extra);
-    showToast(done.length ? '✓ 迁好了：' + done.join('、') : '没有选要迁的东西', done.length ? 'success' : 'plain');
-  };
-  if (!wantHist) { finish(); return; }
+  if (!(document.getElementById('migHistory').checked && c.count > 0)) { migClose(draft); return; }
+  // 聊天记录：第二遍读出来，跟着草稿走，保存角色时存成档案
   btn.disabled = true; btn.textContent = '正在读聊天记录…';
   migReadHistory(s.file, c.idx).then(function(msgs) {
-    var seen = typeof arcSeenKeys === 'function' ? arcSeenKeys(char.id) : {};
-    var fresh = msgs.filter(function(m) { return !(m.time && seen[arcMsgKey(m)]); });
-    if (!fresh.length) { finish('聊天记录之前都导入过了'); return; }
-    var arc = { id: 'arc' + Date.now().toString(36), from: from.slice(0, 16), file: s.file.name, importTime: Date.now(), msgs: fresh,
-      mem: { pos: 0, count: 0, seg: 0, budget: ARC_BUDGET, careful: false, withStatus: true, done: false, err: '' } };
-    (arcStore[char.id] = arcListOf(char.id)).push(arc);
-    saveArcStore();
-    renderArchiveList(char);
-    finish('聊天记录 ' + fresh.length + ' 条存成了档案');
+    if (msgs.length) draft.pendingArc = { from: from.slice(0, 16), file: s.file.name, msgs: msgs };
   }).catch(function(err) {
-    finish('聊天记录没读出来（' + ((err && err.message) || '出错了') + '）');
+    showToast('✗ 聊天记录没读出来：' + ((err && err.message) || '出错了'), 'error');
+  }).then(function() {
+    btn.disabled = false; btn.textContent = '确认';
+    migClose(draft);
   });
 });

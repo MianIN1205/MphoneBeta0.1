@@ -354,7 +354,7 @@ function stkFromJson(data) {
   var out = [];
   var isUrl = function(v) { return typeof v === 'string' && /^(https?:\/\/|data:image\/)/i.test(v.trim()); };
   var NAME_K = /^(name|title|desc|description|key|label|alt|meaning|text|名字|名称|描述|含义|备注)$/i;
-  var URL_K = /^(url|src|link|href|image|img|path|uri|地址|链接|图片)$/i;
+  var URL_K = /^(url|src|link|href|image|img|path|uri|data|地址|链接|图片)$/i;
   (function walk(v, key) {
     if (isUrl(v)) { out.push((/^\d*$/.test(key) ? '' : key) + ' ' + v.trim()); return; }
     if (Array.isArray(v)) { v.forEach(function(x) { walk(x, ''); }); return; }
@@ -371,6 +371,49 @@ function stkFromJson(data) {
   return out.join('\n');
 }
 
+// 带分类的 json（眠花糖机的表情包文件，或者 uwu 小手机那种每个表情包带 group 的）：直接按分类导入，不用一类一类选
+// 返回 [{ name, url, cat }]；里面没有分类就返回 null，按普通文档处理
+function stkGroupedFromJson(data) {
+  var out = [];
+  var isUrl = function(v) { return typeof v === 'string' && /^(https?:\/\/|data:image\/)/i.test(v.trim()); };
+  if (data && data.app === 'mphone' && data.type === 'stickers' && Array.isArray(data.cats)) {
+    data.cats.forEach(function(c) {
+      (c.items || []).forEach(function(x) { if (x && isUrl(x.url)) out.push({ name: String(x.name || '').slice(0, 30), url: x.url.trim(), cat: String(c.name || '默认') }); });
+    });
+    return out.length ? out : null;
+  }
+  var CAT_K = ['group', 'category', 'cat', 'groupName', 'folder', '分类', '分组'];
+  var URL_KS = ['url', 'src', 'link', 'data', 'image', 'img', '链接', '图片'];
+  var NAME_KS = ['name', 'title', 'desc', 'description', 'alt', '名字', '名称', '描述'];
+  var pick = function(o, ks) { for (var i = 0; i < ks.length; i++) if (typeof o[ks[i]] === 'string' && o[ks[i]].trim()) return o[ks[i]].trim(); return ''; };
+  (function walk(v, depth) {
+    if (depth > 4 || !v || typeof v !== 'object') return;
+    if (Array.isArray(v)) { v.forEach(function(x) { walk(x, depth + 1); }); return; }
+    var url = pick(v, URL_KS), cat = pick(v, CAT_K);
+    if (isUrl(url) && cat) { out.push({ name: pick(v, NAME_KS).slice(0, 30), url: url, cat: cat.slice(0, 20) }); return; }
+    Object.keys(v).forEach(function(k) { walk(v[k], depth + 1); });
+  })(data, 0);
+  return out.length ? out : null;
+}
+// 按分类一次导入：分类没有就新建；同一个分类里链接一样的跳过
+function stkImportGrouped(list) {
+  var added = 0, skipped = 0, newCats = 0, last = null;
+  list.forEach(function(x) {
+    var cat = stkCatByName(x.cat);
+    if (!cat) { cat = { id: stkNewId('sc'), name: x.cat }; stkData.cats.push(cat); newCats++; }
+    last = cat;
+    if (stkItemsOf(cat.id).some(function(s) { return s.url === x.url; })) { skipped++; return; }
+    stkData.items.push({ id: stkNewId('sk'), name: stkUniqueName(x.name || stkNameFromUrl(x.url)), url: x.url, cat: cat.id });
+    added++;
+  });
+  saveStickers();
+  if (last && !stkCat(stkCurCat)) stkCurCat = last.id;
+  renderStickerDrawer();
+  stkImportOverlay.classList.remove('open');
+  stkCacheQueue();
+  showToast('✓ 导入了 ' + added + ' 个' + (newCats ? '，新建 ' + newCats + ' 个分类' : '') + (skipped ? '，' + skipped + ' 个已经有了' : ''), 'success');
+}
+
 // 读文档：txt 先按 UTF-8 读，读不通再按 GBK（Windows 记事本存的中文常见）
 function stkReadDocText(file) {
   var name = file.name.toLowerCase();
@@ -382,7 +425,12 @@ function stkReadDocText(file) {
     catch (_) { text = new TextDecoder('gbk').decode(buf); }
     text = text.replace(/^\uFEFF/, '');
     if (/\.json$/.test(name) || /^\s*[\[{]/.test(text)) {
-      try { return stkFromJson(JSON.parse(text)); } catch (_) {}
+      try {
+        var j = JSON.parse(text);
+        var grouped = stkGroupedFromJson(j);
+        if (grouped) return { grouped: grouped };
+        return stkFromJson(j);
+      } catch (_) {}
     }
     return text;
   });
@@ -417,6 +465,8 @@ stkImportCat.addEventListener('input', refreshImportChips);
 document.getElementById('stkImportDoc').addEventListener('click', function() {
   pickFile('.txt,.md,.csv,.json,.docx,.html,.htm,text/plain,application/json', function(file) {
     stkReadDocText(file).then(function(text) {
+      // 带分类的文件：按原来的分类直接全部导入（导完提示导了多少、新建了几个分类）
+      if (text && text.grouped) { stkImportGrouped(text.grouped); return; }
       var list = stkParseLines(text);
       if (!list.length) { showToast('没在文档里找到图片链接', 'error'); return; }
       var cur = stkImportText.value.trim();
