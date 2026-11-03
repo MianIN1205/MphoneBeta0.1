@@ -1,6 +1,7 @@
 // 眠花糖机 — 查手机：加号抽屉「查手机」，看角色手机里的信息（和你的是真实聊天，和别人的由 AI 按人设写）、备忘录、浏览器（搜索记录、收藏）、购物（购物车、钱包、账单）。
 // 每个 App 第一次打开时自动写一份存下来（mphone_peek），之后点右上 ↻ 才换新的。
-// 角色设置「聊天」页开了「TA 会发现你查手机」时，翻得多了 TA 可能察觉，下次聊天回复时提起（关着就永远不会发现）
+// 角色设置「聊天」页开了「TA 会发现你查手机」时，翻得多了 TA 可能察觉，下次聊天回复时提起（关着就永远不会发现）；
+// 开了「手机有密码」时先要解锁：密码和提示由 TA 按人设自己定，猜对一次就记住，TA 发现你翻手机后会把密码改掉
 
 var peekStore = mphoneStore.load('mphone_peek', {}) || {};   // { 角色id: { chats|notes|browser|shop: { at, data } } }
 var PEEK_APPS = [
@@ -9,7 +10,7 @@ var PEEK_APPS = [
   { id: 'browser', name: '浏览器', icon: '🧭' },
   { id: 'shop', name: '购物', icon: '🛍️' }
 ];
-var peekState = { idx: -1, app: '', tab: '', detail: null, loading: {}, seen: [], t0: 0 };
+var peekState = { idx: -1, app: '', tab: '', detail: null, loading: {}, seen: [], t0: 0, entry: '', wrong: 0 };
 var appPeek = document.getElementById('appPeek');
 function peekChar() { return charList[peekState.idx]; }
 function peekBox(char) { var k = String(char.id); return peekStore[k] || (peekStore[k] = {}); }
@@ -85,7 +86,8 @@ function openPeek(idx) {
   var char = charList[idx];
   if (!char) return;
   peekState.idx = idx; peekState.app = ''; peekState.detail = null; peekState.tab = '';
-  peekState.seen = []; peekState.t0 = Date.now();
+  peekState.seen = []; peekState.t0 = Date.now(); peekState.entry = ''; peekState.wrong = 0;
+  if (peekLocked(char) && !(peekBox(char).lock || {}).pass) peekMakeLock(char);
   renderPeek();
   appPeek.classList.add('active');
 }
@@ -115,9 +117,13 @@ function peekMaybeCaught() {
   if (!char) return;
   var cc = Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {});
   if (!cc.peekNotice) return;   // 关着：怎么翻都不会发现
-  var score = peekState.seen.length + (Date.now() - peekState.t0 > 120000 ? 1 : 0);
+  var score = peekState.seen.length + peekState.wrong + (Date.now() - peekState.t0 > 120000 ? 1 : 0);
   if (score < 4 || Math.random() >= Math.min(0.75, 0.15 * (score - 3))) return;
-  peekBox(char).caught = { at: Date.now(), seen: peekState.seen.slice(0, 10) };
+  var seen = peekState.seen.slice(0, 10);
+  if (peekState.wrong) seen.unshift('试着解锁你的手机，输错了 ' + peekState.wrong + ' 次密码');
+  var box = peekBox(char), relock = peekLockOn(char);
+  box.caught = { at: Date.now(), seen: seen, relock: relock };
+  if (relock) box.lock = {};   // 被发现了：TA 会把密码改掉，下次查手机时再定新的
   savePeek();
 }
 function peekCaughtPrompt(char) {
@@ -127,7 +133,107 @@ function peekCaughtPrompt(char) {
   if (!cc.peekNotice) return '';
   return '【你发现了】' + (typeof fmtAgo === 'function' ? fmtAgo(c.at) : '刚才') + '，用户偷偷翻了你的手机，你察觉到了（比如手机被动过、App 停在你没开过的页面）。' +
     'TA 看了：' + c.seen.join('、') + '。这次回复里自然地提起这件事，反应要符合你的性格和你们现在的关系（可能害羞、慌张、生气、委屈、调侃、假装不在意、反过来逗 TA……）；' +
-    '被看到的内容里有你的小秘密、小心思的话，可以有相应的反应。提这一次就够了，之后不用反复说。';
+    '被看到的内容里有你的小秘密、小心思的话，可以有相应的反应。' + (c.relock ? '你已经把手机密码改掉了，可以顺口提一句。' : '') + '提这一次就够了，之后不用反复说。';
+}
+// 你的手机密码：TA 自己知道（聊天窗口每次都带上），用户问的时候看心情决定给不给
+function peekLockPrompt(char) {
+  if (!peekLockOn(char)) return '';
+  var lk = peekStore[String(char.id)] && peekStore[String(char.id)].lock;
+  if (!lk || !lk.pass) return '';
+  return '【你的手机】你的手机锁屏密码是 ' + lk.pass + (lk.hint ? '（锁屏上的提示是「' + lk.hint + '」）' : '') + '。' +
+    (lk.unlocked ? '用户已经知道这个密码了。' : '用户还不知道；TA 问你要的话，看心情和你们的关系决定给不给、怎么给（可以直接说、逗 TA、让 TA 猜）。') + '平时不用主动提。';
+}
+
+// =============================================
+// 锁屏：TA 按人设定 4～6 位数字密码和一句提示；输错 3 次出现「问问 TA」
+// =============================================
+function peekLockOn(char) { return !!(char && Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {}).peekLock); }
+function peekLocked(char) {
+  if (!peekLockOn(char)) return false;
+  var lk = peekBox(char).lock;
+  return !(lk && lk.unlocked && lk.pass);
+}
+function peekMakeLock(char) {
+  var box = peekBox(char), key = String(char.id) + ':lock';
+  if (peekState.loading[key]) return;
+  peekState.loading[key] = true;
+  var idx = charList.indexOf(char);
+  var msgs = charContextMsgs(idx).concat([activityAsk('【手机密码】给你自己的手机设一个锁屏密码：4～6 位数字，按你的人设来定（比如和用户有关的纪念日、你的生日、对你有意义的数字）；' +
+    '再写一句很短的锁屏提示（10 个字以内，不能直接说出密码，像「是那天」「你应该知道」）。只输出 JSON：{"pass":"0520","hint":"是那天"}')]);
+  callApiOnce(msgs, char).then(function(text) {
+    var d = {};
+    try { d = peekParse(text); } catch (_) {}
+    var pass = String(d.pass || '').replace(/\D/g, '');
+    if (pass.length < 4 || pass.length > 6) throw new Error('bad');
+    box.lock = { pass: pass, hint: String(d.hint || '').slice(0, 16) };
+  }).catch(function() {
+    // 没写好就随便定一个（TA 也知道，聊天里能问到）
+    box.lock = { pass: String(1000 + Math.floor(Math.random() * 9000)), hint: '猜猜看' };
+  }).then(function() {
+    savePeek();
+    delete peekState.loading[key];
+    if (peekChar() === char) renderPeek();
+  });
+}
+function renderPeekLock(body, char) {
+  var lk = peekBox(char).lock || {}, wrap = document.createElement('div');
+  wrap.className = 'peek-lock';
+  if (!lk.pass) { wrap.innerHTML = '<div class="peek-state">正在锁屏…</div>'; body.appendChild(wrap); return; }
+  wrap.innerHTML = '<div class="peek-home-av"></div><div class="peek-lock-title">输入密码</div><div class="peek-lock-hint"></div>' +
+    '<div class="peek-dots"></div><div class="peek-keys"></div><div class="peek-lock-ask"></div>';
+  paintCharAvatar(wrap.querySelector('.peek-home-av'), char);
+  wrap.querySelector('.peek-lock-hint').textContent = lk.hint ? '提示：' + lk.hint : '';
+  var dots = wrap.querySelector('.peek-dots');
+  for (var i = 0; i < lk.pass.length; i++) {
+    var d = document.createElement('span');
+    if (i < peekState.entry.length) d.className = 'on';
+    dots.appendChild(d);
+  }
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].forEach(function(k) {
+    var b = document.createElement('button');
+    b.className = 'peek-key' + (k ? '' : ' blank') + (k === '⌫' ? ' del' : '');
+    b.textContent = k;
+    if (k) b.addEventListener('click', function() { peekKey(k); });
+    wrap.querySelector('.peek-keys').appendChild(b);
+  });
+  if (peekState.wrong >= 3) {
+    var ask = document.createElement('button');
+    ask.className = 'peek-again';
+    ask.textContent = '问问 TA';
+    ask.addEventListener('click', function() {
+      appPeek.classList.remove('active');
+      peekMaybeCaught();
+      var inp = document.getElementById('crInput');
+      if (inp) inp.focus();
+      showToast('去聊天里问问 TA 密码吧', 'plain');
+    });
+    var tip = document.createElement('div');
+    tip.textContent = '输错 ' + peekState.wrong + ' 次了';
+    wrap.querySelector('.peek-lock-ask').appendChild(tip);
+    wrap.querySelector('.peek-lock-ask').appendChild(ask);
+  }
+  body.appendChild(wrap);
+}
+function peekKey(k) {
+  var char = peekChar(), lk = peekBox(char).lock || {};
+  if (!lk.pass) return;
+  if (k === '⌫') { peekState.entry = peekState.entry.slice(0, -1); renderPeek(); return; }
+  if (peekState.entry.length >= lk.pass.length) return;
+  peekState.entry += k;
+  if (peekState.entry.length < lk.pass.length) { renderPeek(); return; }
+  if (peekState.entry === lk.pass) {
+    lk.unlocked = true;
+    savePeek();
+    peekState.entry = '';
+    renderPeek();
+    return;
+  }
+  // 输错：点点抖一下再清空
+  peekState.wrong++;
+  renderPeek();
+  var dots = document.querySelector('#peekBody .peek-dots');
+  if (dots) dots.classList.add('wrong');
+  setTimeout(function() { peekState.entry = ''; if (peekChar() === char) renderPeek(); }, 450);
 }
 function peekCaughtDone(char) {
   var box = char && peekStore[String(char.id)];
@@ -153,6 +259,7 @@ function renderPeek() {
   refresh.classList.toggle('spin', loading);
   body.innerHTML = '';
   body.scrollTop = 0;
+  if (peekLocked(char)) { refresh.style.visibility = 'hidden'; title.textContent = name + '的手机'; renderPeekLock(body, char); return; }
   if (!app) {
     title.textContent = name + '的手机';
     var home = document.createElement('div');

@@ -359,7 +359,7 @@ function buildMsgs(idx, histOverride) {
   var realSys = isChatHist ? realWorldContext(char, fullHistory) : '';
   if (realSys) msgs.push({ role: 'system', content: realSys });
   // 聊天窗口：TA 刚发现用户翻了自己的手机（查手机，见 js/chat/peek.js）
-  var peekSys = (isChatHist && typeof peekCaughtPrompt === 'function') ? peekCaughtPrompt(char) : '';
+  var peekSys = (isChatHist && typeof peekCaughtPrompt === 'function') ? [peekLockPrompt(char), peekCaughtPrompt(char)].filter(Boolean).join('\n') : '';
   if (peekSys) msgs.push({ role: 'system', content: peekSys });
   // 聊天窗口：这个角色能用的表情包名字（表情包抽屉的设置里按角色打开）
   var stkSys = (isChatHist && typeof stickerPrompt === 'function') ? stickerPrompt(char) : '';

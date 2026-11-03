@@ -64,3 +64,21 @@
 .peek-page-title { font-size: 16px; font-weight: 600; color: #222; line-height: 1.5; }
 .peek-page-meta { font-size: 11px; color: #aaa; margin: 4px 0 10px; }
 .peek-page-text { font-size: 14px; color: #333; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }
+
+/* 锁屏 */
+.peek-lock { display: flex; flex-direction: column; align-items: center; padding-top: 22px; }
+.peek-lock-title { margin-top: 12px; font-size: 15px; color: #444; }
+.peek-lock-hint { margin-top: 4px; font-size: 12px; color: #b9a6bf; min-height: 16px; }
+.peek-dots { display: flex; gap: 14px; margin: 18px 0 22px; }
+.peek-dots span { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #c08aa0; box-sizing: border-box; transition: background 0.12s; }
+.peek-dots span.on { background: #c08aa0; }
+.peek-dots.wrong { animation: peekShake 0.36s ease-in-out; }
+.peek-dots.wrong span.on { background: #e07080; border-color: #e07080; }
+@keyframes peekShake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.peek-keys { display: grid; grid-template-columns: repeat(3, 64px); gap: 14px 22px; }
+.peek-key { width: 64px; height: 64px; border-radius: 50%; border: none; background: rgba(255, 255, 255, 0.82); box-shadow: 0 2px 8px rgba(180, 120, 120, 0.12);
+  font-size: 24px; color: #444; font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, background 0.1s; }
+.peek-key:active { transform: scale(0.92); background: #fff; }
+.peek-key.blank { visibility: hidden; }
+.peek-key.del { background: none; box-shadow: none; font-size: 20px; color: #a08090; }
+.peek-lock-ask { margin-top: 18px; text-align: center; font-size: 11.5px; color: #c08aa0; min-height: 20px; }
