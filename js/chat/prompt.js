@@ -364,7 +364,9 @@ function buildMsgs(idx, histOverride) {
   if (attentionNote) msgs.push(attentionNote);
   // 提示词、人设、预设、世界书里的 {{char}} / {{user}} 换成名字（聊天记录本身不动）
   var fill = function(m) { return typeof m.content === 'string' ? { role: m.role, content: fillMacros(m.content, char) } : m; };
-  return msgs.map(fill).concat(rawHist, wbByPos.after.map(fill));
+  // 用户发来的文件：全文单独一段放在聊天记录前面（不替换 {{user}} 这些，原样给）
+  var fileSys = (typeof filesContextFor === 'function') ? filesContextFor(history) : null;
+  return msgs.map(fill).concat(fileSys ? [fileSys] : [], rawHist, wbByPos.after.map(fill));
 }
 
 // 发给 AI / 用于总结的消息文字：撤回的只告诉它「撤回了一条消息」，引用的附上引用内容
@@ -378,7 +380,7 @@ function msgTextForAI(m) {
   if (m.narr) return '【旁白 · 剧情开场】（这是中立的旁白，交代场景，不是用户说的话）\n' + (m.content || '');
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   if (m.cal && typeof calTextForAI === 'function') return calTextForAI(m.cal);
-  var c = m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
+  var c = (m.file && typeof fileTextForAI === 'function') ? fileTextForAI(m) : m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
   if (m.quote) c = '「引用 ' + m.quote.author + '：' + m.quote.text + '」\n' + c;
   return c;
 }

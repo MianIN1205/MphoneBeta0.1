@@ -211,6 +211,7 @@ var MPHONE_SCRIPTS = [
   "js/chat/wallet-fav.js",
   "js/chat/msg-menu.js",
   "js/chat/media-send.js",
+  "js/chat/file-send.js",
   "js/core/image-viewer.js",
   "js/char/assistant.js",
   "js/settings/assist.js",

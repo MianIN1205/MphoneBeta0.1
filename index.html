@@ -67,6 +67,7 @@
   <link rel="stylesheet" href="css/char/assistant.css">
   <link rel="stylesheet" href="css/prompt/prompt.css">
   <link rel="stylesheet" href="css/desk/pet.css">
+  <link rel="stylesheet" href="css/chat/file-send.css">
 </head>
 <body class="phone-fullscreen">
   <!-- 载入页：脚本全部加载完后淡出（见 js/core/boot.js） -->
@@ -2156,14 +2157,16 @@
             </div>
             <span class="cr-plus-label">相册</span>
           </button>
-          <button class="cr-plus-item" data-func="拍摄">
+          <button class="cr-plus-item" data-func="文件">
             <div class="cr-plus-box">
               <svg viewBox="0 0 24 24">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
               </svg>
             </div>
-            <span class="cr-plus-label">拍摄</span>
+            <span class="cr-plus-label">文件</span>
           </button>
           <button class="cr-plus-item" data-func="语音通话">
             <div class="cr-plus-box">
@@ -2215,15 +2218,19 @@
             </div>
             <span class="cr-plus-label">转账</span>
           </button>
-          <button class="cr-plus-item" data-func="收藏">
+          <button class="cr-plus-item" data-func="查手机">
             <div class="cr-plus-box">
               <svg viewBox="0 0 24 24">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                <rect x="6" y="2" width="12" height="20" rx="2.5"></rect>
+                <circle cx="11.5" cy="11" r="2.6"></circle>
+                <line x1="13.4" y1="12.9" x2="15.2" y2="14.7"></line>
+                <line x1="10.5" y1="18.5" x2="13.5" y2="18.5"></line>
               </svg>
             </div>
-            <span class="cr-plus-label">收藏</span>
+            <span class="cr-plus-label">查手机</span>
           </button>
         </div>
+        <input type="file" id="crFileInput" multiple style="display:none">
       </div>
 
       <!-- 表情包抽屉（与加号抽屉同高）：上面是当前分类的表情包，下面是分类标签和导入 / 设置键 -->
@@ -2994,6 +3001,19 @@
 
     <!-- Prompt 条目删除确认弹窗 -->
     <!-- 报错分析：聊天里「回复失败」那行小字点开（见 js/core/errors.js） -->
+    <!-- 看发过的文件全文（js/chat/file-send.js） -->
+    <div class="mine-acc-overlay" id="fileViewOverlay">
+      <div class="mine-acc-modal file-view-modal">
+        <div class="mine-acc-title" id="fileViewTitle">文件</div>
+        <div class="file-view-sub" id="fileViewSub"></div>
+        <div class="file-view-body" id="fileViewBody"></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="fileViewCopy">复制全文</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="fileViewClose">关闭</button>
+        </div>
+      </div>
+    </div>
+
     <div class="mine-acc-overlay" id="errInfoOverlay">
       <div class="mine-acc-modal err-info-modal">
         <div class="mine-acc-title" id="errInfoTitle">出了点问题</div>

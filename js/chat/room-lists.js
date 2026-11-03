@@ -55,6 +55,8 @@
           crAlbumFileInput.value = '';
           crAlbumFileInput.click();
           closeCrPlusPanel();
+        } else if (funcName === '文件' && typeof openChatFilePicker === 'function') {
+          openChatFilePicker();
         } else {
           showToast('「' + funcName + '」功能开发中', 'success');
         }

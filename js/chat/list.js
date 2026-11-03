@@ -23,6 +23,7 @@ function msgPreviewText(m) {
   if (m.pat) return '[拍一拍]';
   if (m.cal) return '[' + m.cal.kind + '] ' + m.cal.title;
   if (m.imgSrc) return '[图片]';
+  if (m.file) return '[文件] ' + (m.file.name || '');
   if (m.voice) return '[语音]' + (m.transcript ? ' ' + m.transcript : '');
   return String(m.content || '').replace(/〔译〕[\s\S]*$/, '').replace(/\s+/g, ' ');
 }
