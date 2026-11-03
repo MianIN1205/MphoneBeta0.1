@@ -40,8 +40,9 @@ function petWordList(p, waking) {
 }
 
 // =============================================
-// 样子：像素小动物（24×22 的格子，上面留了 4 格放耳朵）或者一张图片
-// 分组：pet-legs-a / pet-legs-b 两组腿轮流抬，pet-top 是身子，pet-eye 是眼睛（眨眼、睡觉用）
+// 样子：像素小动物（24×24 的格子，上面留了 2 格放耳朵）或者一张图片
+// 拆成会动的几块：每条腿（pet-leg）、身子（pet-top，里面有钳子 / 小爪 pet-arm、眼睛 pet-eyes、小尾巴 pet-tail），
+// 每一帧在 Pet.frame 里算位置，所以能做出蹲下、弹起、甩钳子、腿乱蹬这些
 // =============================================
 function petShade(hex, k) {
   var n = parseInt(String(hex || '#D97757').replace('#', ''), 16);
@@ -52,52 +53,49 @@ function petShade(hex, k) {
 function petR(x, y, w, h, fill, cls, rx) {
   return '<rect' + (cls ? ' class="' + cls + '"' : '') + ' x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"' + (rx ? ' rx="' + rx + '"' : '') + ' fill="' + fill + '"/>';
 }
-function petSvg(p) {
+// 每种的零件：legs = [[x, y, w, h, rx]]，arms = 左右两只 [x, y, w, h, rx, 肩膀 x, 肩膀 y]，eyes = 两只眼睛的 x，ey = 眼睛的 y
+function petParts(p) {
   var c = p.color || '#D97757', d = petShade(c, -0.22), kind = p.kind || 'crab';
-  var legsA = '', legsB = '', back = '', body = '', eyes = [8, 14], ey = 10;
-  if (kind === 'crab') {
-    legsA = petR(4, 16, 2, 4, c) + petR(15, 16, 2, 4, c);
-    legsB = petR(7, 16, 2, 4, c) + petR(18, 16, 2, 4, c);
-    body = petR(3, 7, 18, 10, c) + petR(0, 10, 3, 3, c) + petR(21, 10, 3, 3, c);
-    eyes = [7, 15]; ey = 9;
-  } else if (kind === 'blob') {
-    legsA = petR(6, 16, 3, 3, d, '', 1);
-    legsB = petR(15, 16, 3, 3, d, '', 1);
-    body = petR(3, 7, 18, 11, c, '', 4);
-  } else if (kind === 'cat') {
-    legsA = petR(6, 16, 2, 4, c) + petR(14, 16, 2, 4, c);
-    legsB = petR(9, 16, 2, 4, c) + petR(17, 16, 2, 4, c);
-    back = '<path d="M20 13 h2 v-5 h2 v7 h-4 z" fill="' + d + '"/>';
-    body = '<path d="M4 9 L5 3 L10 7 L14 7 L19 3 L20 9 Z" fill="' + c + '"/>' + petR(4, 7, 16, 10, c, '', 1) +
-           '<path d="M6 7 L6.4 5 L8.2 6.6 Z" fill="' + d + '"/><path d="M18 7 L17.6 5 L15.8 6.6 Z" fill="' + d + '"/>';
-  } else if (kind === 'bear') {
-    legsA = petR(6, 16, 3, 4, c) + petR(14, 16, 3, 4, c);
-    legsB = petR(9, 16, 2, 4, c) + petR(17, 16, 2, 4, c);
-    body = '<circle cx="6" cy="7" r="2.6" fill="' + c + '"/><circle cx="18" cy="7" r="2.6" fill="' + c + '"/>' +
-           '<circle cx="6" cy="7" r="1.2" fill="' + d + '"/><circle cx="18" cy="7" r="1.2" fill="' + d + '"/>' +
-           petR(4, 6, 16, 11, c, '', 3) + petR(9.5, 12, 5, 3, petShade(c, 0.45), '', 1.2) + petR(11.3, 12.3, 1.4, 1, '#2a2422');
-  } else if (kind === 'bunny') {
-    legsA = petR(6, 16, 3, 3, c, '', 1);
-    legsB = petR(15, 16, 3, 3, c, '', 1);
-    body = petR(6.5, -1, 3, 10, c, '', 1.5) + petR(14.5, -1, 3, 10, c, '', 1.5) +
-           petR(7.5, 0.5, 1, 6, '#f6b4c4') + petR(15.5, 0.5, 1, 6, '#f6b4c4') + petR(4, 7, 16, 11, c, '', 4);
-  }
-  // 眼睛
-  var eye = p.eye || 'bean', ink = '#2a2422', eyeSvg = '';
-  eyes.forEach(function(x) {
-    if (eye === 'round') eyeSvg += '<g class="pet-eye"><rect x="' + x + '" y="' + ey + '" width="2.2" height="2.4" rx="1.1" fill="' + ink + '"/><rect x="' + (x + 1.2) + '" y="' + (ey + 0.4) + '" width="0.7" height="0.7" fill="#fff"/></g>';
-    else if (eye === 'line') eyeSvg += petR(x - 0.5, ey + 1.2, 3, 1, ink, 'pet-eye');
-    else eyeSvg += petR(x, ey, 2, 3, ink, 'pet-eye');
+  if (kind === 'crab') return { c: c, legC: c, legs: [[4, 16, 2, 4], [7, 16, 2, 4], [15, 16, 2, 4], [18, 16, 2, 4]],
+    body: petR(3, 7, 18, 10, c), arms: [[0, 10, 3, 3, 0, 3, 11.5], [21, 10, 3, 3, 0, 21, 11.5]], eyes: [7, 15], ey: 9 };
+  if (kind === 'blob') return { c: c, legC: d, legs: [[6, 16, 3, 3, 1], [15, 16, 3, 3, 1]],
+    body: petR(3, 7, 18, 11, c, '', 4), arms: [[1.2, 12, 2.6, 2.2, 1, 3.6, 13], [20.2, 12, 2.6, 2.2, 1, 20.4, 13]], eyes: [8, 14], ey: 10 };
+  if (kind === 'cat') return { c: c, legC: c, legs: [[6, 16, 2, 4], [9, 16, 2, 4], [14, 16, 2, 4], [17, 16, 2, 4]],
+    tail: '<path d="M19.5 14 h2.5 v-5 h2 v7 h-4.5 z" fill="' + d + '"/>', tailPivot: [20, 15],
+    body: '<path d="M4 9 L5 3 L10 7 L14 7 L19 3 L20 9 Z" fill="' + c + '"/>' + petR(4, 7, 16, 10, c, '', 1) +
+          '<path d="M6 7 L6.4 5 L8.2 6.6 Z" fill="' + d + '"/><path d="M18 7 L17.6 5 L15.8 6.6 Z" fill="' + d + '"/>',
+    arms: [[2.2, 12, 2.4, 2, 0.8, 4.4, 13], [19.4, 12, 2.4, 2, 0.8, 19.6, 13]], eyes: [8, 14], ey: 10 };
+  if (kind === 'bear') return { c: c, legC: c, legs: [[5.5, 16, 2.5, 4], [8.5, 16, 2.5, 4], [13, 16, 2.5, 4], [16, 16, 2.5, 4]],
+    body: '<circle cx="6" cy="7" r="2.6" fill="' + c + '"/><circle cx="18" cy="7" r="2.6" fill="' + c + '"/>' +
+          '<circle cx="6" cy="7" r="1.2" fill="' + d + '"/><circle cx="18" cy="7" r="1.2" fill="' + d + '"/>' +
+          petR(4, 6, 16, 11, c, '', 3) + petR(9.5, 12, 5, 3, petShade(c, 0.45), '', 1.2) + petR(11.3, 12.3, 1.4, 1, '#2a2422'),
+    arms: [[2.2, 11.5, 2.4, 2.4, 1, 4.4, 12.7], [19.4, 11.5, 2.4, 2.4, 1, 19.6, 12.7]], eyes: [8, 14], ey: 10 };
+  // bunny
+  return { c: c, legC: c, legs: [[6, 16, 3, 3, 1], [15, 16, 3, 3, 1]],
+    body: petR(6.5, -1, 3, 10, c, '', 1.5) + petR(14.5, -1, 3, 10, c, '', 1.5) +
+          petR(7.5, 0.5, 1, 6, '#f6b4c4') + petR(15.5, 0.5, 1, 6, '#f6b4c4') + petR(4, 7, 16, 11, c, '', 4),
+    arms: [[2.4, 12, 2.4, 2.2, 1, 4.6, 13], [19.2, 12, 2.4, 2.2, 1, 19.4, 13]], eyes: [8, 14], ey: 10 };
+}
+function petSvg(p) {
+  var P = petParts(p), ink = '#2a2422', eye = p.eye || 'bean';
+  var legs = P.legs.map(function(l) { return '<g class="pet-leg">' + petR(l[0], l[1], l[2], l[3], P.legC, '', l[4]) + '</g>'; }).join('');
+  var arms = P.arms.map(function(a, i) {
+    return '<g class="pet-arm" data-px="' + a[5] + '" data-py="' + a[6] + '" data-side="' + (i ? 1 : -1) + '">' + petR(a[0], a[1], a[2], a[3], P.c, '', a[4]) + '</g>';
+  }).join('');
+  var eyeSvg = '';
+  P.eyes.forEach(function(x) {
+    if (eye === 'round') eyeSvg += '<rect x="' + x + '" y="' + P.ey + '" width="2.2" height="2.4" rx="1.1" fill="' + ink + '"/><rect x="' + (x + 1.2) + '" y="' + (P.ey + 0.4) + '" width="0.7" height="0.7" fill="#fff"/>';
+    else if (eye === 'line') eyeSvg += petR(x - 0.5, P.ey + 1.2, 3, 1, ink);
+    else eyeSvg += petR(x, P.ey, 2, 3, ink);
   });
-  // 小装饰
-  var acc = '', a = p.acc || 'none';
-  if (a === 'blush') acc = petR(eyes[0] - 1.5, ey + 3.4, 2.5, 1.2, '#f39bb0', '', 0.6) + petR(eyes[1] + 1, ey + 3.4, 2.5, 1.2, '#f39bb0', '', 0.6);
+  var acc = '', a = p.acc || 'none', ex = P.eyes, ey = P.ey;
+  if (a === 'blush') acc = petR(ex[0] - 1.5, ey + 3.4, 2.5, 1.2, '#f39bb0', '', 0.6) + petR(ex[1] + 1, ey + 3.4, 2.5, 1.2, '#f39bb0', '', 0.6);
   else if (a === 'bow') acc = '<path d="M15 5 L18 3.2 L18 7.8 Z M21 5 L18 3.2 L18 7.8 Z" fill="#f08aa6" transform="translate(-0.5 1)"/><rect x="17" y="5" width="1.6" height="1.6" fill="#d9607e" transform="translate(-0.5 0.2)"/>';
   else if (a === 'flower') acc = '<g transform="translate(17.5 6.2)"><circle cx="0" cy="-1.3" r="1.1" fill="#fff"/><circle cx="1.3" cy="0" r="1.1" fill="#fff"/><circle cx="0" cy="1.3" r="1.1" fill="#fff"/><circle cx="-1.3" cy="0" r="1.1" fill="#fff"/><circle r="0.8" fill="#f6c94a"/></g>';
   else if (a === 'sprout') acc = '<path d="M12 7 V3.6" stroke="#6bb67e" stroke-width="0.9"/><path d="M12 4.6 C10 4.6 9.2 3.2 9.4 2.2 C11 2.2 12 3.2 12 4.6 Z M12 4 C13.6 4 14.8 2.8 14.6 1.6 C13 1.6 12 2.6 12 4 Z" fill="#7cc48e"/>';
-  return '<svg class="pet-svg" viewBox="0 -2 24 24" aria-hidden="true">' + back +
-    '<g class="pet-legs-a">' + legsA + '</g><g class="pet-legs-b">' + legsB + '</g>' +
-    '<g class="pet-top">' + body + eyeSvg + acc + '</g></svg>';
+  return '<svg class="pet-svg" viewBox="0 -2 24 24" aria-hidden="true">' +
+    (P.tail ? '<g class="pet-tail" data-px="' + P.tailPivot[0] + '" data-py="' + P.tailPivot[1] + '">' + P.tail + '</g>' : '') + legs +
+    '<g class="pet-top">' + arms + P.body + '<g class="pet-eyes" data-cy="' + (ey + 1.5) + '">' + eyeSvg + '</g>' + acc + '</g></svg>';
 }
 function petLook(p) {
   if (p.kind === 'img') return p.img ? '<img class="pet-img" alt="" draggable="false" src="' + String(p.img).replace(/"/g, '&quot;') + '">' : petSvg(Object.assign({}, p, { kind: 'blob' }));
@@ -119,9 +117,12 @@ var PET_PROPS = {
         '<g fill="#e3d6c8"><rect x="6.6" y="14" width="4.2" height="0.5"/><rect x="6.6" y="15.4" width="4.2" height="0.5"/><rect x="6.6" y="16.8" width="3" height="0.5"/>' +
         '<rect x="13" y="14" width="4.2" height="0.5"/><rect x="13" y="15.4" width="4.2" height="0.5"/><rect x="13" y="16.8" width="3.4" height="0.5"/></g></g>'
 };
+// 四条腿错开抬（像小碎步），两条腿的一左一右
+var PET_LEG_PHASE = { 4: [0, Math.PI, Math.PI / 2, Math.PI * 1.5], 2: [0, Math.PI] };
 
 // =============================================
 // 一只会动的宠物：box 是它能走动的地方；opt = { size, top, bottom }
+// 动起来的部分全在 frame 里按时间算：身子的压扁 / 拉长 / 摇摆（pet-inner）、腿、钳子、眼睛、尾巴
 // =============================================
 function Pet(box, data, opt) {
   var self = this;
@@ -134,11 +135,14 @@ function Pet(box, data, opt) {
   box.appendChild(el);
   this.inner = el.firstChild;
   this.say = el.querySelector('.pet-say');
+  this.state = 'idle'; this.until = 0; this.since = Date.now();
   this.setData(data);
-  this.x = -1; this.y = -1;
-  this.state = 'idle'; this.until = 0; this.tx = 0; this.ty = 0;
+  this.x = -1; this.y = -1; this.tx = 0; this.ty = 0; this.v = 0; this.maxV = 34; this.dir = 1;
+  this.phase = 0; this.rot = 0; this.rotV = 0; this.eyeX = 0; this.eyeY = 0; this.eyeTX = 0; this.eyeTY = 0;
+  this.fx = null;          // 一次性的动作：hop 跳一下、land 落地、wave 挥手
+  this.dragV = 0;          // 拖着走时手指的横向速度（身子跟着晃）
   this.lastTouch = Date.now(); this.last = 0; this.running = false;
-  this.blinkAt = Date.now() + 1000 + Math.random() * 3000;
+  this.blinkAt = Date.now() + 1000 + Math.random() * 3000; this.blinkT = 0; this.blink2 = false;
   this.bindPointer();
   this.tick = function(t) { self.frame(t); };
 }
@@ -146,6 +150,12 @@ Pet.prototype.setData = function(p) {
   this.data = p;
   this.inner.innerHTML = petLook(p) + '<svg class="pet-prop" viewBox="0 -2 24 24" aria-hidden="true">' + (PET_PROPS[this.state] || '') + '</svg><span class="pet-z">z</span>';
   this.prop = this.inner.querySelector('.pet-prop');
+  var q = function(s) { return this.inner.querySelectorAll(s); }.bind(this);
+  this.legs = Array.prototype.slice.call(q('.pet-leg'));
+  this.arms = Array.prototype.slice.call(q('.pet-arm'));
+  this.top = this.inner.querySelector('.pet-top');
+  this.eyes = this.inner.querySelector('.pet-eyes');
+  this.tail = this.inner.querySelector('.pet-tail');
   this.el.classList.toggle('is-img', p.kind === 'img' && !!p.img);
 };
 Pet.prototype.area = function() {
@@ -157,13 +167,16 @@ Pet.prototype.place = function() {
 };
 Pet.prototype.set = function(state, ms) {
   var el = this.el;
-  ['walk', 'sleep', 'look-l', 'look-r', 'look-up', 'act-dance', 'act-pc', 'act-book', 'act-stretch'].forEach(function(c) { el.classList.remove(c); });
+  ['walk', 'sleep', 'act-dance', 'act-pc', 'act-book', 'act-stretch'].forEach(function(c) { el.classList.remove(c); });
   this.state = state;
+  this.since = Date.now();
   this.until = Date.now() + (ms || 0);
   if (state === 'walk' || state === 'sleep') el.classList.add(state);
   if (PET_ACTS[state]) el.classList.add('act-' + state);   // 加前缀：.book 之类会和书架的样式撞
-  if (state === 'look') el.classList.add(['look-l', 'look-r', 'look-up'][Math.floor(Math.random() * 3)]);
   if (this.prop) this.prop.innerHTML = PET_PROPS[state] || '';
+  // 东张西望：眼睛看向一边，脑袋跟着歪一点
+  if (state === 'look') { var k = Math.floor(Math.random() * 3); this.eyeTX = [-1, 1, 0][k]; this.eyeTY = [0, 0, -0.9][k]; this.tilt = [-5, 5, 0][k]; }
+  else this.tilt = 0;
 };
 Pet.prototype.act = function(name) {
   this.lastTouch = Date.now();
@@ -171,14 +184,13 @@ Pet.prototype.act = function(name) {
   var a = PET_ACTS[name];
   if (a) this.set(name, a[0] + Math.random() * a[1]);
 };
-// 跳舞时头上冒小音符
 Pet.prototype.float = function(text, cls) {
   var s = document.createElement('span');
   s.className = cls; s.textContent = text;
   this.inner.appendChild(s);
   setTimeout(function() { s.remove(); }, 1300);
 };
-// 想想接下来干什么：多半是走到附近一个地方，有时东张西望、发会儿呆，久没人理（或者夜里）就打个盹
+// 想想接下来干什么：多半是走到附近一个地方，有时东张西望、发会儿呆、跳舞、玩电脑、看书、伸懒腰，久没人理（或者夜里）就打个盹
 Pet.prototype.decide = function() {
   var a = this.area(), r = Math.random(), h = new Date().getHours();
   var sleepy = (h >= 23 || h < 6) ? 0.25 : (Date.now() - this.lastTouch > 90000 ? 0.12 : 0.04);
@@ -192,6 +204,8 @@ Pet.prototype.decide = function() {
   var ang = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 130;
   this.tx = Math.min(a.x1, Math.max(a.x0, this.x + Math.cos(ang) * dist));
   this.ty = Math.min(a.y1, Math.max(a.y0, this.y + Math.sin(ang) * dist * 0.7));
+  this.maxV = 24 + Math.random() * 26;   // 有时慢慢晃，有时小跑
+  this.v = 0;
   this.set('walk', 15000);
 };
 Pet.prototype.frame = function(t) {
@@ -210,24 +224,112 @@ Pet.prototype.frame = function(t) {
     this.y = Math.min(a.y1, Math.max(a.y0, this.y));
   }
   if (this.state === 'walk') {
-    var dx = this.tx - this.x, dy = this.ty - this.y, d = Math.sqrt(dx * dx + dy * dy), step = 34 * dt;
-    if (d <= step || now > this.until) { this.x = this.tx; this.y = this.ty; this.set('idle', 800 + Math.random() * 2500); }
+    // 起步慢慢加速，快到了慢下来
+    var dx = this.tx - this.x, dy = this.ty - this.y, d = Math.sqrt(dx * dx + dy * dy);
+    this.v += (Math.min(this.maxV, 10 + d * 2.2) - this.v) * Math.min(1, dt * 5);
+    var step = this.v * dt;
+    if (Math.abs(dx) > 1) this.dir = dx < 0 ? -1 : 1;
+    if (d <= Math.max(step, 0.6) || now > this.until) { this.x = this.tx; this.y = this.ty; this.v = 0; this.set('idle', 800 + Math.random() * 2500); }
     else { this.x += dx / d * step; this.y += dy / d * step; }
   } else if (this.state !== 'drag' && now > this.until) {
-    if (this.state === 'sleep') { this.set('idle', 1500); this.talk(true); }
+    if (this.state === 'sleep') { this.set('idle', 1500); this.talk(true); this.fx = { type: 'hop', t0: now }; }
     else this.decide();
   }
-  if (this.state === 'dance' && !(now < this.noteAt)) {
-    this.float(Math.random() < 0.5 ? '♪' : '♫', 'pet-note' + (Math.random() < 0.5 ? ' r' : ''));
-    this.noteAt = now + 600 + Math.random() * 500;
+  if (this.state === 'dance') {
+    if (!(now < this.noteAt)) { this.float(Math.random() < 0.5 ? '♪' : '♫', 'pet-note' + (Math.random() < 0.5 ? ' r' : '')); this.noteAt = now + 600 + Math.random() * 500; }
   }
-  if (this.state !== 'sleep' && now > this.blinkAt) {
-    var el = this.el;
-    el.classList.add('blink');
-    setTimeout(function() { el.classList.remove('blink'); }, 130);
-    this.blinkAt = now + 2500 + Math.random() * 4000;
-  }
+  this.pose(t / 1000, dt, now);
   this.place();
+};
+// 摆姿势：每一帧按状态算出身子、腿、钳子、眼睛的位置
+Pet.prototype.pose = function(s, dt, now) {
+  var st = this.state, el = this.since ? (now - this.since) / 1000 : 0;
+  var ix = 0, iy = 0, sx = 1, sy = 1, rotT = this.tilt || 0, bodyY = 0, armL = 4 * Math.sin(s * 2), armR = 4 * Math.sin(s * 2 + 1);
+  var legLift = [0, 0, 0, 0], legX = [0, 0, 0, 0], legY = 0, eyeS = 1, eyeTX = this.eyeTX, eyeTY = this.eyeTY, tail = 10 * Math.sin(s * 2.2);
+  var walking = st === 'walk' && this.v > 2, stepHz = 0;
+  if (walking) stepHz = 1.2 + this.v / 14;
+  if (st === 'dance' || st === 'drag') stepHz = st === 'drag' ? 5 : 3.4;
+  this.phase += dt * Math.PI * 2 * stepHz;
+  var ph = PET_LEG_PHASE[this.legs.length] || PET_LEG_PHASE[4];
+  // 平时：轻轻呼吸
+  sy = 1 + 0.022 * Math.sin(s * 2.4); sx = 1 - 0.012 * Math.sin(s * 2.4);
+  if (st === 'idle' || st === 'look') { eyeTX = st === 'look' ? this.eyeTX : 0.35 * Math.sin(s * 0.7); eyeTY = st === 'look' ? this.eyeTY : 0; }
+  if (walking) {
+    for (var i = 0; i < this.legs.length; i++) { var w = this.phase + ph[i]; legLift[i] = Math.max(0, Math.sin(w)) * 1.5; legX[i] = Math.cos(w) * 0.5 * this.dir; }
+    bodyY = -0.45 * Math.abs(Math.sin(this.phase));
+    rotT = this.dir * Math.min(5, this.v / 8);
+    armL = 10 * Math.sin(this.phase); armR = 10 * Math.sin(this.phase + Math.PI);
+    eyeTX = this.dir * 0.9; eyeTY = 0;
+    tail = 18 * Math.sin(this.phase);
+  }
+  if (st === 'dance') {
+    var b = s * 7;
+    rotT = 10 * Math.sin(b); iy = -Math.abs(Math.sin(b)) * this.h * 0.09;
+    sy = 1 + 0.06 * Math.cos(b * 2); sx = 1 - 0.04 * Math.cos(b * 2);
+    armL = 38 + 28 * Math.sin(b); armR = 38 + 28 * Math.sin(b + Math.PI);
+    for (var j = 0; j < this.legs.length; j++) legLift[j] = Math.max(0, Math.sin(this.phase + ph[j])) * 1.4;
+    eyeTX = 0.6 * Math.sin(b); tail = 25 * Math.sin(b);
+  }
+  if (st === 'pc') {
+    var k1 = Math.max(0, Math.sin(s * 19)), k2 = Math.max(0, Math.sin(s * 19 + Math.PI));
+    armL = 6 + 10 * k1; armR = 6 + 10 * k2; bodyY = 0.25 * (k1 + k2); eyeTY = 0.6; eyeTX = 0.3 * Math.sin(s * 0.9);
+  }
+  if (st === 'book') { armL = armR = 22; rotT = 2 * Math.sin(s * 0.8); eyeTY = 1.1; eyeTX = 0.6 * Math.sin(s * 1.3); eyeS = 0.7; }
+  if (st === 'stretch') {
+    var p = Math.sin(Math.min(1, el / 1.6) * Math.PI);
+    sy = 1 + 0.15 * p; sx = 1 - 0.07 * p; armL = armR = 75 * p; if (p > 0.3) eyeS = 0.15;
+  }
+  if (st === 'sleep') {
+    bodyY = 2.6 + 0.35 * Math.sin(s * 1.4); legY = -1; armL = armR = -8; eyeS = 0.15; eyeTY = 1; eyeTX = 0;
+    sy = 1 + 0.03 * Math.sin(s * 1.4); sx = 1 + 0.02; tail = 4 * Math.sin(s * 0.8);
+  }
+  if (st === 'drag') {
+    // 拎在手里：腿乱蹬，钳子乱挥，身子跟着手指晃，眼睛往下看
+    for (var m = 0; m < this.legs.length; m++) { legLift[m] = -1 - 0.8 * Math.max(0, Math.sin(this.phase + ph[m])); legX[m] = 0.6 * Math.sin(this.phase * 1.3 + m); }
+    armL = 35 + 20 * Math.sin(s * 15); armR = 35 + 20 * Math.sin(s * 15 + 2);
+    rotT = Math.max(-28, Math.min(28, -this.dragV * 0.06)); eyeTY = 0.8; eyeTX = 0; sy = 1.04; sx = 0.97;
+    this.dragV *= Math.pow(0.02, dt);
+    tail = 30 * Math.sin(s * 9);
+  }
+  // 一次性的动作：跳一下（先蹲、再弹起、落地压扁）、落地、挥手
+  var fx = this.fx;
+  if (fx) {
+    var k = (now - fx.t0) / 1000, h = this.h;
+    if (fx.type === 'hop') {
+      if (k < 0.09) { var q = k / 0.09; sy = 1 - 0.18 * q; sx = 1 + 0.12 * q; }
+      else if (k < 0.37) { var q2 = (k - 0.09) / 0.28; iy = -Math.sin(q2 * Math.PI) * h * 0.42; sy = 1.1 - 0.1 * q2; sx = 0.93 + 0.07 * q2; legY = 0.6; armL = armR = 40; }
+      else if (k < 0.6) { var q3 = (k - 0.37) / 0.23; sy = 1 - 0.16 * Math.cos(q3 * Math.PI / 2) * (1 - q3) + 0.04 * Math.sin(q3 * Math.PI); sx = 1 + 0.12 * (1 - q3); }
+      else this.fx = null;
+    } else if (fx.type === 'land') {
+      if (k < 0.3) { var q4 = k / 0.3; sy = 1 - 0.18 * (1 - q4) + 0.05 * Math.sin(q4 * Math.PI); sx = 1 + 0.12 * (1 - q4); }
+      else this.fx = null;
+    } else if (fx.type === 'wave') {
+      if (k < 1.1) armR = 60 + 28 * Math.sin(k * 16);
+      else this.fx = null;
+    }
+  }
+  // 身子的摇摆用弹簧（甩一下会晃两下才停）
+  var acc = (rotT - this.rot) * 90 - this.rotV * 11;
+  this.rotV += acc * dt; this.rot += this.rotV * dt;
+  // 眨眼（有时连眨两下）
+  if (st !== 'sleep' && now > this.blinkAt) { this.blinkT = now; this.blink2 = Math.random() < 0.25; this.blinkAt = now + 2500 + Math.random() * 4000; }
+  var bk = now - this.blinkT;
+  if (bk < 120 || (this.blink2 && bk > 220 && bk < 340)) eyeS = Math.min(eyeS, 0.12);
+  this.eyeX += (eyeTX - this.eyeX) * Math.min(1, dt * 10);
+  this.eyeY += (eyeTY - this.eyeY) * Math.min(1, dt * 10);
+
+  this.inner.style.transform = 'translate(' + ix.toFixed(2) + 'px,' + iy.toFixed(2) + 'px) rotate(' + this.rot.toFixed(2) + 'deg) scale(' + sx.toFixed(3) + ',' + sy.toFixed(3) + ')';
+  if (this.top) this.top.setAttribute('transform', 'translate(0 ' + bodyY.toFixed(2) + ')');
+  for (var n = 0; n < this.legs.length; n++) this.legs[n].setAttribute('transform', 'translate(' + legX[n].toFixed(2) + ' ' + (legY - legLift[n]).toFixed(2) + ')');
+  for (var r = 0; r < this.arms.length; r++) {
+    var g = this.arms[r], side = +g.getAttribute('data-side'), ang = (side < 0 ? armL : -armR);
+    g.setAttribute('transform', 'rotate(' + ang.toFixed(1) + ' ' + g.getAttribute('data-px') + ' ' + g.getAttribute('data-py') + ')');
+  }
+  if (this.eyes) {
+    var cy = +this.eyes.getAttribute('data-cy');
+    this.eyes.setAttribute('transform', 'translate(' + this.eyeX.toFixed(2) + ' ' + (this.eyeY + cy).toFixed(2) + ') scale(1 ' + eyeS.toFixed(2) + ') translate(0 ' + (-cy) + ')');
+  }
+  if (this.tail) this.tail.setAttribute('transform', 'rotate(' + tail.toFixed(1) + ' ' + this.tail.getAttribute('data-px') + ' ' + this.tail.getAttribute('data-py') + ')');
 };
 Pet.prototype.start = function() { if (this.running) return; this.running = true; this.last = 0; requestAnimationFrame(this.tick); };
 Pet.prototype.stop = function() { this.running = false; };
@@ -239,34 +341,36 @@ Pet.prototype.talk = function(waking) {
   clearTimeout(this._sayT);
   this._sayT = setTimeout(function() { s.classList.remove('show'); }, 1800);
 };
-// 摸一下：跳一跳、冒个小爱心，有时候说句话；睡着的被摸醒
+// 摸一下：蹲一下跳起来、挥挥钳子、冒个小爱心，有时候说句话；睡着的被摸醒（揉揉眼睛跳起来）
 Pet.prototype.pat = function() {
-  var el = this.el;
-  this.lastTouch = Date.now();
-  if (this.state === 'sleep') { this.set('idle', 2000); this.talk(true); return; }
+  var now = Date.now();
+  this.lastTouch = now;
+  if (this.state === 'sleep') { this.set('idle', 2000); this.talk(true); this.fx = { type: 'hop', t0: now }; return; }
   this.set('idle', 1800);
-  el.classList.remove('hop'); void el.offsetWidth; el.classList.add('hop');
-  setTimeout(function() { el.classList.remove('hop'); }, 400);
+  this.fx = Math.random() < 0.6 ? { type: 'hop', t0: now } : { type: 'wave', t0: now };
   var heart = document.createElement('span');
   heart.className = 'pet-heart'; heart.textContent = '♥';
   this.inner.appendChild(heart);
   setTimeout(function() { heart.remove(); }, 950);
   if (Math.random() < 0.6) this.talk(false);
 };
-// 点一下 = 摸摸；按住拖动 = 拎着走（拖动时腿乱蹬）
+// 点一下 = 摸摸；按住拖动 = 拎着走（腿乱蹬、身子跟着晃，放下时落地压一下）
 Pet.prototype.bindPointer = function() {
   var self = this, el = this.el, down = null;
   el.addEventListener('pointerdown', function(e) {
     e.stopPropagation();
     var r = self.box.getBoundingClientRect(), k = r.width / (self.box.offsetWidth || r.width) || 1;   // 带边框模式整个小手机是缩放过的
-    down = { px: e.clientX, py: e.clientY, x: self.x, y: self.y, k: k, moved: false };
+    down = { px: e.clientX, py: e.clientY, x: self.x, y: self.y, k: k, moved: false, lx: e.clientX, lt: performance.now() };
     try { el.setPointerCapture(e.pointerId); } catch (_) {}
   });
   el.addEventListener('pointermove', function(e) {
     if (!down) return;
     var dx = (e.clientX - down.px) / down.k, dy = (e.clientY - down.py) / down.k;
     if (!down.moved && dx * dx + dy * dy < 36) return;
-    if (!down.moved) { down.moved = true; self.set('drag'); el.classList.add('drag'); self.lastTouch = Date.now(); }
+    if (!down.moved) { down.moved = true; self.set('drag'); el.classList.add('drag'); self.lastTouch = Date.now(); self.fx = null; }
+    var tnow = performance.now(), dtm = Math.max(8, tnow - down.lt);
+    self.dragV = self.dragV * 0.6 + ((e.clientX - down.lx) / down.k / dtm * 1000) * 0.4;
+    down.lx = e.clientX; down.lt = tnow;
     var a = self.area();
     self.x = Math.min(a.x1, Math.max(a.x0, down.x + dx));
     self.y = Math.min(a.y1, Math.max(a.y0, down.y + dy));
@@ -277,7 +381,7 @@ Pet.prototype.bindPointer = function() {
     var moved = down.moved;
     down = null;
     el.classList.remove('drag');
-    if (moved) self.set('idle', 1200 + Math.random() * 1500);
+    if (moved) { self.set('idle', 1200 + Math.random() * 1500); self.fx = { type: 'land', t0: Date.now() }; self.dragV = 0; self.rot *= 0.3; self.rotV = 0; }
     else self.pat();
   };
   el.addEventListener('pointerup', end);

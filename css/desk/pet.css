@@ -8,30 +8,9 @@
 .pet { position: absolute; left: 0; top: 0; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent; cursor: grab; will-change: transform; }
 .pet.drag { cursor: grabbing; }
-.pet-inner { position: relative; width: 100%; height: 100%; }
-.pet.hop .pet-inner { animation: petHop 0.38s ease-out; }
+.pet-inner { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; }   /* 压扁 / 拉长 / 摇摆都在 pet.js 里每帧算 */
+.pet.drag .pet-inner { transform-origin: 50% 0; }   /* 拎起来时从上面晃 */
 .pet-svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 2px rgba(120, 70, 50, 0.18)); }
-.pet-svg .pet-eye { fill: #2a2422; transform-box: fill-box; transform-origin: center; transition: transform 0.12s; }
-.pet-svg .pet-legs-a, .pet-svg .pet-legs-b, .pet-svg .pet-top { transition: transform 0.25s; }
-
-/* 走路：两组腿轮流抬一下，身子跟着轻轻一颠 */
-.pet.walk .pet-legs-a { animation: petStep 0.34s steps(1) infinite; }
-.pet.walk .pet-legs-b { animation: petStep 0.34s steps(1) infinite; animation-delay: -0.17s; }
-.pet.walk .pet-top { animation: petBob 0.34s steps(1) infinite; }
-.pet.drag .pet-legs-a { animation: petStep 0.18s steps(1) infinite; }
-.pet.drag .pet-legs-b { animation: petStep 0.18s steps(1) infinite; animation-delay: -0.09s; }
-.pet.blink .pet-eye { transform: scaleY(0.15); }
-.pet.look-l .pet-eye { transform: translateX(-1px); }
-.pet.look-r .pet-eye { transform: translateX(1px); }
-.pet.look-up .pet-eye { transform: translateY(-1px); }
-/* 睡觉：趴下（身子落到腿上），眼睛眯成一条线 */
-.pet.sleep .pet-top { transform: translateY(3px); }
-.pet.sleep .pet-legs-a, .pet.sleep .pet-legs-b { transform: translateY(-1px); }
-.pet.sleep .pet-eye { transform: translateY(1px) scaleY(0.2); }
-
-@keyframes petStep { 0% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
-@keyframes petBob  { 0% { transform: translateY(0); } 50% { transform: translateY(0.5px); } }
-@keyframes petHop  { 0% { transform: translateY(0); } 45% { transform: translateY(-28%); } 100% { transform: translateY(0); } }
 
 /* 说话的小泡泡、爱心、睡觉的 z */
 .pet-say { position: absolute; left: 50%; bottom: 100%; margin-bottom: 4px; transform: translateX(-50%) scale(0.92); opacity: 0;
@@ -52,12 +31,9 @@
 .pet-home-tip { text-align: center; font-size: 11px; color: #b9a6bf; margin: 0 0 14px; }
 .pet-set-hint { font-size: 10.5px; color: #bbb; line-height: 1.5; margin-top: 4px; }
 
-/* 图片宠物：走路时轻轻一颠，睡觉时歪一点 */
+/* 图片宠物：没有腿和钳子，跟着身子一起压扁、摇摆 */
 .pet-img { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(120, 70, 50, 0.18));
   transition: transform 0.25s; pointer-events: none; -webkit-user-drag: none; }
-.pet.walk .pet-img { animation: petImgBob 0.42s ease-in-out infinite; }
-.pet.sleep .pet-img { transform: translateY(6%) rotate(-6deg); }
-@keyframes petImgBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5%); } }
 
 /* 小窝里的宠物列表 */
 .pet-row { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid rgba(210, 180, 190, 0.22); cursor: pointer; }
@@ -91,26 +67,12 @@
 .pet-swatch.active { box-shadow: 0 0 0 2px #D05858; }
 .pet-color-input { width: 28px; height: 28px; border: none; padding: 0; background: none; cursor: pointer; }
 
-/* 动作：跳舞（左右摇、腿跟着踩）、玩电脑（坐在电脑后面敲，屏幕的光一闪一闪）、看书（眼睛往下）、伸懒腰（身子拉长一下） */
+/* 动作的道具（电脑、书）和跳舞的小音符；动作本身在 pet.js 的 Pet.pose 里 */
 .pet-prop { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.pet.act-dance .pet-inner { animation: petDance 0.9s ease-in-out infinite; }
-.pet.act-dance .pet-legs-a { animation: petStep 0.3s steps(1) infinite; }
-.pet.act-dance .pet-legs-b { animation: petStep 0.3s steps(1) infinite; animation-delay: -0.15s; }
-@keyframes petDance { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(-6%, -3%) rotate(-9deg); }
-  50% { transform: translate(0, -9%) rotate(0); } 75% { transform: translate(6%, -3%) rotate(9deg); } }
 .pet-note { position: absolute; left: 20%; top: -4px; color: #b9a6e0; font-size: 12px; pointer-events: none; animation: petNote 1.2s ease-out forwards; }
 .pet-note.r { left: 70%; color: #f08aa6; }
 @keyframes petNote { from { opacity: 0.95; transform: translate(0, 0) rotate(-10deg); } to { opacity: 0; transform: translate(6px, -22px) rotate(10deg); } }
-.pet.act-pc .pet-top { animation: petType 0.28s steps(1) infinite; }
-.pet.act-pc .pet-eye { transform: translateY(0.6px); }
 .pet .pc-glow { animation: petGlow 1.4s steps(2) infinite; }
-@keyframes petType { 50% { transform: translateY(0.4px); } }
 @keyframes petGlow { 0% { opacity: 0.35; } 50% { opacity: 0.75; } }
-.pet.act-book .pet-eye { transform: translateY(1.2px) scaleY(0.6); }
-.pet.act-book .pet-top { animation: petRead 3.2s ease-in-out infinite; }
-@keyframes petRead { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(0.5px); } }
-.pet.act-stretch .pet-top { transform-box: fill-box; transform-origin: center bottom; animation: petStretch 1.6s ease-in-out; }
-.pet.act-stretch .pet-eye { transform: scaleY(0.2); }
-@keyframes petStretch { 0%, 100% { transform: scale(1, 1); } 40%, 60% { transform: scale(0.94, 1.14); } }
 .pet.is-img.act-pc .pet-img, .pet.is-img.act-book .pet-img { transform: translateY(4%); }
 .pet-home-acts { justify-content: center; margin: 0 0 8px; }
