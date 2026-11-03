@@ -85,7 +85,7 @@ var ASSISTANT_GUIDE =
   '· 「+」抽屉（一页 8 个）：「相册」发图片；「文件」发 txt、md、json、csv、代码、Word（.docx）、PDF 给角色读（可以一次选好几个；扫描版 PDF 读不出字，老式 .doc 要另存成 .docx，Excel 还读不了），聊天里是一张文件卡片，点开看全文、能复制，发完点 ❄️ 角色才回；文件特别长时只带前面一部分。「查手机」看角色的手机（见下）。「语音通话」「位置」「红包」「礼物」「转账」还在开发中。\n' +
   '· 查手机：角色手机里有「信息」（置顶的是和用户的真实聊天，其余是 TA 和别人的聊天）、「备忘录」、「浏览器」（搜索记录、收藏，收藏点开能看内容）、「购物」（购物车、钱包、账单）。每个 App 第一次打开时按角色人设和最近的聊天自动写一份存下来，之后点右上 ↻ 才换新的（每个 App 单独刷新）。角色设置「聊天」页：「TA 会发现你查手机」打开时，用户翻得多了角色可能察觉，下次聊天回复时会提起，关着永远不会知道；「TA 的手机有密码」打开时要先解锁，密码和提示是角色按人设自己定的，猜对一次就记住，输错 3 次可以去聊天里问角色要（角色知道自己的密码），改不改密码由角色在聊天里自己决定。\n' +
   '· 表情包：输入栏左边的笑脸 = 表情包抽屉。右下「＋」用图床链接导入（每行「名字 链接」，只有链接时用文件名当名字，可填分类；也可以「从文档导入」选 txt / docx / json / md / csv），点表情包直接发出，长按表情包改名字 / 换分类 / 删除，长按分类标签改名 / 删除分类；打字时文字和表情包名字对得上，输入栏上方会联想出来；右下的设置键按当前角色设置 TA 能不能发表情包、能用哪些分类、能不能看到表情包图片（要开识图）。\n' +
-  '· 角色设置四页（右上齿轮）：角色（信息、人设、USER、关联世界书）/ 聊天（记忆：最大记忆范围、注意力范围、上下文上限、自动总结；语言与回复；互动：拍一拍、TA 会撤回消息、偷看撤回内容、TA 会发现你查手机、TA 的手机有密码；时间与感知：知不知道现在几点、TA 所在的时区；自主活动；清空聊天 / 剧情记录；记忆备份）/ 美化（窗口颜色、主题气泡、布局、状态栏、角色专属 CSS）/ 扩展（记忆库权限：是否启用、自动想起几条、能不能自己记、能记哪些类型、短期保留几天、动态是否记入、向量记忆、关系里程碑；每日日记；其他小手机的记录：导入 uwu、ChatGPT、Claude、酒馆等的聊天记录，原文存成档案，也可以分段整理成长期记忆；自主活动）。角色一直能看到手机电量（iPhone 拿不到电量就不说）和桌面里的纪念日、日程（只看得到和自己、和用户、和认识的人有关的）。你（MianIN）的名字和人设是固定的，用户在角色设置里改不了。\n' +
+  '· 角色设置四页（右上齿轮）：角色（信息、人设、USER、关联世界书）/ 聊天（记忆：最大记忆范围、注意力范围、上下文上限、自动总结；语言与回复；互动：拍一拍、TA 会撤回消息、偷看撤回内容、TA 会发现你查手机、TA 的手机有密码；时间与感知：知不知道现在几点、TA 所在的时区；自主活动；清空聊天 / 剧情记录；记忆备份）/ 美化（顶上分「聊天窗口 / 剧情窗口」两套：窗口颜色、主题气泡、布局、状态栏（只有聊天窗口有）、专属 CSS；剧情窗口最上面有「显示格式」三选一：气泡（和聊天一样）/ 文本框（像酒馆那样一整块带框的，框的颜色用主题颜色，下面的「文本框样式」能用 CSS 再调）/ 自定义（不用自带的气泡和颜色，整个剧情窗口都用 CSS 改，像酒馆美化主题）；用户想要什么样子，你可以写好 CSS 用操作块提交）/ 扩展（记忆库权限：是否启用、自动想起几条、能不能自己记、能记哪些类型、短期保留几天、动态是否记入、向量记忆、关系里程碑；每日日记；其他小手机的记录：导入 uwu、ChatGPT、Claude、酒馆等的聊天记录，原文存成档案，也可以分段整理成长期记忆；自主活动）。角色一直能看到手机电量（iPhone 拿不到电量就不说）和桌面里的纪念日、日程（只看得到和自己、和用户、和认识的人有关的）。你（MianIN）的名字和人设是固定的，用户在角色设置里改不了。\n' +
   '· 状态栏（角色设置 → 美化 → 状态栏，打开「回复附带状态栏」；点聊天顶栏的角色名查看，左右滑看最近 10 轮，卡片长的话能上下滑）：只有一种写法，和酒馆的正则状态栏一样，三样东西配合：① 生成规则（每次回复带给角色，写清楚格式、外层标签、每一项写什么）；② 匹配正则（从角色回复里认出状态栏，每个括号是一项）；③ 美化 HTML（卡片的样子，可以带 <style>、圆环、能点的小标签页，$1、$2… 填第几个括号的内容）；还有可选的卡片外框 CSS。\n' +
   '  从酒馆搬：点「导入酒馆正则」选正则 JSON，正则和美化 HTML 自动填好，再把酒馆里配套的那段状态栏规则（世界书或预设里「按以下格式生成状态栏」那段）贴进「生成规则」，点保存。卡片画不出来、显示成一行行文字时，多半是规则和正则对不上（比如规则里写「♥：」，正则要的是「符号：」；或者外层标签名不一样），让用户把规则里那几个字改成和正则一样，或者把正则改成认规则里的写法。外层标签 <状态栏> 和 [状态栏] 小手机会自动互换。\n' +
   '  自带的「默认」也是这三样；以前用 {{心情}} 占位符写的旧模板照样能用，打开设置时会自动换算成这三样，保存后就是新写法。调好后起个名字「存为预设」，聊天顶上的便捷拓展栏一点就能换。用户把正则 JSON、规则用「文件」发给你时，你可以帮 TA 检查对不对得上、改好再给 TA 复制。\n' +
@@ -125,9 +125,10 @@ function assistantPrompt(char) {
   }
   if (cfg.css) {
     out.push('【权限 · 设计界面 CSS】用户想改界面样子时，你可以写 CSS 并提交。target 为 "global" 时作用于整个界面（替换全部全局样式，所以要在现有内容基础上改）；' +
-      'target 为角色名时写进该角色的聊天室专属样式（mode 可选 "append" 追加 或 "replace" 替换，默认追加）。' + ASSISTANT_CSS_HINT +
+      'target 为角色名时写进该角色的聊天室专属样式（mode 可选 "append" 追加 或 "replace" 替换，默认追加）；再加 "view":"drama" 就是改这个角色的剧情窗口，可以同时用 "format" 把剧情窗口的显示格式换成 "bubble"（气泡）、"box"（文本框：像酒馆那样一整块带框的，CSS 用来调框的样子）或 "custom"（自定义：不用自带的气泡和颜色，整个剧情窗口都靠你写的 CSS，要把背景、顶栏、消息、头像、旁白 .cr-narr、输入栏都照顾到）。' + ASSISTANT_CSS_HINT +
       '\n当前全局样式：\n' + (globalCss ? globalCss.slice(0, 3000) : '（空）'));
     acts.push('<mphone-action>{"type":"set_css","target":"global","css":"完整的 CSS"}</mphone-action>');
+    acts.push('<mphone-action>{"type":"set_css","target":"角色名","view":"drama","format":"box","mode":"replace","css":"剧情窗口的 CSS"}</mphone-action>');
   }
   if (cfg.err) {
     var api = getApiCfg();
@@ -174,7 +175,7 @@ function findCharByName(name) {
 }
 function actionTitle(a) {
   if (a.type === 'add_worldbook') return '添加世界书「' + (a.name || '未命名') + '」';
-  if (a.type === 'set_css') return a.target === 'global' || !a.target ? '修改全局样式' : '修改「' + a.target + '」的聊天样式';
+  if (a.type === 'set_css') return a.target === 'global' || !a.target ? '修改全局样式' : '修改「' + a.target + '」的' + (a.view === 'drama' ? '剧情窗口' : '聊天') + '样式';
   return '无法识别的操作';
 }
 var ACTION_STATE_TEXT = { pending: '等待用户确认', done: '用户已确认，已生效', ignored: '用户忽略了', undone: '用户撤销了', failed: '格式不对，没有执行' };
@@ -219,8 +220,17 @@ function runAction(a) {
     } else {
       var c = findCharByName(a.target);
       if (!c) throw new Error('找不到角色「' + a.target + '」');
-      a.result = { charId: c.id, prev: c.customCss || '' };
-      c.customCss = a.mode === 'replace' ? String(a.css || '') : ((c.customCss ? c.customCss + '\n' : '') + String(a.css || ''));
+      if (a.view === 'drama') {
+        // 剧情窗口的样式：剧情窗口还没单独设置过时，先照聊天窗口的样子建一套；format 可以顺便换成 文本框 / 自定义
+        if (!c.dramaLook) c.dramaLook = { chatBg: c.chatBg, bubble: c.bubble, look: JSON.parse(JSON.stringify(c.look || {})), customCss: c.customCss || '' };
+        var dl = c.dramaLook;
+        a.result = { charId: c.id, view: 'drama', prev: dl.customCss || '', prevFormat: (dl.look || {}).format };
+        dl.customCss = a.mode === 'replace' ? String(a.css || '') : ((dl.customCss ? dl.customCss + '\n' : '') + String(a.css || ''));
+        if (a.format === 'bubble' || a.format === 'box' || a.format === 'custom') dl.look = Object.assign({}, dl.look || {}, { format: a.format });
+      } else {
+        a.result = { charId: c.id, prev: c.customCss || '' };
+        c.customCss = a.mode === 'replace' ? String(a.css || '') : ((c.customCss ? c.customCss + '\n' : '') + String(a.css || ''));
+      }
       saveCharList();
       if (charList[openingChatCharIdx] === c) applyChatRoomStyle(c);
     }
@@ -243,7 +253,11 @@ function undoAction(a) {
   } else if (a.type === 'set_css') {
     if (r.charId) {
       var c = charList.filter(function(x) { return x.id === r.charId; })[0];
-      if (c) { c.customCss = r.prev; saveCharList(); if (charList[openingChatCharIdx] === c) applyChatRoomStyle(c); }
+      if (c && r.view === 'drama' && c.dramaLook) {
+        c.dramaLook.customCss = r.prev;
+        c.dramaLook.look = Object.assign({}, c.dramaLook.look || {}, { format: r.prevFormat || 'bubble' });
+      } else if (c) c.customCss = r.prev;
+      if (c) { saveCharList(); if (charList[openingChatCharIdx] === c) applyChatRoomStyle(c); }
     } else {
       setGlobalCss(r.prev || '');
     }
@@ -293,6 +307,7 @@ function paintActionCard(card, m) {
     line('关联角色', [].concat(a.link || []).join('、'));
   } else if (a.type === 'set_css' && a.target && a.target !== 'global') {
     line('方式', a.mode === 'replace' ? '替换原有样式' : '追加到原有样式后面');
+    if (a.view === 'drama' && a.format) line('剧情窗口格式', { bubble: '气泡', box: '文本框', custom: '自定义' }[a.format] || a.format);
   }
   var pre = document.createElement('pre');
   pre.className = 'cr-action-pre';

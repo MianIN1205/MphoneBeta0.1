@@ -2627,6 +2627,19 @@
           <div class="chat-msg-row user"><div class="chat-msg-avatar"></div><div class="chat-msg-bubble">还不错，刚下班～</div></div>
         </div>
 
+        <!-- 剧情窗口的显示格式：气泡 / 文本框 / 自定义（只有剧情窗口有） -->
+        <div id="csDramaFmtWrap" style="display:none;">
+        <div class="section-label">显示格式</div>
+        <div class="settings-card">
+          <div class="pf-radio-row" id="dramaFormatRow">
+            <button class="pf-radio-btn selected" data-format="bubble">气泡</button>
+            <button class="pf-radio-btn" data-format="box">文本框</button>
+            <button class="pf-radio-btn" data-format="custom">自定义</button>
+          </div>
+          <div class="auto-hint" id="dramaFormatHint"></div>
+        </div>
+        </div>
+
         <!-- 聊天背景 -->
         <div class="section-label">窗口颜色</div>
         <div class="settings-card">
@@ -2654,7 +2667,8 @@
           </div>
         </div>
 
-        <!-- 气泡（主题） -->
+        <!-- 气泡（主题）：剧情窗口选「自定义」时收起来 -->
+        <div id="csThemeWrap">
         <div class="section-label">主题</div>
         <div class="settings-card">
           <div class="bubble-section-label">颜色预设</div>
@@ -2704,10 +2718,12 @@
           </div>
         </div>
 
+        </div>
+
         <!-- 布局 -->
         <div class="section-label">布局</div>
         <div class="settings-card">
-          <div class="auto-row">
+          <div class="auto-row" id="layoutAvatarRow">
             <span class="auto-row-label">消息头像（双方）</span>
             <label class="st-toggle-wrap"><input type="checkbox" id="layoutAvatar" checked><span class="st-toggle-slider"></span></label>
           </div>
@@ -2722,7 +2738,7 @@
               <button class="pf-radio-btn" data-align="left">居左</button>
             </div>
           </div>
-          <div class="auto-row">
+          <div class="auto-row" id="layoutFormatAutoRow">
             <span class="auto-row-label">显示格式</span>
             <div class="pf-radio-row" id="layoutFormatRow">
               <button class="pf-radio-btn selected" data-format="bubble">气泡</button>
@@ -2789,6 +2805,7 @@
           <textarea class="custom-css-textarea" id="customCssInput"
             placeholder="/* 例：.chat-char-card { border-radius: 8px; } */"
             rows="5"></textarea>
+          <div class="auto-hint" id="customCssHint" style="margin:6px 0 0;display:none;"></div>
           <button class="custom-css-apply-btn" id="customCssApplyBtn">应用</button>
         </div>
 

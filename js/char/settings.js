@@ -404,6 +404,9 @@ function setLookForm(l) {
   document.querySelectorAll('#layoutFormatRow .pf-radio-btn').forEach(function(b) {
     b.classList.toggle('selected', b.dataset.format === l.format);
   });
+  // 剧情窗口的三种格式；以前的「文段」算文本框
+  var dfm = l.format === 'text' ? 'box' : (['bubble', 'box', 'custom'].indexOf(l.format) >= 0 ? l.format : 'bubble');
+  document.querySelectorAll('#dramaFormatRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.format === dfm); });
   document.getElementById('statusOn').checked = l.statusOn;
   document.getElementById('statusFields').value = l.statusFields;
   document.getElementById('statusTpl').value = statusTplOf(l);
@@ -416,7 +419,7 @@ function setLookForm(l) {
 
 function readLookForm() {
   var a = document.querySelector('#layoutHeadAlignRow .pf-radio-btn.selected');
-  var fm = document.querySelector('#layoutFormatRow .pf-radio-btn.selected');
+  var fm = document.querySelector(csLookView === 'drama' ? '#dramaFormatRow .pf-radio-btn.selected' : '#layoutFormatRow .pf-radio-btn.selected');
   return {
     showAvatar:   document.getElementById('layoutAvatar').checked,
     headAvatar:   document.getElementById('layoutHeadAvatar').checked,
@@ -454,13 +457,42 @@ function setLookPartForm(view) {
   setLookForm(p.look);
   customCssInput.value = p.customCss || '';
   document.getElementById('csStatusWrap').style.display = view === 'chat' ? '' : 'none';
-  document.getElementById('customCssLabel').textContent =
-    (view === 'chat' ? '聊天窗口' : '剧情窗口') + '专属样式（进入该角色' + (view === 'chat' ? '聊天' : '剧情') + '时生效）';
   document.querySelectorAll('#csLookViewRow .pf-radio-btn').forEach(function(b) {
     b.classList.toggle('selected', b.dataset.view === view);
   });
+  syncDramaFormatUi();
   paintLookPreview();
 }
+// 剧情窗口：气泡（和现在一样）/ 文本框（像酒馆那样一整块带框的，框的颜色用主题颜色，样子可以用 CSS 再调）/ 自定义（整个剧情窗口都用 CSS 改）
+var DRAMA_FORMAT_HINT = {
+  bubble: '和聊天窗口一样的气泡，颜色在下面的「主题」里选。',
+  box: '像酒馆那样，每条消息是一整块带框、带底色的文本框，框的颜色用下面的「主题」。想要别的样子，在最下面的「文本框样式」里写 CSS，也可以让 MianIN 帮你设计。',
+  custom: '不用小手机自带的气泡和颜色，整个剧情窗口都用最下面的 CSS 来改，像酒馆的美化主题一样。不会写可以跟 MianIN 说想要什么样子，祂会写好给你确认。'
+};
+function syncDramaFormatUi() {
+  var drama = csLookView === 'drama';
+  var sel = document.querySelector('#dramaFormatRow .pf-radio-btn.selected');
+  var fmt = drama && sel ? sel.dataset.format : '';
+  document.getElementById('csDramaFmtWrap').style.display = drama ? '' : 'none';
+  document.getElementById('layoutFormatAutoRow').style.display = drama ? 'none' : '';
+  document.getElementById('csThemeWrap').style.display = fmt === 'custom' ? 'none' : '';
+  document.getElementById('layoutAvatarRow').style.display = fmt === 'custom' ? 'none' : '';
+  document.getElementById('dramaFormatHint').textContent = DRAMA_FORMAT_HINT[fmt] || '';
+  document.getElementById('customCssLabel').textContent = !drama ? '聊天窗口专属样式（进入该角色聊天时生效）'
+    : fmt === 'box' ? '文本框样式（CSS，可选）' : fmt === 'custom' ? '整个剧情窗口的 CSS' : '剧情窗口专属样式（进入该角色剧情时生效）';
+  var hint = document.getElementById('customCssHint');
+  hint.style.display = drama && fmt !== 'bubble' ? '' : 'none';
+  hint.textContent = fmt === 'box'
+    ? '常用：#appChatRoom .chat-msg-bubble（每个文本框）、.chat-msg-row.ai / .chat-msg-row.user（角色 / 你的）、.chat-msg-avatar（头像）、.cr-narr（开场旁白）。只在这个角色的剧情窗口生效'
+    : '常用：#appChatRoom（整个窗口）、#chatRoomContent（背景）、.settings-nav（顶栏）、.chat-msg-row.ai / .user .chat-msg-bubble（消息）、.chat-msg-avatar（头像）、.cr-narr（旁白）、.chat-room-bottom（输入栏）。只在这个角色的剧情窗口生效';
+}
+document.querySelectorAll('#dramaFormatRow .pf-radio-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('#dramaFormatRow .pf-radio-btn').forEach(function(b) { b.classList.remove('selected'); });
+    this.classList.add('selected');
+    syncDramaFormatUi();
+  });
+});
 function switchLookView(view) {
   if (view === csLookView) return;
   csLookParts[csLookView] = readLookPartForm();

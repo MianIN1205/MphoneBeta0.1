@@ -84,7 +84,7 @@
 ### char/ 角色
 | 文件 | 内容 |
 |---|---|
-| settings / settings-save / look | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）表单和默认值 `DEFAULT_CHAT_CFG`；保存 / 删除角色；美化页 |
+| settings / settings-save / look | 角色设置（4 页：角色 / 聊天 / 美化 / 扩展）表单和默认值 `DEFAULT_CHAT_CFG`；保存 / 删除角色；美化页（聊天窗口 / 剧情窗口各一套 `char.dramaLook`）。剧情窗口最上面「显示格式」三选一（用户定的）：气泡（和现在一样）/ 文本框 `look.format = box`（像酒馆那样一整块带框的，颜色用主题颜色，room.js 的 `lookCss` 出样式，下面「文本框样式」写 CSS 再调）/ 自定义 `custom`（`lookCss` 返回空，主题和头像开关收起来，整个剧情窗口靠「整个剧情窗口的 CSS」）；以前剧情窗口的「文段」算文本框；剧情窗口不显示布局里的「显示格式」行（`syncDramaFormatUi`）。MianIN 的 set_css 可以带 `view: "drama"`、`format` 改剧情窗口 |
 | memory / summary / backup | 角色记忆（短期 / 长期 / 珍贵，可选向量检索，按 token 预算注入）、关系里程碑（记忆多时分批整理）；按回合总结；单个角色的记忆备份（含档案） |
 | archive | 其他小手机的记录（扩展页「导入聊天记录」）：认 uwu（`uwu-chat-history`，`[某某的消息：…]` 去壳，`isStatusUpdate` 是状态栏）、眠花糖机角色备份、ChatGPT（mapping）/ Claude（chat_messages）官网导出、酒馆 .jsonl、任意 JSON（找像消息的对象）、CSV、微信 / QQ 两行式 txt、「名字：内容」的 txt / md / docx；用户要求兼容的格式尽量多。先预览再导入，预览里点名字改「谁是 TA」；同一份记录再导时按时间 + 内容跳过已导入的。原文存在 `mphone_archives`（只给用户翻看，不发给 AI），列表和记忆库都写「来自 xxx」（`from` 存完整名字，如「uwu 小手机」）；可选分段整理成长期记忆（`m.source = 'import'`、`m.from`、时间用原聊天日期，角色看到时带「在 xxx 里」）。整理完自动 `arcConsolidate`：导入的记忆按来源分组、去掉数字后按相似度分小组，让模型把同一件事合并（细节全留），条数没变少或解析失败就保持原样（用户要求导入后记忆库不要堆太多重复的）。用户要求整理完整、准确、不爆 token：一件事一条、写具体细节、禁止空泛句；每段约 5000 token，太长自动减半，偶发错误重试，失败停在那一段可「继续整理」；可选逐段核对（次数翻倍） |
 | migrate | 通讯录「导入角色」选 uwu 小手机完整备份时用（用户要的是导入角色时选，不是在已有角色上迁移）：读 uwu / ovo 小手机的完整备份（.ee = gzip 的一行一个 JSON，header `format` 含 stream-backup；`chat-start` 是角色资料，`chat-history` 是消息，`worldBooks` 是世界书），流式解压读两遍，不读 API / 密钥。弹窗选角色、勾人设 / 头像 / 聊天记录 / 世界书（默认勾这个角色关联的，原来全局的和其他的不勾）→ 变成新角色草稿进角色设置；保存时世界书按 `folderName`（原分类）放进同名文件夹、一样的直接关联，聊天记录 `pendingArc` 存成档案 |

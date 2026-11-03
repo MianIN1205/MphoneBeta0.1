@@ -27,6 +27,7 @@ function hexToRgba(hex, a) {
 // 气泡颜色 / 透明度 / 效果 / 显示格式 → CSS（scope：聊天室，或美化页里的小预览）
 function lookCss(part, scope) {
   var look = Object.assign({}, DEFAULT_LOOK, part.look || {});
+  if (look.format === 'custom') return '';   // 剧情窗口「自定义」：全靠用户自己的 CSS
   var b = part.bubble || DEFAULT_BUBBLE;
   var colors = BUBBLE_PRESETS[b.preset] || BUBBLE_PRESETS[0];
   var op = (b.opacity === undefined ? 85 : b.opacity) / 100;
@@ -46,6 +47,13 @@ function lookCss(part, scope) {
     css += sel + ' .chat-msg-bubble:not(.error) { background: transparent !important; box-shadow: none !important; max-width: 100%; padding: 2px 2px; border-radius: 0; line-height: 1.8; }\n' +
            sel + ' .chat-msg-avatar { display: none; }\n' +
            sel + '.user .chat-msg-bubble:not(.error) { color: #8a6a76; text-align: right; }\n';
+  }
+  // 文本框（剧情窗口）：像酒馆那样一整块带框的，颜色还是用主题颜色；旁白不动
+  if (look.format === 'box') {
+    var box = sel + ' .chat-msg-bubble:not(.error):not(.cr-narr)';
+    css += sel + ':not(.cr-narr-row) { align-items: flex-start; }\n' +
+           box + ' { flex: 1; min-width: 0; max-width: 100%; border-radius: 12px; padding: 10px 14px; line-height: 1.8; text-align: left;' +
+           ' border: 1px solid rgba(255,255,255,0.75); box-shadow: 0 2px 10px rgba(120,80,100,0.08); }\n';
   }
   return css;
 }
