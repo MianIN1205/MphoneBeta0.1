@@ -204,6 +204,37 @@ function statusTplFields(tpl) {
   return out;
 }
 
+// ---------- 状态栏只有一种写法（用户要的，和酒馆的正则状态栏一样）：生成规则 + 匹配正则 + 美化 HTML（$1、$2…）----------
+// 以前的 {{心情}} 模板、只填「字段」的写法，用的时候现场换算成这一种；打开设置时表单里显示换算好的，保存后就存成新写法。
+// 换算出来的正则外层标签可有可无、字段之间也认「|」，以前记录里存的「心情：… | 位置：…」照样画得出来
+var STATUS_FIELD_HINT = { 天气: '此刻的时段和天气，比如 傍晚 · 小雨', 心情: '一两个词', 位置: '在哪里', 在做什么: '正在做的事', 好感度: '0-100 的纯数字', 心里话: '此刻没说出口的一句话' };
+function statusReEsc(s) { return String(s).replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&'); }
+function statusConvertTpl(tpl, fieldsCsv) {
+  var fields = statusTplFields(tpl), html = tpl || '';
+  if (!fields.length) {
+    fields = String(fieldsCsv || DEFAULT_LOOK.statusFields).split(/[,，、]/).map(function(s) { return s.trim(); }).filter(Boolean);
+    html = fields.map(function(f) { return '<div style="margin:2px 0"><b style="color:#a08890;font-weight:500">' + f + '</b>　{{' + f + '}}</div>'; }).join('\n');
+  }
+  fields.forEach(function(f, i) {
+    html = html.replace(new RegExp('\\{\\{\\s*' + statusReEsc(f) + '\\s*\\}\\}', 'g'), function() { return '$' + (i + 1); });
+  });
+  var find = '(?:<状态栏>|\\[状态栏\\])?\\s*' + fields.map(function(f) { return statusReEsc(f) + '[:：]\\s*([\\s\\S]*?)'; }).join('\\s*(?:[|｜]\\s*)?') +
+             '\\s*(?:<\\/状态栏>|\\[\\/状态栏\\]|$)';
+  var rules = '每次回复的最后另起一行，按下面的格式写你此刻的状态，用 <状态栏> 和 </状态栏> 包住；每项一行，写简短的内容，数值只写数字：\n<状态栏>\n' +
+    fields.map(function(f) { return f + '：' + (STATUS_FIELD_HINT[f] || '…'); }).join('\n') + '\n</状态栏>';
+  return { find: find, tpl: html, rules: rules };
+}
+// 一个角色（或预设）的状态栏，统一成 { find, tpl, rules }；最老的「AI 直接照模板写整段 HTML」（模板里没有占位符）返回 null
+function statusSpec(look) {
+  look = Object.assign({}, DEFAULT_LOOK, look || {});
+  var tpl = statusTplOf(look);
+  if (look.statusFind) return { find: look.statusFind, tpl: tpl, rules: look.statusRules || '' };
+  if (tpl && !statusTplFields(tpl).length) return null;
+  var c = statusConvertTpl(tpl, look.statusFields);
+  if (look.statusRules) c.rules += '\n每一项的要求：\n' + look.statusRules;
+  return c;
+}
+
 // 每日日记（「扩展」页）：到点自动写一篇当天的日记，最多两个时间
 var DEFAULT_DIARY_CFG = { on: false, times: ['21:30', ''] };
 function setDiaryCfgForm(d) {
@@ -379,7 +410,7 @@ function setLookForm(l) {
   document.getElementById('statusCss').value = l.statusCss;
   document.getElementById('statusFind').value = l.statusFind || '';
   document.getElementById('statusRules').value = l.statusRules || '';
-  if (typeof syncStatusRegexForm === 'function') syncStatusRegexForm();
+  if (typeof syncStatusRegexForm === 'function') syncStatusRegexForm(true);
   document.getElementById('statusSub').classList.toggle('open', l.statusOn);
 }
 

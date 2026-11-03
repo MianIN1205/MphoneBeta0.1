@@ -12,6 +12,8 @@
 }
 .cr-status-panel::-webkit-scrollbar { display: none; }
 .cr-status-panel.open { opacity: 1; transform: scale(1); pointer-events: auto; }
+/* 下面还有内容：底部淡出，提示能往下滑 */
+.cr-status-panel.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); }
 /* 一次一条，左右滑动翻看历史 */
 .cr-sp-track {
   display: flex; align-items: flex-start;

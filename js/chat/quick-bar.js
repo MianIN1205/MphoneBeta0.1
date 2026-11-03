@@ -30,16 +30,19 @@ function crQuickChar() { return charList[openingChatCharIdx]; }
 // mphone_status_presets = [{ id, name, fields, tpl, css, find, rules }]；「默认」是自带的，不存。find / rules：导入的酒馆正则和生成规则
 var statusPresets = mphoneStore.load('mphone_status_presets', []);
 function saveStatusPresets() { mphoneStore.save('mphone_status_presets', statusPresets); }
-function statusBuiltin() { return { id: '', name: '默认', fields: DEFAULT_LOOK.statusFields, tpl: DEFAULT_STATUS_TPL, css: '' }; }
+function statusBuiltin() {
+  var c = statusConvertTpl(DEFAULT_STATUS_TPL);
+  return { id: '', name: '默认', fields: DEFAULT_LOOK.statusFields, tpl: c.tpl, css: '', find: c.find, rules: c.rules };
+}
+function statusPresetSpec(p) { return statusSpec({ statusTpl: p.tpl || '', statusFields: p.fields, statusFind: p.find || '', statusRules: p.rules || '' }); }
 // 角色现在用的是哪个：关了 → null；和某个预设一样 → 那个；都不一样 → 'custom'
 function charStatusPreset(char) {
   var l = Object.assign({}, DEFAULT_LOOK, (char && char.look) || {});
   if (!l.statusOn) return null;
-  var tpl = statusTplOf(l);
+  var mine = JSON.stringify(statusSpec(l));
   var all = [statusBuiltin()].concat(statusPresets);
   for (var i = 0; i < all.length; i++) {
-    if ((all[i].tpl || '') === (tpl || '') && (all[i].tpl || all[i].fields === l.statusFields) && (all[i].css || '') === (l.statusCss || '') &&
-        (all[i].find || '') === (l.statusFind || '') && (all[i].rules || '') === (l.statusRules || '')) return all[i];
+    if (JSON.stringify(statusPresetSpec(all[i])) === mine && (all[i].css || '') === (l.statusCss || '')) return all[i];
   }
   return 'custom';
 }
@@ -119,7 +122,7 @@ function renderStatusPresetChips() {
       document.getElementById('statusCss').value = p.css || '';
       document.getElementById('statusFind').value = p.find || '';
       document.getElementById('statusRules').value = p.rules || '';
-      syncStatusRegexForm();
+      syncStatusRegexForm(true);
       showToast('已套用「' + p.name + '」，点保存生效', 'plain');
     }, p.id ? function() {
       openConfirm('删除状态栏预设「' + p.name + '」？', function() {
@@ -146,11 +149,33 @@ document.getElementById('statusPresetSave').addEventListener('click', function()
 renderStatusPresetChips();
 
 // 导入酒馆正则状态栏（regex JSON，单个、数组、或者藏在预设 / 角色卡里的都认）：正则 + 美化 HTML 原样放进来，规则让用户自己贴
-function syncStatusRegexForm() {
-  var on = !!document.getElementById('statusFind').value.trim();
-  document.getElementById('statusRegexWrap').style.display = on ? '' : 'none';
-  document.getElementById('statusTplHint').style.display = on ? 'none' : '';
+// 状态栏只有一种写法：生成规则 + 匹配正则 + 美化 HTML。fold = true：刚填好表单（打开设置、套用预设、导入）时，
+// 旧的 {{}} 模板 / 只填字段的写法换算成新写法填进来（statusConvertTpl），短的框展开、长的代码框收起来
+function syncStatusRegexForm(fold) {
+  var $ = function(id) { return document.getElementById(id); };
+  if (fold && !$('statusFind').value.trim()) {
+    var tpl = $('statusTpl').value.trim();
+    if (!tpl || statusTplFields(tpl).length) {
+      var c = statusConvertTpl(tpl, $('statusFields').value), extra = $('statusRules').value.trim();
+      $('statusFind').value = c.find;
+      $('statusTpl').value = c.tpl;
+      $('statusRules').value = c.rules + (extra ? '\n每一项的要求：\n' + extra : '');
+    }
+  }
+  [['statusTpl', 'statusTplMeta'], ['statusFind', 'statusFindMeta'], ['statusRules', 'statusRulesMeta'], ['statusCss', 'statusCssMeta']].forEach(function(p) {
+    var v = $(p[0]).value.trim();
+    $(p[1]).textContent = v ? v.length + ' 字' : '空着';
+  });
+  if (fold) {
+    $('statusRulesFold').open = $('statusRules').value.trim().length < 400;
+    $('statusFindFold').open = false;
+    $('statusTplFold').open = false;
+    $('statusCssFold').open = false;
+  }
 }
+['statusTpl', 'statusFind', 'statusRules', 'statusCss'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', function() { syncStatusRegexForm(); });
+});
 function statusRegexScripts(obj, out) {
   out = out || [];
   if (Array.isArray(obj)) obj.forEach(function(x) { statusRegexScripts(x, out); });
@@ -179,16 +204,13 @@ document.getElementById('statusImportFile').addEventListener('change', function(
     document.getElementById('statusTpl').value = pick.replaceString.trim();
     document.getElementById('statusFind').value = pick.findRegex;
     if (pick.scriptName) document.getElementById('statusPresetName').value = String(pick.scriptName).slice(0, 16);
-    syncStatusRegexForm();
+    // 之前贴的规则留着（重新导入改好的正则时不用再贴）；小手机自己换算出来的那种清掉，换成酒馆的要贴的
+    if (/^每次回复的最后另起一行，按下面的格式写你此刻的状态/.test(document.getElementById('statusRules').value)) document.getElementById('statusRules').value = '';
+    syncStatusRegexForm(true);
+    document.getElementById('statusRulesFold').open = true;
     showToast('✓ 已导入「' + (pick.scriptName || '状态栏') + '」' + (list.length > 1 ? '（文件里有 ' + list.length + ' 条，用了最像状态栏的一条）' : '') + '，把配套的规则贴进「生成规则」，点保存生效', 'success');
   }).catch(function() { showToast('✗ 读不了这个文件，要酒馆导出的正则 JSON', 'error'); });
 });
-document.getElementById('statusRegexOff').addEventListener('click', function() {
-  document.getElementById('statusFind').value = '';
-  syncStatusRegexForm();
-  showToast('已改回模板方式（{{字段}}），点保存生效', 'plain');
-});
-document.getElementById('statusFind').addEventListener('input', syncStatusRegexForm);
 
 function renderQuickPop() {
   var char = crQuickChar();

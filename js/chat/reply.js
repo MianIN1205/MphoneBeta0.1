@@ -15,10 +15,11 @@ function commitAssistantReply(hist, raw, list, empty) {
   raw = th.text;
   var st = takeStatus(raw);
   raw = st.text; status = st.status;
-  // 导入了酒馆正则的状态栏：角色照规则写，用正则认出来（只在聊天窗口）
+  // 状态栏：角色照规则写，用正则认出来（只在聊天窗口）
   var sc = charOfHistory(hist), sLook = sc && chatHistories[sc.id] === hist ? Object.assign({}, DEFAULT_LOOK, sc.look || {}) : null;
-  if (sLook && sLook.statusOn && sLook.statusFind && typeof statusRegexTake === 'function') {
-    var rt = statusRegexTake(sLook, status || raw);
+  var sSpec = sLook && sLook.statusOn ? statusSpec(sLook) : null;
+  if (sSpec && typeof statusRegexTake === 'function') {
+    var rt = statusRegexTake(sSpec, status || raw);
     if (rt.status) { if (!status) raw = rt.text; status = rt.status; }
   }
   raw = raw.replace(/<签名>([\s\S]*?)<\/签名>/g, function(_, s) { headStatus = s.replace(/\s+/g, ' ').trim().slice(0, 20); return ''; });

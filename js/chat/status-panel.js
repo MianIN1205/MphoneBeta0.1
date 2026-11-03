@@ -30,6 +30,9 @@ function statusRegexOf(find) {
 // 状态栏外面那层标签的名字（[状态栏]、<StatusBlock> 这种），角色写成另一种括号时换成正则要的那种
 function statusRegexTag(find) {
   var s = String(find || '').replace(/^\//, '').replace(/^\^/, '');
+  // 外层标签可有可无的写法：(?:<状态栏>|\[状态栏\])?（小手机换算出来的）
+  var opt = s.match(/^\(\?:<([^>|]+)>\|/);
+  if (opt) return { name: opt[1], square: false };
   // 两种括号都认的写法：[\[<]状态栏[\]>]
   var both = s.match(/^\[\\\[<\]([^\[\]\\]+)\[\\\]>\]/);
   if (both) return { name: both[1], square: true };
@@ -44,10 +47,10 @@ function statusRegexNorm(find, text) {
                     : t.split('[' + n + ']').join('<' + n + '>').split('[/' + n + ']').join('</' + n + '>');
 }
 // 从回复里取出状态栏：正则对上的那段；对不上时把外层标签包住的那段拿走（不让它出现在聊天里）
-function statusRegexTake(look, raw) {
-  var re = statusRegexOf(look.statusFind), t = statusRegexNorm(look.statusFind, raw), m = re && t.match(re);
+function statusRegexTake(spec, raw) {
+  var re = statusRegexOf(spec.find), t = statusRegexNorm(spec.find, raw), m = re && t.match(re);
   if (!m) {
-    var tag = statusRegexTag(look.statusFind);
+    var tag = statusRegexTag(spec.find);
     if (tag) {
       var q = tag.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       m = t.match(new RegExp(tag.square ? '\\[' + q + '\\][\\s\\S]*?(\\[\\/' + q + '\\]|$)' : '<' + q + '>[\\s\\S]*?(<\\/' + q + '>|$)'));
@@ -57,16 +60,17 @@ function statusRegexTake(look, raw) {
   return { text: t.replace(m[0], '').replace(/\s+$/, ''), status: m[0].trim() };
 }
 // 套进 HTML：和酒馆一样，$1、$2… 是第几个括号，{{match}} 是整段
-function statusRegexRender(look, s) {
-  var re = statusRegexOf(look.statusFind), t = statusRegexNorm(look.statusFind, s), m = re && t.match(re);
+function statusRegexRender(spec, s) {
+  var re = statusRegexOf(spec.find), t = statusRegexNorm(spec.find, s), m = re && t.match(re);
   if (!m) return null;
-  return m[0].replace(re, String(look.statusTpl || '').replace(/\{\{\s*match\s*\}\}/gi, '$$&'));
+  return m[0].replace(re, String(spec.tpl || '').replace(/\{\{\s*match\s*\}\}/gi, '$$&'));
 }
 // 边生成边出气泡时，状态栏那段不要冒出来：从它开头的地方截掉
 function statusStreamCut(char, text) {
   var look = Object.assign({}, DEFAULT_LOOK, (char && char.look) || {});
-  if (!look.statusOn || !look.statusFind) return text;
-  var tag = statusRegexTag(look.statusFind), cut = text.length;
+  var spec = look.statusOn ? statusSpec(look) : null;
+  if (!spec) return text;
+  var tag = statusRegexTag(spec.find), cut = text.length;
   (tag ? ['[' + tag.name + ']', '<' + tag.name + '>'] : []).forEach(function(o) { var i = text.indexOf(o); if (i >= 0 && i < cut) cut = i; });
   return text.slice(0, cut);
 }
@@ -125,7 +129,7 @@ function renderStatusPanel() {
     crStatusPanel.appendChild(empty);
     return;
   }
-  var tpl = statusTplOf(look), tplFields = statusTplFields(tpl);
+  var spec = statusSpec(look);
   var track = document.createElement('div');
   track.className = 'cr-sp-track';
   all.forEach(function(m) {
@@ -135,15 +139,11 @@ function renderStatusPanel() {
     time.className = 'cr-sp-time';
     time.textContent = m.time ? fmtMsgTime(m.time) : '';
     // 卡片内容放进 Shadow DOM：模板自带的 <style> 只管自己，不影响聊天界面
-    // 以前 AI 直接写的 HTML 照原样显示；字段内容按模板画出来；没有模板就是线条本卡片
-    var body, lined = false, rx = look.statusFind ? statusRegexRender(look, m.status) : null;
-    if (look.statusFind) {
-      if (rx) body = statusSafeHtml(fillMacros(rx, char));
-      else { body = statusTextHtml(fillMacros(m.status, char).replace(/\n+/g, '|')); lined = true; }   // 正则没对上：按行显示原文
-    }
+    // 正则认得出就套进美化 HTML；以前 AI 直接写的整段 HTML 照原样显示；都不是就按行显示成线条本卡片
+    var body, lined = false, rx = spec ? statusRegexRender(spec, m.status) : null;
+    if (rx) body = statusSafeHtml(fillMacros(rx, char));
     else if (statusIsHtml(m.status)) body = statusSafeHtml(fillMacros(m.status, char));
-    else if (tplFields.length) body = statusSafeHtml(fillStatusTpl(tpl, parseStatusFields(m.status, tplFields), char));
-    else { body = statusTextHtml(fillMacros(m.status, char)); lined = true; }
+    else { body = statusTextHtml(fillMacros(m.status, char).replace(/\n+/g, '|')); lined = true; }
     var card = document.createElement('div');
     card.className = 'cr-status-card' + (lined ? ' cr-status-lined' : '');
     var root = card.attachShadow({ mode: 'open' });
@@ -169,11 +169,22 @@ function renderStatusPanel() {
 function openStatusPanel() {
   // 面板从顶栏（开了便捷拓展栏就从拓展栏）下沿开始
   var under = appChatRoom.classList.contains('cr-qb-on') ? document.getElementById('crQuickBar') : appChatRoom.querySelector('.settings-nav');
-  crStatusPanel.style.top = (under.getBoundingClientRect().bottom - appChatRoom.getBoundingClientRect().top) + 'px';
+  var roomTop = appChatRoom.getBoundingClientRect().top, top = under.getBoundingClientRect().bottom - roomTop;
+  crStatusPanel.style.top = top + 'px';
+  // 高度一直到输入栏上面（卡片长的话在面板里上下滑）
+  var barTop = crBottomBar ? crBottomBar.getBoundingClientRect().top - roomTop : appChatRoom.clientHeight;
+  crStatusPanel.style.maxHeight = Math.max(160, barTop - top - 4) + 'px';
   crStatusPanel.classList.add('open');
   renderStatusPanel();
   crStatusPanel.scrollTop = 0;
+  statusPanelFade();
 }
+// 下面还有内容时底部淡出一点，提示可以往下滑
+function statusPanelFade() {
+  var more = crStatusPanel.scrollHeight - crStatusPanel.scrollTop - crStatusPanel.clientHeight > 8;
+  crStatusPanel.classList.toggle('more', more);
+}
+crStatusPanel.addEventListener('scroll', statusPanelFade, { passive: true });
 function closeStatusPanel() { crStatusPanel.classList.remove('open'); }
 // 新回复到达、角色设置改动后：面板开着就刷新
 function refreshStatusPanel() {

@@ -60,22 +60,18 @@ function chatFormatRules(char) {
   rules.push('如果你此刻的状态有变化（在做什么、心情），在全部消息最后另起一行写 <签名>不超过 12 个字</签名>，' +
              '它会显示在聊天界面你名字的下面，像微信状态一样（比如「在赶地铁」「有点困了」）。现在显示的是「' +
              (char.headStatus || CHAT_SUB_DEFAULT) + '」，没变就不用写。');
-  // 状态栏：AI 只输出字段内容，小手机按模板画出来；模板里没有占位符的旧写法，仍让 AI 照模板直接写 HTML
+  // 状态栏：照「生成规则」写，小手机用正则认出来画成卡片（statusSpec，见 js/char/settings.js）
   if (look.statusOn) {
-    var tpl = statusTplOf(look), tplFields = statusTplFields(tpl);
-    var sRules = look.statusRules ? fillMacros(look.statusRules, char) : '';
-    if (look.statusFind) {
-      // 导入的酒馆正则：照用户贴的规则写，格式、外层标签都照规则来；没贴规则就照正则的格式
+    var spec = statusSpec(look);
+    if (spec) {
+      // 和酒馆的正则状态栏一样：照「生成规则」写，格式、外层标签都照规则来；没写规则就照正则的格式
       rules.push('在全部消息之后另起一行，写出你此刻的状态栏（这段不会显示在聊天里，小手机会把它画成状态卡片）。' +
-                 (sRules ? '格式、外层标签、每一项怎么写，都严格照下面的【状态栏规则】：\n【状态栏规则】\n' + sRules
-                         : '格式要能被这个正则完整匹配（照它的标签和顺序写，括号的地方填你此刻的内容）：' + look.statusFind));
-    } else if (tpl && !tplFields.length) {
-      rules.push('在全部消息之后，另起一行用 <status></status> 包住你当前的状态。状态按下面的 HTML 模板输出：' +
-                 '保留模板里的标签和样式，只把内容换成你此刻的真实状态。\n' + fillMacros(tpl, char));
+                 (spec.rules ? '格式、外层标签、每一项怎么写，都严格照下面的【状态栏规则】：\n【状态栏规则】\n' + fillMacros(spec.rules, char)
+                             : '格式要能被这个正则完整匹配（照它的标签和顺序写，括号的地方填你此刻的内容）：' + spec.find));
     } else {
-      var fields = tplFields.length ? tplFields : look.statusFields.split(/[,，、]/).map(function(s) { return s.trim(); }).filter(Boolean);
-      rules.push('在全部消息之后，另起一行输出你当前的状态（每项只写简短的内容，不写 HTML；数值只写数字，比如好感度写 68）：<status>' +
-                 fields.map(function(f) { return f + '：…'; }).join(' | ') + '</status>' + (sRules ? '\n每一项的要求：\n' + sRules : ''));
+      // 最老的写法：模板里没有占位符，让 AI 照模板直接写整段 HTML
+      rules.push('在全部消息之后，另起一行用 <status></status> 包住你当前的状态。状态按下面的 HTML 模板输出：' +
+                 '保留模板里的标签和样式，只把内容换成你此刻的真实状态。\n' + fillMacros(statusTplOf(look), char));
     }
     // 接着上一次的状态写，数值不会忽高忽低
     var prev = lastStatusOf(chatHistories[char.id]);

@@ -200,3 +200,17 @@
 }
 .cs-look-preview .chat-msg-avatar { width: 26px; height: 26px; }
 .cs-look-preview .chat-msg-bubble { font-size: 13px; }
+
+/* 美化 → 状态栏：做法说明、导入按钮、收起来的代码框 */
+.st-mode-hint { margin: 2px 0 10px; }
+.st-import-btn { width: 100%; padding: 10px 0; border-radius: 12px; border: 1.5px dashed rgba(208, 88, 120, 0.35); background: rgba(255, 240, 244, 0.7);
+  color: #c05070; font-size: 13.5px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.st-import-info { font-size: 11px; color: #aaa; margin: 6px 2px 10px; }
+.st-fold { margin: 0 0 8px; border-radius: 12px; background: rgba(0, 0, 0, 0.03); padding: 0 10px; }
+.st-fold > summary { list-style: none; display: flex; align-items: center; gap: 6px; padding: 10px 0; cursor: pointer; font-size: 13px; font-weight: 600; color: #555; -webkit-tap-highlight-color: transparent; }
+.st-fold > summary::-webkit-details-marker { display: none; }
+.st-fold > summary::before { content: '›'; display: inline-block; width: 12px; color: #c08aa0; font-size: 16px; line-height: 1; transition: transform 0.15s; }
+.st-fold[open] > summary::before { transform: rotate(90deg); }
+.st-fold-meta { margin-left: auto; font-size: 11px; font-weight: 400; color: #bbb; }
+.st-fold > .custom-css-textarea { margin-bottom: 4px; }
+.st-fold > .auto-hint { margin: 2px 0 10px; }
