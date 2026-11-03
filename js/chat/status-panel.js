@@ -19,6 +19,55 @@ function statusSafeHtml(html) {
   });
   return doc.body.innerHTML;
 }
+// ---------- 酒馆正则状态栏（角色设置里「导入酒馆正则」）----------
+// findRegex 可能是「/…/flags」或者光秃秃的正则
+function statusRegexOf(find) {
+  find = String(find || '').trim();
+  if (!find) return null;
+  var m = find.match(/^\/([\s\S]+)\/([a-z]*)$/);
+  try { return m ? new RegExp(m[1], m[2].replace(/g/g, '')) : new RegExp(find); } catch (e) { return null; }
+}
+// 状态栏外面那层标签的名字（[状态栏]、<StatusBlock> 这种），角色写成另一种括号时换成正则要的那种
+function statusRegexTag(find) {
+  var s = String(find || '').replace(/^\//, '').replace(/^\^/, '');
+  var m = s.match(/^\\\[([^\\\[\]]+)\\\]/) || s.match(/^<([^>\s\\]+)>/);
+  return m ? { name: m[1], square: s.charAt(0) === '\\' } : null;
+}
+function statusRegexNorm(find, text) {
+  var t = String(text || ''), tag = statusRegexTag(find);
+  if (!tag) return t;
+  var n = tag.name;
+  return tag.square ? t.split('<' + n + '>').join('[' + n + ']').split('</' + n + '>').join('[/' + n + ']')
+                    : t.split('[' + n + ']').join('<' + n + '>').split('[/' + n + ']').join('</' + n + '>');
+}
+// 从回复里取出状态栏：正则对上的那段；对不上时把外层标签包住的那段拿走（不让它出现在聊天里）
+function statusRegexTake(look, raw) {
+  var re = statusRegexOf(look.statusFind), t = statusRegexNorm(look.statusFind, raw), m = re && t.match(re);
+  if (!m) {
+    var tag = statusRegexTag(look.statusFind);
+    if (tag) {
+      var q = tag.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      m = t.match(new RegExp(tag.square ? '\\[' + q + '\\][\\s\\S]*?(\\[\\/' + q + '\\]|$)' : '<' + q + '>[\\s\\S]*?(<\\/' + q + '>|$)'));
+    }
+  }
+  if (!m) return { text: raw, status: '' };
+  return { text: t.replace(m[0], '').replace(/\s+$/, ''), status: m[0].trim() };
+}
+// 套进 HTML：和酒馆一样，$1、$2… 是第几个括号，{{match}} 是整段
+function statusRegexRender(look, s) {
+  var re = statusRegexOf(look.statusFind), t = statusRegexNorm(look.statusFind, s), m = re && t.match(re);
+  if (!m) return null;
+  return m[0].replace(re, String(look.statusTpl || '').replace(/\{\{\s*match\s*\}\}/gi, '$$&'));
+}
+// 边生成边出气泡时，状态栏那段不要冒出来：从它开头的地方截掉
+function statusStreamCut(char, text) {
+  var look = Object.assign({}, DEFAULT_LOOK, (char && char.look) || {});
+  if (!look.statusOn || !look.statusFind) return text;
+  var tag = statusRegexTag(look.statusFind), cut = text.length;
+  (tag ? ['[' + tag.name + ']', '<' + tag.name + '>'] : []).forEach(function(o) { var i = text.indexOf(o); if (i >= 0 && i < cut) cut = i; });
+  return text.slice(0, cut);
+}
+
 // 以前 AI 直接写的整段 HTML（开头就是标签）；字段内容里夹着的标签不算，填模板时会被转义
 function statusIsHtml(s) { return /^\s*<[a-z!]/i.test(s); }
 // 「心情：… | 位置：…」这种纯文字的状态：每个字段一行
@@ -84,8 +133,12 @@ function renderStatusPanel() {
     time.textContent = m.time ? fmtMsgTime(m.time) : '';
     // 卡片内容放进 Shadow DOM：模板自带的 <style> 只管自己，不影响聊天界面
     // 以前 AI 直接写的 HTML 照原样显示；字段内容按模板画出来；没有模板就是线条本卡片
-    var body, lined = false;
-    if (statusIsHtml(m.status)) body = statusSafeHtml(fillMacros(m.status, char));
+    var body, lined = false, rx = look.statusFind ? statusRegexRender(look, m.status) : null;
+    if (look.statusFind) {
+      if (rx) body = statusSafeHtml(fillMacros(rx, char));
+      else { body = statusTextHtml(fillMacros(m.status, char).replace(/\n+/g, '|')); lined = true; }   // 正则没对上：按行显示原文
+    }
+    else if (statusIsHtml(m.status)) body = statusSafeHtml(fillMacros(m.status, char));
     else if (tplFields.length) body = statusSafeHtml(fillStatusTpl(tpl, parseStatusFields(m.status, tplFields), char));
     else { body = statusTextHtml(fillMacros(m.status, char)); lined = true; }
     var card = document.createElement('div');

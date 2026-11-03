@@ -27,7 +27,7 @@ function charPromptPreset(char) {
 function crQuickChar() { return charList[openingChatCharIdx]; }
 
 // ---------- 状态栏预设：在角色设置「美化 → 状态栏」里存，在聊天窗口的便捷拓展栏里一点就换 ----------
-// mphone_status_presets = [{ id, name, fields, tpl, css }]；「默认」是自带的，不存
+// mphone_status_presets = [{ id, name, fields, tpl, css, find, rules }]；「默认」是自带的，不存。find / rules：导入的酒馆正则和生成规则
 var statusPresets = mphoneStore.load('mphone_status_presets', []);
 function saveStatusPresets() { mphoneStore.save('mphone_status_presets', statusPresets); }
 function statusBuiltin() { return { id: '', name: '默认', fields: DEFAULT_LOOK.statusFields, tpl: DEFAULT_STATUS_TPL, css: '' }; }
@@ -38,13 +38,14 @@ function charStatusPreset(char) {
   var tpl = statusTplOf(l);
   var all = [statusBuiltin()].concat(statusPresets);
   for (var i = 0; i < all.length; i++) {
-    if ((all[i].tpl || '') === (tpl || '') && (all[i].tpl || all[i].fields === l.statusFields) && (all[i].css || '') === (l.statusCss || '')) return all[i];
+    if ((all[i].tpl || '') === (tpl || '') && (all[i].tpl || all[i].fields === l.statusFields) && (all[i].css || '') === (l.statusCss || '') &&
+        (all[i].find || '') === (l.statusFind || '') && (all[i].rules || '') === (l.statusRules || '')) return all[i];
   }
   return 'custom';
 }
 function applyStatusPreset(char, p) {
   var l = Object.assign({}, DEFAULT_LOOK, char.look || {});
-  char.look = p ? Object.assign(l, { statusOn: true, statusFields: p.fields || DEFAULT_LOOK.statusFields, statusTpl: p.tpl || '', statusCss: p.css || '' })
+  char.look = p ? Object.assign(l, { statusOn: true, statusFields: p.fields || DEFAULT_LOOK.statusFields, statusTpl: p.tpl || '', statusCss: p.css || '', statusFind: p.find || '', statusRules: p.rules || '' })
                 : Object.assign(l, { statusOn: false });
   saveCharList();
   if (typeof applyChatRoomStyle === 'function' && charList[openingChatCharIdx] === char) applyChatRoomStyle(char);
@@ -116,6 +117,9 @@ function renderStatusPresetChips() {
       document.getElementById('statusFields').value = p.fields || DEFAULT_LOOK.statusFields;
       document.getElementById('statusTpl').value = p.tpl || '';
       document.getElementById('statusCss').value = p.css || '';
+      document.getElementById('statusFind').value = p.find || '';
+      document.getElementById('statusRules').value = p.rules || '';
+      syncStatusRegexForm();
       showToast('已套用「' + p.name + '」，点保存生效', 'plain');
     }, p.id ? function() {
       openConfirm('删除状态栏预设「' + p.name + '」？', function() {
@@ -131,7 +135,8 @@ document.getElementById('statusPresetSave').addEventListener('click', function()
   var name = document.getElementById('statusPresetName').value.trim();
   if (!name) { shakeEl(document.getElementById('statusPresetName')); return; }
   var p = { id: 'sp' + Date.now().toString(36), name: name, fields: document.getElementById('statusFields').value.trim() || DEFAULT_LOOK.statusFields,
-    tpl: document.getElementById('statusTpl').value.trim(), css: document.getElementById('statusCss').value };
+    tpl: document.getElementById('statusTpl').value.trim(), css: document.getElementById('statusCss').value,
+    find: document.getElementById('statusFind').value.trim(), rules: document.getElementById('statusRules').value.trim() };
   statusPresets = statusPresets.filter(function(x) { return x.name !== name; }).concat([p]);
   saveStatusPresets();
   document.getElementById('statusPresetName').value = '';
@@ -139,6 +144,51 @@ document.getElementById('statusPresetSave').addEventListener('click', function()
   showToast('✓ 已存为「' + name + '」', 'success');
 });
 renderStatusPresetChips();
+
+// 导入酒馆正则状态栏（regex JSON，单个、数组、或者藏在预设 / 角色卡里的都认）：正则 + 美化 HTML 原样放进来，规则让用户自己贴
+function syncStatusRegexForm() {
+  var on = !!document.getElementById('statusFind').value.trim();
+  document.getElementById('statusRegexWrap').style.display = on ? '' : 'none';
+  document.getElementById('statusTplHint').style.display = on ? 'none' : '';
+}
+function statusRegexScripts(obj, out) {
+  out = out || [];
+  if (Array.isArray(obj)) obj.forEach(function(x) { statusRegexScripts(x, out); });
+  else if (obj && typeof obj === 'object') {
+    if (typeof obj.findRegex === 'string' && typeof obj.replaceString === 'string') out.push(obj);
+    else Object.keys(obj).forEach(function(k) { statusRegexScripts(obj[k], out); });
+  }
+  return out;
+}
+document.getElementById('statusImportBtn').addEventListener('click', function() {
+  var f = document.getElementById('statusImportFile');
+  f.value = '';
+  f.click();
+});
+document.getElementById('statusImportFile').addEventListener('change', function() {
+  var file = this.files && this.files[0];
+  if (!file) return;
+  file.text().then(function(text) {
+    var list = statusRegexScripts(JSON.parse(text.replace(/^\uFEFF/, '')));
+    // 有好几条时，挑替换成 HTML 的、最长的那条（一般就是状态栏本体）
+    var pick = list.filter(function(r) { return /<[a-z]/i.test(r.replaceString); }).sort(function(a, b) { return b.replaceString.length - a.replaceString.length; })[0] || list[0];
+    if (!pick) { showToast('✗ 这个文件里没找到酒馆正则', 'error'); return; }
+    if (!statusRegexOf(pick.findRegex)) { showToast('✗ 正则写法认不出来', 'error'); return; }
+    document.getElementById('statusOn').checked = true;
+    document.getElementById('statusSub').classList.add('open');
+    document.getElementById('statusTpl').value = pick.replaceString.trim();
+    document.getElementById('statusFind').value = pick.findRegex;
+    if (pick.scriptName) document.getElementById('statusPresetName').value = String(pick.scriptName).slice(0, 16);
+    syncStatusRegexForm();
+    showToast('✓ 已导入「' + (pick.scriptName || '状态栏') + '」' + (list.length > 1 ? '（文件里有 ' + list.length + ' 条，用了最像状态栏的一条）' : '') + '，把配套的规则贴进「生成规则」，点保存生效', 'success');
+  }).catch(function() { showToast('✗ 读不了这个文件，要酒馆导出的正则 JSON', 'error'); });
+});
+document.getElementById('statusRegexOff').addEventListener('click', function() {
+  document.getElementById('statusFind').value = '';
+  syncStatusRegexForm();
+  showToast('已改回模板方式（{{字段}}），点保存生效', 'plain');
+});
+document.getElementById('statusFind').addEventListener('input', syncStatusRegexForm);
 
 function renderQuickPop() {
   var char = crQuickChar();

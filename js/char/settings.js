@@ -222,7 +222,7 @@ function readDiaryCfgForm() {
 document.getElementById('diaryAutoOn').addEventListener('change', function() {
   document.getElementById('diaryAutoSub').classList.toggle('open', this.checked);
 });
-var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '' };
+var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '', statusFind: '', statusRules: '' };
 
 // 表单里暂存的 USER 账号选择与各账号印象（切换账号时不丢）
 // csAccUid 为 '' 表示跟随主账号（「我的」里当前使用的账号）
@@ -377,6 +377,9 @@ function setLookForm(l) {
   document.getElementById('statusFields').value = l.statusFields;
   document.getElementById('statusTpl').value = statusTplOf(l);
   document.getElementById('statusCss').value = l.statusCss;
+  document.getElementById('statusFind').value = l.statusFind || '';
+  document.getElementById('statusRules').value = l.statusRules || '';
+  if (typeof syncStatusRegexForm === 'function') syncStatusRegexForm();
   document.getElementById('statusSub').classList.toggle('open', l.statusOn);
 }
 
@@ -391,7 +394,9 @@ function readLookForm() {
     statusOn:     document.getElementById('statusOn').checked,
     statusFields: document.getElementById('statusFields').value.trim() || DEFAULT_LOOK.statusFields,
     statusTpl:    document.getElementById('statusTpl').value.trim(),
-    statusCss:    document.getElementById('statusCss').value
+    statusCss:    document.getElementById('statusCss').value,
+    statusFind:   document.getElementById('statusFind').value.trim(),
+    statusRules:  document.getElementById('statusRules').value.trim()
   };
 }
 

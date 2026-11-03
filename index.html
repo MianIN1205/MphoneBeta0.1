@@ -2744,10 +2744,27 @@
               <span class="auto-row-label">字段</span>
               <input class="field-input" type="text" id="statusFields" placeholder="心情,位置,在做什么,好感度" style="flex:2;">
             </div>
-            <div class="bubble-section-label" style="margin-bottom:6px;">HTML 模板（可选）</div>
+            <div class="auto-row" style="margin-bottom:6px;">
+              <span class="bubble-section-label" style="margin:0;">HTML 模板（可选）</span>
+              <button class="mine-acc-btn mine-acc-btn-close" id="statusImportBtn" style="flex:none;padding:6px 12px;margin-left:auto;">导入酒馆正则</button>
+              <input type="file" id="statusImportFile" accept=".json,application/json" style="display:none">
+            </div>
             <textarea class="custom-css-textarea" id="statusTpl" rows="8"
               placeholder="&lt;div&gt;心情：{{心情}}&lt;/div&gt;"></textarea>
-            <div class="auto-hint" style="margin:4px 0 10px;">用 {{心情}} 这样的占位符标出要填的地方：AI 只输出这些字段的内容，小手机按模板画出来，省 token、样子也稳定。模板里有占位符时上面的「字段」不用管；清空模板就按字段显示成线条本卡片。点聊天顶栏的角色名查看</div>
+            <div class="auto-hint" style="margin:4px 0 10px;" id="statusTplHint">用 {{心情}} 这样的占位符标出要填的地方：AI 只输出这些字段的内容，小手机按模板画出来，省 token、样子也稳定。模板里有占位符时上面的「字段」不用管；清空模板就按字段显示成线条本卡片。点聊天顶栏的角色名查看</div>
+            <!-- 导入的酒馆正则状态栏：角色照「生成规则」写，小手机用这个正则把它套进上面的 HTML（$1、$2…） -->
+            <div id="statusRegexWrap" style="display:none;">
+              <div class="auto-row" style="margin-bottom:6px;">
+                <span class="bubble-section-label" style="margin:0;">匹配正则（酒馆导入的）</span>
+                <span class="sysbar-reset" id="statusRegexOff" style="margin-left:auto;">不用正则了</span>
+              </div>
+              <textarea class="custom-css-textarea" id="statusFind" rows="3" spellcheck="false"></textarea>
+              <div class="auto-hint" style="margin:4px 0 10px;">角色照下面的「生成规则」写状态栏，小手机用这个正则认出来，套进上面的 HTML（$1、$2… 是正则里的第几个括号），和酒馆里一样。一般不用改</div>
+            </div>
+            <div class="bubble-section-label" style="margin-bottom:6px;">生成规则（可选）</div>
+            <textarea class="custom-css-textarea" id="statusRules" rows="6"
+              placeholder="告诉角色每一项怎么写，比如：心情：0-100 的纯数字"></textarea>
+            <div class="auto-hint" style="margin:4px 0 10px;">每次回复都会带给角色。导入了酒馆正则时，把酒馆里配套的那段状态栏规则（世界书或预设里「按以下格式生成状态栏」那段）整段贴进来</div>
             <div class="bubble-section-label" style="margin-bottom:6px;">状态栏美化（CSS，作用于 .cr-status-card）</div>
             <textarea class="custom-css-textarea" id="statusCss" rows="4"
               placeholder="/* 例：.cr-status-card { background: #fff7e6; } */"></textarea>

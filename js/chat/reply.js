@@ -15,6 +15,12 @@ function commitAssistantReply(hist, raw, list, empty) {
   raw = th.text;
   var st = takeStatus(raw);
   raw = st.text; status = st.status;
+  // 导入了酒馆正则的状态栏：角色照规则写，用正则认出来（只在聊天窗口）
+  var sc = charOfHistory(hist), sLook = sc && chatHistories[sc.id] === hist ? Object.assign({}, DEFAULT_LOOK, sc.look || {}) : null;
+  if (sLook && sLook.statusOn && sLook.statusFind && typeof statusRegexTake === 'function') {
+    var rt = statusRegexTake(sLook, status || raw);
+    if (rt.status) { if (!status) raw = rt.text; status = rt.status; }
+  }
   raw = raw.replace(/<签名>([\s\S]*?)<\/签名>/g, function(_, s) { headStatus = s.replace(/\s+/g, ' ').trim().slice(0, 20); return ''; });
   raw = raw.replace(/<拍一拍\s*\/?>(\s*<\/拍一拍>)?/g, function() { patBack = true; return ''; });
   // 剧情回复里藏着的前情：记在这一轮最后一条消息上，不显示
@@ -285,15 +291,17 @@ function sendMsg(userText, requestOnly, onDone) {
     onStatus: function(text) { typing.bubble.textContent = text; if (activeList) activeList.scrollTop = 999999; },
     onText: function(full) {
       aiText = full;
+      // 导入的酒馆状态栏那段不在聊天里冒出来
+      var liveText = (isChatView && typeof statusStreamCut === 'function') ? statusStreamCut(replyChar, aiText) : aiText;
       // 操作块不直接显示原始代码，写完后会变成确认卡片
-      var shown = aiText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
+      var shown = liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
         .replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
         .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
         .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, '').trim();
       if (bubbleStream && shown.indexOf('⚙️') < 0) {
         // 聊天窗口：写完的句子一个一个冒出来，打字气泡保持小点
         if (started) { typing.bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>'; started = false; }
-        previewStream(aiText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
+        previewStream(liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
           .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
           .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, ''));
       } else {
