@@ -1,5 +1,5 @@
 // 眠花糖机 — 桌宠：桌面「桌宠」app 是个小窝，里面可以养好几只（像素小动物自己捏，或者用一张 Q 版图片当 TA 的代表），
-// 想放出去的会在屏幕上自己爬来爬去（点一下摸摸，按住拖着走，没人理会打盹）。说的话里可以写 {{user}} / {{char}}
+// 想放出去的会在屏幕上自己爬来爬去，时不时跳舞、玩电脑、看书、伸懒腰（点一下摸摸，按住拖着走，没人理会打盹）。说的话里可以写 {{user}} / {{char}}
 
 // =============================================
 // 数据：mphone_pet = { follow, pets: [{ id, name, kind, color, eye, acc, img, charId, words, out }] }
@@ -105,6 +105,22 @@ function petLook(p) {
 }
 
 // =============================================
+// 动作：跳舞、玩电脑、看书、伸懒腰（还有走路、东张西望、发呆、睡觉）。道具画在和身子一样的格子里，盖在前面
+// =============================================
+var PET_ACTS = { dance: [4000, 3000], pc: [10000, 15000], book: [10000, 15000], stretch: [1700, 0] };
+var PET_PROPS = {
+  pc: '<rect class="pc-glow" x="5.5" y="12.6" width="13" height="0.9" fill="#bfe3ff"/>' +
+      '<rect x="4.5" y="13.5" width="15" height="7" rx="1" fill="#d6d9e2" stroke="#a9aebb" stroke-width="0.6"/>' +
+      '<path d="M12 18.2 l-1.4 -1.4 a0.8 0.8 0 0 1 1.4 -1 a0.8 0.8 0 0 1 1.4 1 z" fill="#f08aa6"/>' +
+      '<rect x="3" y="20.3" width="18" height="1" rx="0.5" fill="#a9aebb"/>',
+  book: '<g transform="translate(0 1.4)"><rect x="5" y="13" width="14" height="7.2" rx="0.8" fill="#e8737f"/>' +
+        '<rect x="5.8" y="12.4" width="6" height="7" fill="#fffaf2"/><rect x="12.2" y="12.4" width="6" height="7" fill="#fffaf2"/>' +
+        '<rect x="11.8" y="12.4" width="0.4" height="7.2" fill="#d9c9b8"/>' +
+        '<g fill="#e3d6c8"><rect x="6.6" y="14" width="4.2" height="0.5"/><rect x="6.6" y="15.4" width="4.2" height="0.5"/><rect x="6.6" y="16.8" width="3" height="0.5"/>' +
+        '<rect x="13" y="14" width="4.2" height="0.5"/><rect x="13" y="15.4" width="4.2" height="0.5"/><rect x="13" y="16.8" width="3.4" height="0.5"/></g></g>'
+};
+
+// =============================================
 // 一只会动的宠物：box 是它能走动的地方；opt = { size, top, bottom }
 // =============================================
 function Pet(box, data, opt) {
@@ -128,7 +144,8 @@ function Pet(box, data, opt) {
 }
 Pet.prototype.setData = function(p) {
   this.data = p;
-  this.inner.innerHTML = petLook(p) + '<span class="pet-z">z</span>';
+  this.inner.innerHTML = petLook(p) + '<svg class="pet-prop" viewBox="0 -2 24 24" aria-hidden="true">' + (PET_PROPS[this.state] || '') + '</svg><span class="pet-z">z</span>';
+  this.prop = this.inner.querySelector('.pet-prop');
   this.el.classList.toggle('is-img', p.kind === 'img' && !!p.img);
 };
 Pet.prototype.area = function() {
@@ -140,19 +157,38 @@ Pet.prototype.place = function() {
 };
 Pet.prototype.set = function(state, ms) {
   var el = this.el;
-  ['walk', 'sleep', 'look-l', 'look-r', 'look-up'].forEach(function(c) { el.classList.remove(c); });
+  ['walk', 'sleep', 'look-l', 'look-r', 'look-up', 'act-dance', 'act-pc', 'act-book', 'act-stretch'].forEach(function(c) { el.classList.remove(c); });
   this.state = state;
   this.until = Date.now() + (ms || 0);
   if (state === 'walk' || state === 'sleep') el.classList.add(state);
+  if (PET_ACTS[state]) el.classList.add('act-' + state);   // 加前缀：.book 之类会和书架的样式撞
   if (state === 'look') el.classList.add(['look-l', 'look-r', 'look-up'][Math.floor(Math.random() * 3)]);
+  if (this.prop) this.prop.innerHTML = PET_PROPS[state] || '';
+};
+Pet.prototype.act = function(name) {
+  this.lastTouch = Date.now();
+  if (name === 'sleep') { this.set('sleep', 20000 + Math.random() * 30000); return; }
+  var a = PET_ACTS[name];
+  if (a) this.set(name, a[0] + Math.random() * a[1]);
+};
+// 跳舞时头上冒小音符
+Pet.prototype.float = function(text, cls) {
+  var s = document.createElement('span');
+  s.className = cls; s.textContent = text;
+  this.inner.appendChild(s);
+  setTimeout(function() { s.remove(); }, 1300);
 };
 // 想想接下来干什么：多半是走到附近一个地方，有时东张西望、发会儿呆，久没人理（或者夜里）就打个盹
 Pet.prototype.decide = function() {
   var a = this.area(), r = Math.random(), h = new Date().getHours();
   var sleepy = (h >= 23 || h < 6) ? 0.25 : (Date.now() - this.lastTouch > 90000 ? 0.12 : 0.04);
   if (r < sleepy) { this.set('sleep', 18000 + Math.random() * 40000); return; }
-  if (r < sleepy + 0.18) { this.set('look', 1200 + Math.random() * 1600); return; }
-  if (r < sleepy + 0.34) { this.set('idle', 1500 + Math.random() * 3000); return; }
+  if (r < sleepy + 0.14) { this.set('look', 1200 + Math.random() * 1600); return; }
+  if (r < sleepy + 0.26) { this.set('idle', 1500 + Math.random() * 3000); return; }
+  if (r < sleepy + 0.33) { this.act('dance'); return; }
+  if (r < sleepy + 0.40) { this.act('pc'); return; }
+  if (r < sleepy + 0.46) { this.act('book'); return; }
+  if (r < sleepy + 0.50) { this.act('stretch'); return; }
   var ang = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 130;
   this.tx = Math.min(a.x1, Math.max(a.x0, this.x + Math.cos(ang) * dist));
   this.ty = Math.min(a.y1, Math.max(a.y0, this.y + Math.sin(ang) * dist * 0.7));
@@ -180,6 +216,10 @@ Pet.prototype.frame = function(t) {
   } else if (this.state !== 'drag' && now > this.until) {
     if (this.state === 'sleep') { this.set('idle', 1500); this.talk(true); }
     else this.decide();
+  }
+  if (this.state === 'dance' && !(now < this.noteAt)) {
+    this.float(Math.random() < 0.5 ? '♪' : '♫', 'pet-note' + (Math.random() < 0.5 ? ' r' : ''));
+    this.noteAt = now + 600 + Math.random() * 500;
   }
   if (this.state !== 'sleep' && now > this.blinkAt) {
     var el = this.el;
@@ -315,6 +355,14 @@ function renderPetList() {
     list.appendChild(empty);
   }
 }
+// 小窝下面的按钮：叫小窝里的大家一起做
+[['dance', '跳个舞'], ['pc', '玩电脑'], ['book', '看书'], ['stretch', '伸懒腰'], ['sleep', '睡觉']].forEach(function(a) {
+  var b = document.createElement('button');
+  b.className = 'pet-chip';
+  b.textContent = a[1];
+  b.addEventListener('click', function() { Object.keys(homePets.map).forEach(function(id) { homePets.map[id].act(a[0]); }); });
+  document.getElementById('petHomeActs').appendChild(b);
+});
 document.getElementById('dockPet').addEventListener('click', function() { appPet.classList.add('active'); homePets.run(true); petRefresh(); });
 document.getElementById('backPet').addEventListener('click', function() { appPet.classList.remove('active'); homePets.run(false); petRefresh(); });
 (function() {

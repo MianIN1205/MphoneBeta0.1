@@ -90,3 +90,27 @@
 .pet-swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08); cursor: pointer; padding: 0; }
 .pet-swatch.active { box-shadow: 0 0 0 2px #D05858; }
 .pet-color-input { width: 28px; height: 28px; border: none; padding: 0; background: none; cursor: pointer; }
+
+/* 动作：跳舞（左右摇、腿跟着踩）、玩电脑（坐在电脑后面敲，屏幕的光一闪一闪）、看书（眼睛往下）、伸懒腰（身子拉长一下） */
+.pet-prop { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.pet.act-dance .pet-inner { animation: petDance 0.9s ease-in-out infinite; }
+.pet.act-dance .pet-legs-a { animation: petStep 0.3s steps(1) infinite; }
+.pet.act-dance .pet-legs-b { animation: petStep 0.3s steps(1) infinite; animation-delay: -0.15s; }
+@keyframes petDance { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(-6%, -3%) rotate(-9deg); }
+  50% { transform: translate(0, -9%) rotate(0); } 75% { transform: translate(6%, -3%) rotate(9deg); } }
+.pet-note { position: absolute; left: 20%; top: -4px; color: #b9a6e0; font-size: 12px; pointer-events: none; animation: petNote 1.2s ease-out forwards; }
+.pet-note.r { left: 70%; color: #f08aa6; }
+@keyframes petNote { from { opacity: 0.95; transform: translate(0, 0) rotate(-10deg); } to { opacity: 0; transform: translate(6px, -22px) rotate(10deg); } }
+.pet.act-pc .pet-top { animation: petType 0.28s steps(1) infinite; }
+.pet.act-pc .pet-eye { transform: translateY(0.6px); }
+.pet .pc-glow { animation: petGlow 1.4s steps(2) infinite; }
+@keyframes petType { 50% { transform: translateY(0.4px); } }
+@keyframes petGlow { 0% { opacity: 0.35; } 50% { opacity: 0.75; } }
+.pet.act-book .pet-eye { transform: translateY(1.2px) scaleY(0.6); }
+.pet.act-book .pet-top { animation: petRead 3.2s ease-in-out infinite; }
+@keyframes petRead { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(0.5px); } }
+.pet.act-stretch .pet-top { transform-box: fill-box; transform-origin: center bottom; animation: petStretch 1.6s ease-in-out; }
+.pet.act-stretch .pet-eye { transform: scaleY(0.2); }
+@keyframes petStretch { 0%, 100% { transform: scale(1, 1); } 40%, 60% { transform: scale(0.94, 1.14); } }
+.pet.is-img.act-pc .pet-img, .pet.is-img.act-book .pet-img { transform: translateY(4%); }
+.pet-home-acts { justify-content: center; margin: 0 0 8px; }
