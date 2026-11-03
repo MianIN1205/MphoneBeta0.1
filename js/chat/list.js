@@ -29,18 +29,20 @@ function msgPreviewText(m) {
   return String(m.content || '').replace(/〔译〕[\s\S]*$/, '').replace(/\s+/g, ' ');
 }
 
-// 消息列表：置顶在前，其余按最后一条消息的时间从新到旧；左滑出现 置顶 / 标为未读 / 删除
+// 消息列表：MianIN 固定在最上面，然后置顶的，其余按最后一条消息的时间从新到旧；左滑出现 置顶 / 标为未读 / 删除（MianIN 只有标为未读）
 var SESSION_SWIPE_W = 168;
 function renderChatCharList() {
   var list = document.getElementById('chatCharList');
   list.innerHTML = '';
   var sessions = [];
   charList.forEach(function(char, i) {
-    if (!char.inChat) return;
+    if (!char.inChat && !char.builtinAssistant) return;   // MianIN 一直在列表里
     var last = lastSessionMsg(char);
     sessions.push({ char: char, idx: i, last: last, time: (last && last.time) || char.chatTouchedAt || 0 });
   });
   sessions.sort(function(a, b) {
+    // MianIN 固定在最上面（用户要的），然后是置顶的，再按时间
+    if (!!a.char.builtinAssistant !== !!b.char.builtinAssistant) return a.char.builtinAssistant ? -1 : 1;
     if (!!a.char.pinned !== !!b.char.pinned) return a.char.pinned ? -1 : 1;
     return (b.time - a.time) || (a.idx - b.idx);
   });
@@ -52,9 +54,11 @@ function renderChatCharList() {
 
     var acts = document.createElement('div');
     acts.className = 'swipe-acts';
-    [['pin', char.pinned ? '取消置顶' : '置顶'],
+    // MianIN 不能取消置顶、不能删除，只能标已读 / 未读
+    var helper = !!char.builtinAssistant;
+    (helper ? [['unread', chatUnread[char.id] ? '标为已读' : '标为未读']] : [['pin', char.pinned ? '取消置顶' : '置顶'],
      ['unread', chatUnread[char.id] ? '标为已读' : '标为未读'],
-     ['delete', '删除']].forEach(function(a) {
+     ['delete', '删除']]).forEach(function(a) {
       var b = document.createElement('button');
       b.className = 'swipe-btn swipe-' + a[0];
       b.textContent = a[1];
@@ -73,7 +77,7 @@ function renderChatCharList() {
     });
 
     var card = document.createElement('div');
-    card.className = 'chat-char-card' + (char.pinned ? ' pinned' : '');
+    card.className = 'chat-char-card' + (char.pinned || helper ? ' pinned' : '') + (helper ? ' helper' : '');
     card.dataset.index = i;
 
     var av = document.createElement('div');
@@ -89,10 +93,11 @@ function renderChatCharList() {
     nameEl.className = 'chat-char-card-name';
     nameEl.textContent = char.charAlias || char.charName || '未命名';
     head.appendChild(nameEl);
-    if (char.pinned) {
+    // 手动置顶的：名字旁边一颗粉色小爱心（画的，不用 emoji）；MianIN 不显示爱心，右边是小助手的标
+    if (char.pinned && !helper) {
       var pin = document.createElement('span');
       pin.className = 'chat-card-pin';
-      pin.textContent = '📌';
+      pin.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1.2 8.6 3.2 5 6.7 5c2 0 3.4 1.1 4.3 2.4.4.6 1.6.6 2 0C13.9 6.1 15.3 5 17.3 5c3.5 0 5.5 3.6 4.2 6.8C19.5 16.4 12 21 12 21z"/></svg>';
       head.appendChild(pin);
     }
     if (s.last && s.last.time) {
@@ -110,6 +115,13 @@ function renderChatCharList() {
     info.appendChild(lastEl);
     card.appendChild(av);
     card.appendChild(info);
+    if (helper) {
+      var hb = document.createElement('span');
+      hb.className = 'chat-card-helper';
+      hb.title = '小助手';
+      hb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>';
+      card.appendChild(hb);
+    }
     if (chatUnread[char.id]) {
       var badge = document.createElement('span');
       badge.className = 'chat-unread-badge';
@@ -160,6 +172,7 @@ function updateUnreadTotal() {
 // 删除会话：只从列表移走（保留记录），或连聊天记录一起删除
 var sessionDelTarget = null;
 function openSessionDelete(char) {
+  if (char && char.builtinAssistant) return;   // MianIN 删不掉
   sessionDelTarget = char;
   document.getElementById('sessionDelName').textContent = '删除与「' + (char.charAlias || char.charName || '未命名') + '」的聊天';
   document.getElementById('sessionDelOverlay').classList.add('open');

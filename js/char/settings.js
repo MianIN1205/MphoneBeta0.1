@@ -820,7 +820,7 @@ function openCharSetting(idx, draft, keepView) {
   editingCharIndex = idx;
   if (idx === -1) fillCharForm(draft || {});
   else fillCharForm(charList[idx]);
-  document.getElementById('charDeleteBtn').style.display = (idx === -1) ? 'none' : '';
+  document.getElementById('charDeleteBtn').style.display = (idx === -1 || (charList[idx] && charList[idx].builtinAssistant)) ? 'none' : '';   // MianIN 删不掉
   appCharSetting.classList.add('active');
   var v = csViewState;
   var keep = keepView && v && charList[idx] && v.id === charList[idx].id && v.session === chatRoomSession;

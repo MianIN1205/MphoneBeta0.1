@@ -103,6 +103,7 @@ document.getElementById('chatBgUploadBtn').addEventListener('click', function() 
 // CHAR / USER 头像
 ['charAvatarBox'].forEach(function(id) {
   document.getElementById(id).addEventListener('click', function() {
+    if (this.classList.contains('locked')) { showToast('MianIN 的头像是固定的', 'plain'); return; }   // 内置助手的信息锁死
     openImgPicker(function(src) { setAvatarBox(id, src, ''); });
   });
 });

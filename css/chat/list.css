@@ -43,7 +43,12 @@
 .chat-char-card.pinned { background: rgba(255, 236, 240, 0.96); }
 .chat-char-card-head { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .chat-char-card-head .chat-char-card-name { flex: 0 1 auto; min-width: 0; }
-.chat-card-pin { font-size: 10px; flex-shrink: 0; }
+/* 手动置顶：粉色小爱心；MianIN：右边一个小助手的标 */
+.chat-card-pin { flex-shrink: 0; width: 12px; height: 12px; display: inline-flex; }
+.chat-card-pin svg { width: 100%; height: 100%; fill: #F08AA6; }
+.chat-card-helper { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(240, 160, 184, 0.22), rgba(185, 166, 224, 0.26)); }
+.chat-card-helper svg { width: 15px; height: 15px; fill: #D07A98; }
 .chat-char-card-time { margin-left: auto; flex-shrink: 0; font-size: 11px; color: #bbb; padding-left: 6px; }
 
 .chat-tab-icon { position: relative; }

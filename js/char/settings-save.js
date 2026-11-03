@@ -124,7 +124,7 @@ var charDeleteBtn         = document.getElementById('charDeleteBtn');
 var charDelTimer          = null;
 
 charDeleteBtn.addEventListener('click', function() {
-  if (editingCharIndex === -1) return;
+  if (editingCharIndex === -1 || (charList[editingCharIndex] && charList[editingCharIndex].builtinAssistant)) return;
   charDelOkBtn.disabled = true;
   var count = 3;
   charDelCountdown.textContent = '(' + count + ')';
