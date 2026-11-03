@@ -40,7 +40,8 @@ notifyOnInput.addEventListener('change', function() {
 
 // 发一条系统通知（有后台缓存程序时用它发，安卓只认这种；直接打开本地文件时退回普通通知）
 function showSystemNotification(title, body, opts) {
-  var options = Object.assign({ body: body, icon: 'icons/icon.png', badge: 'icons/icon.png' }, opts || {});
+  // badge 是通知栏和通知顶上那个小图标：安卓只认透明底的单色图，给彩色的会换成 Chrome 的图标（用户看到的谷歌 logo）
+  var options = Object.assign({ body: body, icon: 'icons/icon.png', badge: 'icons/badge.png' }, opts || {});
   var direct = function() { try { new Notification(title, options); } catch (_) {} };
   if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) { direct(); return; }
   navigator.serviceWorker.getRegistration().then(function(reg) {

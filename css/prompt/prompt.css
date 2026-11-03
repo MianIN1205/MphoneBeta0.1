@@ -424,3 +424,7 @@
 .cot-switch-info { display: flex; flex-direction: column; gap: 2px; }
 .cot-switch-title { font-size: 13px; font-weight: 600; color: #333; }
 .cot-switch-desc { font-size: 10px; color: #aaa; }
+
+/* 设置里一行右边的小选项按钮（左边是名字的那种）：扁扁的、贴着文字，不换行（用户要的；整行的大切换不动） */
+.auto-row .pf-radio-row, .sb-row .pf-radio-row { flex: none; gap: 4px; align-self: center; }
+.auto-row .pf-radio-btn, .sb-row .pf-radio-btn { flex: none; padding: 4px 10px; line-height: 1.35; border-radius: 8px; white-space: nowrap; }

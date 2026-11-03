@@ -30,7 +30,12 @@ function queueImageGen(desc) {
 // ---------- 聊天：角色发的照片 <照片>画面</照片> ----------
 // 回复里的照片拆成单独一条：先是文字图片（m.textImg），生图模式下画好了再换成真图片（m.imgSrc）
 var PHOTO_TAG_RE = /<照片>([\s\S]*?)<\/照片>/g;
-function photoSplitParts(parts) {
+var PHOTO_GAP = 30;   // 最近这么多条里 TA 发过照片，就先不再发（用户说频率别太高）
+function photoRecentlySent(hist) {
+  return (hist || []).slice(-PHOTO_GAP).some(function(m) { return m.photo && m.role === 'assistant'; });
+}
+function photoSplitParts(parts, hist) {
+  var blocked = photoRecentlySent(hist);
   var out = [];
   parts.forEach(function(p) {
     if (typeof p !== 'string' || p.indexOf('<照片>') < 0) { out.push(p); return; }
@@ -40,7 +45,7 @@ function photoSplitParts(parts) {
       var before = p.slice(last, m.index).trim();
       if (before) out.push(before);
       var desc = m[1].replace(/\s+/g, ' ').trim();
-      if (desc) out.push({ content: '[照片] ' + desc, textImg: desc, photo: true });
+      if (desc && !blocked) { out.push({ content: '[照片] ' + desc, textImg: desc, photo: true }); blocked = true; }   // 一次最多一张
       last = PHOTO_TAG_RE.lastIndex;
     }
     var rest = p.slice(last).trim();
