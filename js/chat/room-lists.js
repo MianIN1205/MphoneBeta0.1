@@ -8,28 +8,34 @@
 
   // 点击剧情底栏「图片」按钮 → 打开设备相册发送图片
   if (crAlbumBtn && crAlbumFileInput) {
+    // 相册：弹出「照片 / 拍照 / 文字图片」三选一（js/chat/compose-plus.js）
     crAlbumBtn.addEventListener('click', function(e) {
       e.stopPropagation();
-      crAlbumFileInput.value = '';
-      crAlbumFileInput.click();
+      if (typeof openAlbumPick === 'function') openAlbumPick();
+      else { crAlbumFileInput.value = ''; crAlbumFileInput.click(); }
     });
 
-    crAlbumFileInput.addEventListener('change', function() {
-      var file = this.files && this.files[0];
-      if (!file || openingChatCharIdx === -1) return;
-      var reader = new FileReader();
-      reader.onload = function(ev) {
-        compressImage(ev.target.result, 1024, function(dataUrl) {
-          var im = { role: 'user', content: '[图片消息]', imgSrc: dataUrl, time: Date.now() };
-          if (pendingQuote) { im.quote = pendingQuote; clearQuote(); }
-          getActiveHistory(openingChatCharIdx).push(im);
-          renderHistMsg(im);
-          saveHistories();
-        });
-      };
-      reader.readAsDataURL(file);
-    });
+    crAlbumFileInput.addEventListener('change', function() { sendPickedImage(this.files && this.files[0]); });
   }
+})();
+// 选好（或拍好）的照片压一下发出去（和回车一样，只发自己的，不叫 AI）
+function sendPickedImage(file) {
+  if (!file || openingChatCharIdx === -1) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    compressImage(ev.target.result, 1024, function(dataUrl) {
+      var im = { role: 'user', content: '[图片消息]', imgSrc: dataUrl, time: Date.now() };
+      if (pendingQuote) { im.quote = pendingQuote; clearQuote(); }
+      getActiveHistory(openingChatCharIdx).push(im);
+      renderHistMsg(im);
+      saveHistories();
+    });
+  };
+  reader.readAsDataURL(file);
+}
+(function() {
+  var crAlbumFileInput = document.getElementById('crAlbumFileInput');
+  var chatRoomContent  = document.getElementById('chatRoomContent');
 
   // 点击底栏「+」按钮 → 底栏上升，下方展开/收起 4×2 微信小功能面板
   if (crPlusBtn && crPlusPanel) {
@@ -52,9 +58,9 @@
         e.stopPropagation();
         var funcName = this.dataset.func || '';
         if (funcName === '相册' && crAlbumFileInput) {
-          crAlbumFileInput.value = '';
-          crAlbumFileInput.click();
           closeCrPlusPanel();
+          if (typeof openAlbumPick === 'function') openAlbumPick();
+          else { crAlbumFileInput.value = ''; crAlbumFileInput.click(); }
         } else if (funcName === '文件' && typeof openChatFilePicker === 'function') {
           openChatFilePicker();
         } else if (funcName === '查手机' && typeof openPeek === 'function') {

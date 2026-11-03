@@ -9,7 +9,7 @@
 // 整理时一段一段来：每段不超过 budget（估算 token），太长被拒就自动切小一半；中途失败停在那一段，下次点「继续」接着来
 // =============================================
 var arcStore = mphoneStore.load('mphone_archives', {});
-var ARC_BUDGET = 5000;        // 每段聊天记录大约多少 token
+var ARC_BUDGET = 20000;       // 每段聊天记录大约多少 token（整理前可以选小段 5000 / 中段 20000 / 大段 50000；以前固定 5000，长记录要请求一两百次，用户嫌多）
 var ARC_MIN_BUDGET = 600;
 var arcRunning = {};          // 档案id → { stop, ctrl }
 function saveArcStore() { mphoneStore.save('mphone_archives', arcStore); }
@@ -375,7 +375,8 @@ function arcStartMemory(char, arc) {
   var run = arcRunning[arc.id] = { stop: false, ctrl: null };
   var n = arcNames(char);
   arc.mem.err = '';
-  arc.mem.budget = arc.mem.budget || ARC_BUDGET;
+  // 以前固定的小段（5000）接着整理时换成现在的默认中段，次数少很多；被自动切小过的保持原样
+  arc.mem.budget = !arc.mem.budget || (arc.mem.budget === 5000 && !arc.mem.picked) ? ARC_BUDGET : arc.mem.budget;
   saveArcStore();
   arcRefresh();
   var tries = 0;
@@ -668,6 +669,7 @@ function openArcPreview() {
   document.getElementById('arcPrevMemRow').style.display = '';
   document.getElementById('arcPrevTitle').textContent = '导入预览';
   document.getElementById('arcPrevOk').textContent = '导入';
+  arcPrevSetBudget(ARC_BUDGET);
   arcPrevRender();
   arcPrevOverlay.classList.add('open');
 }
@@ -736,14 +738,29 @@ function arcPrevUpdate() {
   var mem = document.getElementById('arcPrevMem').checked;
   document.getElementById('arcPrevMemSub').style.display = mem ? '' : 'none';
   var fake = { msgs: p.parsed ? p.parsed.msgs : p.arc.msgs, mem: { withStatus: document.getElementById('arcPrevStatus').checked } };
-  var segs = arcChunkCount(fake, 0, ARC_BUDGET, arcNames(p.char));
+  var budget = arcPrevBudget();
+  var segs = arcChunkCount(fake, 0, budget, arcNames(p.char));
   var careful = document.getElementById('arcPrevCareful').checked;
   document.getElementById('arcPrevCost').textContent = mem
-    ? '大约分成 ' + segs + ' 段，要调用 ' + (careful ? segs * 2 : segs) + ' 次接口（用这个角色现在用的模型）。整理时可以离开这个页面，但要开着小手机；中途可以暂停，下次接着来。'
+    ? '大约分成 ' + segs + ' 段，要调用 ' + (careful ? segs * 2 : segs) + ' 次接口（用这个角色现在用的模型）。' +
+      (budget >= 50000 ? '大段次数最少，但每段记得粗一点，模型的「最大输出长度」要够大；' : budget <= 5000 ? '小段记得最细，次数最多；' : '') +
+      '整理时可以离开这个页面，但要开着小手机；中途可以暂停，下次接着来。'
     : '只存成档案，可以以后再整理。';
 }
 ['arcPrevMem', 'arcPrevStatus', 'arcPrevCareful'].forEach(function(id) {
   document.getElementById(id).addEventListener('change', arcPrevUpdate);
+});
+// 每段多大：小段 / 中段 / 大段
+function arcPrevBudget() {
+  var b = document.querySelector('#arcPrevSegRow .pf-radio-btn.selected');
+  return b ? +b.dataset.budget : ARC_BUDGET;
+}
+function arcPrevSetBudget(v) {
+  document.querySelectorAll('#arcPrevSegRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', +b.dataset.budget === v); });
+  if (!document.querySelector('#arcPrevSegRow .pf-radio-btn.selected')) arcPrevSetBudget(ARC_BUDGET);
+}
+document.querySelectorAll('#arcPrevSegRow .pf-radio-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() { arcPrevSetBudget(+btn.dataset.budget); arcPrevUpdate(); });
 });
 // 已经导入的档案，之后再点「整理成记忆」：用同一个弹窗只选整理方式
 function openArcMemCfg(char, arc) {
@@ -759,6 +776,7 @@ function openArcMemCfg(char, arc) {
   document.getElementById('arcPrevStatusRow').style.display = s.status ? '' : 'none';
   document.getElementById('arcPrevStatus').checked = true;
   document.getElementById('arcPrevCareful').checked = false;
+  arcPrevSetBudget(ARC_BUDGET);
   document.getElementById('arcPrevOk').textContent = '开始整理';
   arcPrevUpdate();
   arcPrevOverlay.classList.add('open');
@@ -769,7 +787,7 @@ document.getElementById('arcPrevOk').addEventListener('click', function() {
   var p = arcPending;
   if (!p) return;
   var mem = document.getElementById('arcPrevMem').checked;
-  var memCfg = { pos: 0, count: 0, seg: 0, budget: ARC_BUDGET, careful: document.getElementById('arcPrevCareful').checked,
+  var memCfg = { pos: 0, count: 0, seg: 0, budget: arcPrevBudget(), picked: true, careful: document.getElementById('arcPrevCareful').checked,
     withStatus: document.getElementById('arcPrevStatus').checked, done: false, err: '' };
   var arc = p.arc;
   if (p.mode === 'import') {

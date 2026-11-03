@@ -567,7 +567,12 @@ function fillCharForm(char) {
   setLookPartForm('chat');
   setAutoForm(char.auto);
   setChatCfgForm(char.chatCfg);
-  renderCharWbLinks(char.worldbookIds || [], char.worldbookFolders || []);
+  // 世界书分「聊天窗口 / 剧情窗口」两栏各自关联（用户要的）；剧情还没单独设置过时先照聊天的勾
+  var wbChat = { ids: (char.worldbookIds || []).slice(), folders: (char.worldbookFolders || []).slice() };
+  csWbParts = { chat: wbChat, drama: char.dramaWb ? { ids: (char.dramaWb.ids || []).slice(), folders: (char.dramaWb.folders || []).slice() } : JSON.parse(JSON.stringify(wbChat)) };
+  csWbView = 'chat';
+  csWbPendingOn = true;
+  renderCharWbLinks(wbChat.ids, wbChat.folders);
   renderMemSummaries(char);
   if (typeof renderArchiveList === 'function') renderArchiveList(char);
 }
@@ -664,8 +669,9 @@ function readCharForm() {
     bubble:           lc.bubble,
     customCss:        lc.customCss,
     dramaLook:        csLookParts.drama,
-    worldbookIds:     readCharWbLinks(),
-    worldbookFolders: readCharWbFolders(),
+    worldbookIds:     csWbPartsNow().chat.ids,
+    worldbookFolders: csWbPartsNow().chat.folders,
+    dramaWb:          csWbPartsNow().drama,
     auto:             readAutoForm(),
     chatCfg:          readChatCfgForm(),
     look:             lc.look,
@@ -681,21 +687,50 @@ function readCharForm() {
 var csPendingWb = null;
 var csPendingArc = null;
 
+// 两栏：csWbParts = { chat: { ids, folders }, drama: { ids, folders } }，表单里显示的是 csWbView 那一栏
+var csWbParts = { chat: { ids: [], folders: [] }, drama: { ids: [], folders: [] } };
+var csWbView = 'chat', csWbPendingOn = true;
+function csWbPartsNow() {
+  csWbParts[csWbView] = { ids: readCharWbLinks(), folders: readCharWbFolders() };
+  return csWbParts;
+}
+function switchCsWbView(view) {
+  if (view === csWbView) return;
+  csWbPartsNow();
+  var p = document.getElementById('wbPendingCb');
+  if (p) csWbPendingOn = p.checked;
+  csWbView = view;
+  renderCharWbLinks(csWbParts[view].ids, csWbParts[view].folders);
+}
 function renderCharWbLinks(ids, folderIds) {
   var wrap = document.getElementById('wbContent');
   wrap.innerHTML = '';
   var groups = wbGroups();
+  var tabs = document.createElement('div');
+  tabs.className = 'pf-radio-row wb-view-row';
+  [['chat', '聊天窗口'], ['drama', '剧情窗口']].forEach(function(t) {
+    var b = document.createElement('button');
+    b.className = 'pf-radio-btn' + (csWbView === t[0] ? ' selected' : '');
+    b.textContent = t[1];
+    b.addEventListener('click', function(e) { e.stopPropagation(); switchCsWbView(t[0]); });
+    tabs.appendChild(b);
+  });
+  wrap.appendChild(tabs);
+  var tip = document.createElement('div');
+  tip.className = 'auto-hint wb-view-hint';
+  tip.textContent = csWbView === 'chat' ? '在聊天窗口里用的世界书' : '在剧情窗口里用的世界书（和聊天窗口分开勾）';
+  wrap.appendChild(tip);
 
   if (csPendingWb && csPendingWb.entries.length) {
     var pending = document.createElement('div');
     pending.className = 'wb-link-folder';
     pending.innerHTML = '<div class="wb-link-folder-head wb-link-pending"><label>' +
-      '<input type="checkbox" id="wbPendingCb" checked><span></span></label></div>';
+      '<input type="checkbox" id="wbPendingCb"' + (csWbPendingOn ? ' checked' : '') + '><span></span></label></div>';
     pending.querySelector('span').textContent = '（导入）' + csPendingWb.entries.length + ' 条，保存角色时' + (csPendingWb.entries.some(function(e) { return e.folderName; }) ? '按原来的分类放进文件夹并关联' : '创建文件夹');
     pending.querySelector('input').addEventListener('change', updateCharWbCount);
     wrap.appendChild(pending);
   } else if (!groups.length) {
-    wrap.innerHTML = '<div class="wb-empty-hint">暂无关联世界书</div>';
+    wrap.insertAdjacentHTML('beforeend', '<div class="wb-empty-hint">暂无关联世界书</div>');
   }
 
   groups.forEach(function(g) {
@@ -770,10 +805,11 @@ function readCharWbLinks() {
   return Array.from(document.querySelectorAll('#wbContent .wb-link-entry-cb:checked:not(:disabled)')).map(function(cb) { return cb.value; });
 }
 function updateCharWbCount() {
-  var n = readCharWbFolders().length + readCharWbLinks().length;
-  var p = document.getElementById('wbPendingCb');
-  if (p && p.checked) n++;
-  document.getElementById('wbCount').textContent = '已关联 ' + n + ' 个';
+  var p = document.getElementById('wbPendingCb'), add = p && p.checked ? 1 : 0;
+  var now = readCharWbFolders().length + readCharWbLinks().length + add;
+  var other = csWbParts[csWbView === 'chat' ? 'drama' : 'chat'];
+  var on = other.ids.length + other.folders.length + add;
+  document.getElementById('wbCount').textContent = csWbView === 'chat' ? '聊天 ' + now + ' · 剧情 ' + on : '聊天 ' + on + ' · 剧情 ' + now;
 }
 
 // 打开角色设置：idx = -1 为新建

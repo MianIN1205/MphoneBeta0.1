@@ -62,7 +62,8 @@ function renderQuickBar() {
   if (!on) { closeQuickPop(); return; }
   var api = charApiPreset(char);
   var pre = charOwnPromptPreset(char);
-  var nWb = (char.worldbookFolders || []).length;
+  var qbDrama = typeof currentCrSubView !== 'undefined' && currentCrSubView === 'contacts';
+  var nWb = charWbOf(char, qbDrama).folders.length;
   var val = function(k, t) { crQuickBar.querySelector('[data-qb="' + k + '"] .cr-qb-val').textContent = t; };
   val('api', api ? api.name : '跟随全局');
   var drama = typeof currentCrSubView !== 'undefined' && currentCrSubView === 'contacts';
@@ -231,13 +232,16 @@ function renderQuickPop() {
     });
   } else if (crQuickOpen === 'wb') {
     // 世界书可多选：点一下关联 / 取消，弹层不收起
-    var groups = wbGroups();
+    // 只换当前窗口（聊天 / 剧情）那栏的
+    var groups = wbGroups(), wbDrama = currentCrSubView === 'contacts';
+    if (wbDrama && !char.dramaWb) char.dramaWb = { ids: (char.worldbookIds || []).slice(), folders: (char.worldbookFolders || []).slice() };
     groups.forEach(function(g) {
-      var linked = (char.worldbookFolders || []).indexOf(g.id) >= 0;
+      var cur = charWbOf(char, wbDrama);
+      var linked = cur.folders.indexOf(g.id) >= 0;
       quickItem(g.name, g.entries.length + ' 条', linked, function() {
-        var list = (char.worldbookFolders || []).filter(function(id) { return id !== g.id; });
+        var list = cur.folders.filter(function(id) { return id !== g.id; });
         if (!linked) list.push(g.id);
-        char.worldbookFolders = list;
+        if (wbDrama) char.dramaWb.folders = list; else char.worldbookFolders = list;
         saveCharList();
         renderQuickBar();
       });

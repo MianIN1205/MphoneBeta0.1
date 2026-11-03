@@ -122,6 +122,7 @@ function renderHistMsg(m, list, empty) {
   }
   var role = m.role === 'user' ? 'user' : 'ai';
   var r = (m.file && typeof appendFileMsg === 'function') ? appendFileMsg(role, m, list, empty)
+        : (m.textImg && typeof appendTextImgMsg === 'function') ? appendTextImgMsg(role, m, list, empty)
         : m.imgSrc ? appendImgMsg(role, m.imgSrc, list, empty)
         : (m.sticker && typeof appendStickerMsg === 'function') ? appendStickerMsg(role, m, list, empty)
         : appendMsg(role, m.content, false, list, empty);

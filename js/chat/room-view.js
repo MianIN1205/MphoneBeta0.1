@@ -35,9 +35,13 @@ function toggleCrDrawer(panel, btn) {
   }, 290);
 }
 
+// 每个角色上次停在聊天还是剧情：下次打开回到那边
+var crLastView = mphoneStore.load('mphone_last_view', {}) || {};
 function switchChatRoomSubView(view) {
   var isDrama = (view === 'contacts');
   currentCrSubView = isDrama ? 'contacts' : 'chat';
+  var vc = charList[openingChatCharIdx];
+  if (vc && crLastView[vc.id] !== currentCrSubView) { crLastView[vc.id] = currentCrSubView; mphoneStore.save('mphone_last_view', crLastView); }
   msgBtnChat.classList.toggle('active', !isDrama);
   msgBtnContacts.classList.toggle('active', isDrama);
   msgToggleSlider.classList.toggle('contacts', isDrama);

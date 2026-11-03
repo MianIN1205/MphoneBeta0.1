@@ -76,14 +76,18 @@
   word-break: break-all;
 }
 
+/* 表情包名字：最多两行，发之前看得清是哪个（用户要的） */
 .stk-name {
   max-width: 100%;
-  font-size: 10px;
+  font-size: 10.5px;
   color: #8a6b76;
-  line-height: 1.2;
+  line-height: 1.25;
+  text-align: center;
+  word-break: break-all;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .stk-empty {
@@ -183,15 +187,25 @@
 }
 .stk-suggest::-webkit-scrollbar { display: none; }
 .stk-suggest.open { display: flex; animation: stkFade 0.18s ease; }
-.stk-suggest .stk-thumb {
+.stk-sg-item {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   border: none;
   padding: 0;
+  background: none;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.stk-suggest .stk-thumb {
+  width: 44px;
+  height: 44px;
   background: rgba(255, 255, 255, 0.8);
 }
+.stk-sg-item .stk-name { font-size: 10px; }
 @keyframes stkFade {
   from { opacity: 0; transform: scale(0.98); }
   to   { opacity: 1; transform: none; }

@@ -456,3 +456,7 @@
 }
 .wb-folder-body { display: none; padding: 8px 0 0 10px; }
 .wb-folder.open .wb-folder-body { display: block; }
+
+/* 关联世界书：聊天窗口 / 剧情窗口两栏 */
+.wb-view-row { margin: 4px 0 6px; }
+.wb-view-hint { margin: 0 0 8px; }

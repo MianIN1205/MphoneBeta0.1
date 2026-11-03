@@ -60,21 +60,29 @@ function peekParse(text) {
   try { return JSON.parse(t); } catch (_) {}
   try { return JSON.parse(t.replace(/,\s*([}\]])/g, '$1').replace(/[“”]/g, '"')); } catch (e) { throw new Error('内容格式乱了，点 ↻ 再试一次'); }
 }
+// 一次请求最多等 PEEK_WAIT_MS：没回来就算失败（可以「再试一次」）；退出再进时，太久没回来的那次也不再挡着（用户遇到过卡在「正在打开」）
+var PEEK_WAIT_MS = 90000;
+function peekBusy(key) { var t = peekState.loading[key]; return !!t && Date.now() - t < PEEK_WAIT_MS; }
+function peekCall(msgs, char) {
+  return Promise.race([callApiOnce(msgs, char), new Promise(function(_, reject) {
+    setTimeout(function() { reject(new Error('等太久没回应，点「再试一次」')); }, PEEK_WAIT_MS);
+  })]);
+}
 function peekLoad(app) {
   var char = peekChar(), box = peekBox(char), key = String(char.id) + ':' + app;
-  if (peekState.loading[key]) return;
-  peekState.loading[key] = true;
+  if (peekBusy(key)) return;
+  var token = peekState.loading[key] = Date.now();
   var old = box[app] && box[app].data;
   renderPeek();
-  callApiOnce(peekAsk(app, char, old), char).then(function(text) {
+  peekCall(peekAsk(app, char, old), char).then(function(text) {
     var data = peekParse(text);
     box[app] = { at: Date.now(), data: data };
     delete box[app + 'Err'];
     savePeek();
   }, function(err) {
-    box[app + 'Err'] = (err && err.message) || '没打开';
+    if (peekState.loading[key] === token) box[app + 'Err'] = (err && err.message) || '没打开';
   }).then(function() {
-    delete peekState.loading[key];
+    if (peekState.loading[key] === token) delete peekState.loading[key];
     if (peekChar() === char) renderPeek();
   });
 }
@@ -165,12 +173,12 @@ function peekLocked(char) {
 }
 function peekMakeLock(char) {
   var box = peekBox(char), key = String(char.id) + ':lock';
-  if (peekState.loading[key]) return;
-  peekState.loading[key] = true;
+  if (peekBusy(key)) return;
+  var token = peekState.loading[key] = Date.now();
   var idx = charList.indexOf(char);
   var msgs = charContextMsgs(idx).concat([activityAsk('【手机密码】给你自己的手机设一个锁屏密码：4～6 位数字，按你的人设来定（比如和用户有关的纪念日、你的生日、对你有意义的数字）；' +
     '再写一句很短的锁屏提示（10 个字以内，不能直接说出密码，像「是那天」「你应该知道」）。只输出 JSON：{"pass":"0520","hint":"是那天"}')]);
-  callApiOnce(msgs, char).then(function(text) {
+  peekCall(msgs, char).then(function(text) {
     var d = {};
     try { d = peekParse(text); } catch (_) {}
     var pass = String(d.pass || '').replace(/\D/g, '');
@@ -181,7 +189,7 @@ function peekMakeLock(char) {
     box.lock = { pass: String(1000 + Math.floor(Math.random() * 9000)), hint: '猜猜看' };
   }).then(function() {
     savePeek();
-    delete peekState.loading[key];
+    if (peekState.loading[key] === token) delete peekState.loading[key];
     if (peekChar() === char) renderPeek();
   });
 }
@@ -264,7 +272,7 @@ function renderPeek() {
   var name = char.charAlias || char.charName || '角色', app = peekState.app, box = peekBox(char);
   var title = document.getElementById('peekTitle'), body = document.getElementById('peekBody'), refresh = document.getElementById('peekRefresh');
   var appInfo = PEEK_APPS.filter(function(a) { return a.id === app; })[0];
-  var loading = !!peekState.loading[String(char.id) + ':' + app];
+  var loading = peekBusy(String(char.id) + ':' + app);
   refresh.style.visibility = app && !peekState.detail ? 'visible' : 'hidden';
   refresh.classList.toggle('spin', loading);
   body.innerHTML = '';

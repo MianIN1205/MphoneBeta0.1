@@ -86,7 +86,7 @@ function showInAppNotice(char, added) {
   paintCharAvatar(inappNotice.querySelector('.inapp-av'), char);
   inappNotice.querySelector('.inapp-name').textContent = char.charAlias || char.charName || '新消息';
   var last = added[added.length - 1];
-  inappNotice.querySelector('.inapp-text').textContent = fillMacros(msgPreviewText(last), char) + (added.length > 1 ? '（共 ' + added.length + ' 条）' : '');
+  inappNotice.querySelector('.inapp-text').textContent = fillMacros(msgPreviewText(last), char);   // 不写「共几条」（用户要的）
   inappNotice._charId = char.id;
   inappNotice.classList.add('show');
   clearTimeout(inappTimer);

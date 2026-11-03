@@ -1429,6 +1429,14 @@
           <label class="st-toggle-wrap"><input type="checkbox" id="arcPrevMem" checked><span class="st-toggle-slider"></span></label>
         </div>
         <div id="arcPrevMemSub">
+          <div class="auto-row">
+            <span class="auto-row-label">每段多大</span>
+            <div class="pf-radio-row" id="arcPrevSegRow">
+              <button class="pf-radio-btn" data-budget="5000">小段</button>
+              <button class="pf-radio-btn selected" data-budget="20000">中段</button>
+              <button class="pf-radio-btn" data-budget="50000">大段</button>
+            </div>
+          </div>
           <div class="auto-row" id="arcPrevStatusRow">
             <span class="auto-row-label">带上状态栏（心声、日记）</span>
             <label class="st-toggle-wrap"><input type="checkbox" id="arcPrevStatus" checked><span class="st-toggle-slider"></span></label>
@@ -2115,6 +2123,9 @@
           </svg>
         </button>
         <input type="file" id="crAlbumFileInput" accept="image/*" style="display:none;">
+        <input type="file" id="crCameraInput" accept="image/*" capture="environment" style="display:none;">
+        <!-- 剧情窗口的快捷符号（js/chat/compose-plus.js） -->
+        <div class="cr-symbol-bar cr-drama-only" id="crSymbolBar"></div>
         <!-- 输入框 + 内嵌回车键 -->
         <div class="cr-input-wrap">
           <textarea class="cr-input" id="crInput" rows="1" placeholder="说点什么…"></textarea>
@@ -2809,6 +2820,17 @@
           <button class="custom-css-apply-btn" id="customCssApplyBtn">应用</button>
         </div>
 
+        <!-- 美化的导出 / 导入（js/char/look-share.js） -->
+        <div class="section-label">导出 / 导入美化</div>
+        <div class="settings-card">
+          <div class="auto-hint" style="margin:0 0 10px;">聊天窗口、剧情窗口、状态栏的美化可以存成一个文件，分享给别人或者导进别的角色</div>
+          <div class="mine-acc-actions">
+            <button class="mine-acc-btn mine-acc-btn-close" id="lookImportBtn">导入</button>
+            <button class="mine-acc-btn mine-acc-btn-add" id="lookExportBtn">导出</button>
+          </div>
+          <input type="file" id="lookImportFile" accept=".json,.txt,application/json,text/plain" style="display:none">
+        </div>
+
       </div>
 
       <!-- ========== 第四页：扩展（记忆权限、自主活动等） ========== -->
@@ -3064,6 +3086,44 @@
         </button>
       </div>
       <div class="peek-body" id="peekBody"></div>
+    </div>
+
+    <!-- 美化的导出 / 导入：勾要哪几样（js/char/look-share.js） -->
+    <div class="mine-acc-overlay" id="lookShareOverlay">
+      <div class="mine-acc-modal">
+        <div class="mine-acc-title" id="lookShareTitle">导出美化</div>
+        <div class="auto-row"><span class="auto-row-label">聊天窗口</span><label class="st-toggle-wrap"><input type="checkbox" id="lookShareChat" checked><span class="st-toggle-slider"></span></label></div>
+        <div class="auto-row"><span class="auto-row-label">剧情窗口</span><label class="st-toggle-wrap"><input type="checkbox" id="lookShareDrama" checked><span class="st-toggle-slider"></span></label></div>
+        <div class="auto-row"><span class="auto-row-label">状态栏</span><label class="st-toggle-wrap"><input type="checkbox" id="lookShareStatus" checked><span class="st-toggle-slider"></span></label></div>
+        <div class="auto-hint" id="lookShareHint"></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="lookShareCancel">取消</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="lookShareOk">导出</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 相册三选一：照片 / 拍照 / 文字图片（js/chat/compose-plus.js） -->
+    <div class="mine-acc-overlay" id="albumPickOverlay">
+      <div class="mine-acc-modal album-pick-modal">
+        <div id="albumPickMain">
+          <div class="mine-acc-title">发图片</div>
+          <div class="album-pick-list">
+            <button class="album-pick-btn" id="albumPickPhoto">照片</button>
+            <button class="album-pick-btn" id="albumPickCamera">拍照</button>
+            <button class="album-pick-btn" id="albumPickTextBtn">文字图片</button>
+          </div>
+          <div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" id="albumPickCancel">取消</button></div>
+        </div>
+        <div id="albumPickText" style="display:none;">
+          <div class="mine-acc-title">文字图片</div>
+          <textarea class="pet-edit-input album-text-input" id="albumTextInput" rows="4" placeholder="用文字描述这张照片，比如：窗外的晚霞，橘粉色的云"></textarea>
+          <div class="mine-acc-actions">
+            <button class="mine-acc-btn mine-acc-btn-close" id="albumTextBack">返回</button>
+            <button class="mine-acc-btn mine-acc-btn-add" id="albumTextSend">发送</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 看发过的文件全文（js/chat/file-send.js） -->

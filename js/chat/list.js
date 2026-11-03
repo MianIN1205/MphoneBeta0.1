@@ -24,6 +24,7 @@ function msgPreviewText(m) {
   if (m.cal) return '[' + m.cal.kind + '] ' + m.cal.title;
   if (m.imgSrc) return '[图片]';
   if (m.file) return '[文件] ' + (m.file.name || '');
+  if (m.textImg) return '[图片]';
   if (m.voice) return '[语音]' + (m.transcript ? ' ' + m.transcript : '');
   return String(m.content || '').replace(/〔译〕[\s\S]*$/, '').replace(/\s+/g, ' ');
 }
@@ -118,6 +119,7 @@ function renderChatCharList() {
 
     card.addEventListener('click', function() {
       openingChatCharIdx = parseInt(this.dataset.index, 10);
+      var hadUnread = !!chatUnread[charList[openingChatCharIdx].id];
       if (chatUnread[charList[openingChatCharIdx].id]) {
         delete chatUnread[charList[openingChatCharIdx].id];
         mphoneStore.save('mphone_unread', chatUnread);
@@ -128,7 +130,8 @@ function renderChatCharList() {
       var char = charList[openingChatCharIdx];
       chatRoomTitle.textContent = char.charAlias || char.charName || '未命名';
       applyChatRoomStyle(char);
-      switchChatRoomSubView('chat');
+      // 回到上次离开时的那边（聊天 / 剧情，用户要的）；有没看的新消息时先看聊天
+      switchChatRoomSubView(hadUnread ? 'chat' : ((crLastView[char.id] === 'contacts') ? 'contacts' : 'chat'));
       appChatRoom.classList.add('active');
     });
 

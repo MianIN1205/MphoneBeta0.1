@@ -56,6 +56,11 @@ charSaveBtn.addEventListener('click', function() {
       saveWbEntries();
       renderWbList();
     }
+    // 剧情窗口那栏也关联上
+    if (data.dramaWb) {
+      (data.worldbookIds || []).forEach(function(id) { if (data.dramaWb.ids.indexOf(id) < 0) data.dramaWb.ids.push(id); });
+      (data.worldbookFolders || []).forEach(function(id) { if (data.dramaWb.folders.indexOf(id) < 0) data.dramaWb.folders.push(id); });
+    }
     delete data.pendingWb;
     csPendingWb = null;
     // 从小手机备份带来的聊天记录：存成这个角色的档案（js/char/archive.js）

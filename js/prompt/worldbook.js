@@ -245,9 +245,15 @@ wbDetailDelete.classList.add('hidden');
 renderWbList();
 
 // 取出某角色当前应注入的世界书条目：已关联（整个文件夹或单个条目）且（无关键词 或 最近 6 条消息里出现任一关键词）
-function getActiveWbEntries(char, hist) {
-  var ids = (char && char.worldbookIds) || [];
-  var folders = (char && char.worldbookFolders) || [];
+// drama：剧情窗口用「剧情窗口」那栏的关联（角色设置里分开勾的；没单独设置过就和聊天一样）
+function charWbOf(char, drama) {
+  if (drama && char && char.dramaWb) return { ids: char.dramaWb.ids || [], folders: char.dramaWb.folders || [] };
+  return { ids: (char && char.worldbookIds) || [], folders: (char && char.worldbookFolders) || [] };
+}
+function getActiveWbEntries(char, hist, drama) {
+  var wb = charWbOf(char, drama);
+  var ids = wb.ids;
+  var folders = wb.folders;
   if (!ids.length && !folders.length) return [];
   var known = {};
   wbFolders.forEach(function(f) { known[f.id] = true; });

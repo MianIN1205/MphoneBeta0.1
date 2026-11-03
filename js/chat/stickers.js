@@ -208,18 +208,26 @@ function updateStkSuggest() {
   }
   stkSuggest.innerHTML = '';
   hits.forEach(function(s) {
-    var box = document.createElement('button');
+    // 小图下面带名字，发之前看得清是哪个
+    var item = document.createElement('button');
+    item.className = 'stk-sg-item';
+    item.setAttribute('aria-label', s.name);
+    var box = document.createElement('div');
     box.className = 'stk-thumb';
-    box.setAttribute('aria-label', s.name);
     box.appendChild(stkImg(s.url, s.name, function() { box.classList.add('broken'); box.textContent = s.name; }));
-    box.addEventListener('click', function(e) {
+    var nm = document.createElement('div');
+    nm.className = 'stk-name';
+    nm.textContent = s.name;
+    item.appendChild(box);
+    item.appendChild(nm);
+    item.addEventListener('click', function(e) {
       e.stopPropagation();
       sendSticker(s);
       crInput.value = '';
       crInput.style.height = '';
       updateStkSuggest();
     });
-    stkSuggest.appendChild(box);
+    stkSuggest.appendChild(item);
   });
   stkSuggest.classList.toggle('open', hits.length > 0);
 }

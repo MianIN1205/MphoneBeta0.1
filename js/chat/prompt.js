@@ -326,7 +326,7 @@ function buildMsgs(idx, histOverride) {
   // 世界书：按注入位置分组（前 = 紧跟系统提示，中 = 预设条目之后，后 = 聊天记录之后；自动见 wbResolvePos）
   // 同一个位置的合成一段「背景设定」，并说清楚这是心里知道的背景：不复述、不反复提、不说「设定」「世界书」
   var wbGroups = { before: [], middle: [], after: [] };
-  getActiveWbEntries(char, history).forEach(function(e) {
+  getActiveWbEntries(char, history, isDrama).forEach(function(e) {
     var p = typeof wbResolvePos === 'function' ? wbResolvePos(e) : (e.pos || 'before');
     (wbGroups[p] || wbGroups.before).push('【' + e.name + '】\n' + e.content);
   });
@@ -385,7 +385,9 @@ function msgTextForAI(m) {
   if (m.narr) return '【旁白 · 剧情开场】（这是中立的旁白，交代场景，不是用户说的话）\n' + (m.content || '');
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   if (m.cal && typeof calTextForAI === 'function') return calTextForAI(m.cal);
-  var c = (m.file && typeof fileTextForAI === 'function') ? fileTextForAI(m) : m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
+  var c = (m.file && typeof fileTextForAI === 'function') ? fileTextForAI(m)
+        : m.textImg ? '[发来一张照片（用文字描述的画面）：' + m.textImg + ']'
+        : m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
   if (m.quote) c = '「引用 ' + m.quote.author + '：' + m.quote.text + '」\n' + c;
   return c;
 }

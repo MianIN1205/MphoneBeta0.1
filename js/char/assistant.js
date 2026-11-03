@@ -15,6 +15,14 @@
   saveCharList();
 })();
 
+// MianIN 默认置顶（用户要的）：只做一次，之后用户取消置顶就不再管
+(function pinAssistantOnce() {
+  if (mphoneStore.load('mphone_mianin_pin_v1', false)) return;
+  var c = charList.filter(function(c) { return c.builtinAssistant; })[0];
+  if (c && !c.pinned) { c.pinned = true; saveCharList(); if (typeof renderChatCharList === 'function') renderChatCharList(); }
+  mphoneStore.save('mphone_mianin_pin_v1', true);
+})();
+
 // MianIN 的人设和名字是固定的（用户要求：小手机里不能改），发给 AI 时总是用这一份，不用角色设置里存的
 var MIANIN_NAME = 'MianIN';
 var MIANIN_PERSONA =
@@ -207,6 +215,7 @@ function runAction(a) {
       var c = findCharByName(n);
       if (!c) return;
       c.worldbookIds = (c.worldbookIds || []).concat(entry.id);
+      if (c.dramaWb) c.dramaWb.ids = (c.dramaWb.ids || []).concat(entry.id);
       linked.push(c.id);
     });
     saveWbEntries();
@@ -246,6 +255,7 @@ function undoAction(a) {
     (r.linked || []).forEach(function(id) {
       var c = charList.filter(function(x) { return x.id === id; })[0];
       if (c) c.worldbookIds = (c.worldbookIds || []).filter(function(x) { return x !== r.entryId; });
+      if (c && c.dramaWb) c.dramaWb.ids = (c.dramaWb.ids || []).filter(function(x) { return x !== r.entryId; });
     });
     saveWbEntries();
     saveCharList();

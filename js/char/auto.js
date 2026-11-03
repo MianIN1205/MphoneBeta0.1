@@ -160,11 +160,19 @@ function autoTick() {
     }
     if (now < plan.at || char._autoBusy) return;
 
+    // 对方有没回复的消息时，先回消息，不去发动态
+    var doPost = a.postOn && (!a.msgOn || (!unrepliedUserMsgs(getChatHistory(idx)).length && Math.random() < 0.3));
+    // 主动消息只在「后台」发（用户要的）：正看着这个聊天、TA 正在回复、或者刚聊过 / 刚离开不到 AUTO_QUIET_MS，都先等着，
+    // 不重新排期，等条件过了下一次检查就发（不会在用户打字、刚发了两条还没点 ❄️ 的时候插进来）
+    if (!doPost) {
+      var viewingThis = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;
+      var recent = char._lastChatAt && now - char._lastChatAt < AUTO_QUIET_MS;
+      if (viewingThis || recent || (typeof genState !== 'undefined' && genState)) return;
+    }
+
     // 到点：只执行一次（关闭页面期间错过的不补发多次），然后重新排期
     autoNext[char.id] = { at: now + autoDelay(a), sig: sig };
     changed = true;
-    // 对方有没回复的消息时，先回消息，不去发动态
-    var doPost = a.postOn && (!a.msgOn || (!unrepliedUserMsgs(getChatHistory(idx)).length && Math.random() < 0.3));
     char._autoBusy = true;
     (doPost ? generateCharPost(idx) : autoSendMessage(idx))
       .catch(function(err) { console.warn('[Mphone] 自主活动失败:', err); })
@@ -177,10 +185,16 @@ function autoTick() {
   if (changed) mphoneStore.save('mphone_auto_next', autoNext);
 }
 
-// 记录最近一次聊天时间，供主动消息参考
+// 记录最近一次聊天时间：发消息、打字、离开聊天室都算，之后 AUTO_QUIET_MS 内不发主动消息
+var AUTO_QUIET_MS = 5 * 60000;
+function markChatActive() { var c = charList[openingChatCharIdx]; if (c) c._lastChatAt = Date.now(); }
+document.getElementById('crInput').addEventListener('input', markChatActive);
 document.getElementById('crInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey && charList[openingChatCharIdx]) charList[openingChatCharIdx]._lastChatAt = Date.now();
+  if (e.key === 'Enter' && !e.shiftKey) markChatActive();
 });
+new MutationObserver(function() {
+  if (!appChatRoom.classList.contains('active')) markChatActive();   // 刚离开聊天室
+}).observe(appChatRoom, { attributes: true, attributeFilter: ['class'] });
 
 // 动态里的收藏状态要用到后面脚本的函数，等全部加载完再画
 onMphoneReady(function() {
