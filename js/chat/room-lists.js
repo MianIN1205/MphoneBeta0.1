@@ -109,7 +109,11 @@ function renderMsgPage(list, empty, hist, count) {
     more.textContent = '上滑查看更早的消息';
     list.appendChild(more);
   }
-  hist.slice(start).forEach(function(m) { renderHistMsg(m, list, empty); });
+  if (start === 0 && typeof errRenderSaved === 'function') errRenderSaved(list, null, null, hist);
+  hist.slice(start).forEach(function(m) {
+    var row = renderHistMsg(m, list, empty);
+    if (m.errs && typeof errRenderSaved === 'function') errRenderSaved(list, m, row, hist);
+  });
 }
 // 滑到顶部：多画一页，并保持当前看到的位置不动
 function loadEarlierMsgs(list) {

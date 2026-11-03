@@ -91,12 +91,41 @@ function explainError(err) {
 
 // =============================================
 // 聊天里的一行小字：「⚠️ 回复失败：连不上服务器  查看原因」，点开是分析弹窗
-// 只显示在界面上，不存进聊天记录，也不会发给 AI
+// 不会发给 AI。报错条一直留在原处（切出去再回来、重开小手机都还在）：
+// 挂在出错时最后一条消息上（m.errs，跟着记录存）；记录还空着时挂在这份记录上（只在这次打开期间）
 // =============================================
-function showErrNotice(err, list, empty, ctx) {
-  list = list || getActiveMsgListEl();
-  if (empty) empty.style.display = 'none';
-  var ex = explainError(err);
+var ERR_KEEP = 5;                  // 一条消息后面最多留几条报错
+var errEmptyNotes = new WeakMap(); // 空记录 → 报错
+// 报错存成普通对象（能存进记录）；只留分析和完整报错要用的，密钥打码
+function errPack(err, ctx) {
+  err = err || {}; ctx = ctx || {};
+  var o = { message: errRedact(String(err.message || err || '')), time: Date.now() };
+  if (err.status) o.status = err.status;
+  if (err.statusText) o.statusText = String(err.statusText);
+  if (err.name && err.name !== 'Error') o.name = String(err.name);
+  try { if (err.url) { var eu = new URL(err.url); o.url = eu.origin + eu.pathname; } } catch (_) {}
+  if (err.body != null && String(err.body).trim()) o.body = errRedact(String(err.body).slice(0, 20000));
+  else if (err.stack) o.stack = String(err.stack).split('\n').slice(0, 10).join('\n');
+  if (ctx.model) o.model = String(ctx.model);
+  try { if (ctx.url) { var cu = new URL(ctx.url); o.ctxUrl = cu.origin + cu.pathname; } } catch (_) {}
+  return o;
+}
+// 记下这次报错（不画），返回存好的那份
+function errRemember(hist, err, ctx) {
+  var p = errPack(err, ctx);
+  if (!hist) return p;
+  var m = hist[hist.length - 1];
+  if (m) {
+    m.errs = (m.errs || []).concat(p).slice(-ERR_KEEP);
+    if (typeof saveHistories === 'function') saveHistories();
+  } else {
+    errEmptyNotes.set(hist, (errEmptyNotes.get(hist) || []).concat(p).slice(-ERR_KEEP));
+  }
+  return p;
+}
+function errNoticeEl(p) {
+  var e = { message: p.message, status: p.status, statusText: p.statusText, name: p.name, url: p.url, body: p.body, stack: p.stack };
+  var ex = explainError(e);
   var el = document.createElement('div');
   el.className = 'cr-recall-notice cr-err-notice';
   el.appendChild(document.createTextNode('⚠️ 回复失败：' + ex.title));
@@ -104,8 +133,27 @@ function showErrNotice(err, list, empty, ctx) {
   more.className = 'cr-recall-reedit';
   more.textContent = '查看原因';
   el.appendChild(more);
-  var detail = { ex: ex, err: err, time: Date.now(), ctx: ctx || {} };
+  var detail = { ex: ex, err: e, time: p.time, ctx: { model: p.model, url: p.ctxUrl } };
   el.addEventListener('click', function() { openErrInfo(detail); });
+  return el;
+}
+// 重画列表时把存着的报错放回原处：after 是消息（null = 记录开头），row 是这条消息画出来的元素
+function errRenderSaved(list, m, row, hist) {
+  var arr = m ? m.errs : errEmptyNotes.get(hist);
+  if (!arr || !arr.length) return;
+  var els = arr.map(function(p) { var el = errNoticeEl(p); list.appendChild(el); return el; });
+  if (row && row.nodeType === 1) row._errNotes = (row._errNotes || []).concat(els);
+  if (!m && list._empty) list._empty.style.display = 'none';
+}
+function showErrNotice(err, list, empty, ctx, hist) {
+  list = list || getActiveMsgListEl();
+  if (empty) empty.style.display = 'none';
+  hist = hist || list._hist || (typeof getActiveHistory === 'function' ? getActiveHistory(openingChatCharIdx) : null);
+  var el = errNoticeEl(errRemember(hist, err, ctx));
+  // 挂在最后一条消息上：删这条消息时报错条一起拿掉
+  var rows = list.querySelectorAll('.chat-msg-row');
+  var last = rows[rows.length - 1];
+  if (last && hist && last._msg === hist[hist.length - 1]) last._errNotes = (last._errNotes || []).concat(el);
   list.appendChild(el);
   list.scrollTop = list.scrollHeight;
   return el;

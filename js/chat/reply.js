@@ -185,11 +185,13 @@ function sendMsg(userText, requestOnly, onDone) {
   genState = { ctrl: ctrl, char: replyChar };
   setGenerating(true);
 
-  // 出错：还在这个对话里就在列表里放一行小字（点开看原因）；已经离开了就在顶部提示一下是谁回复失败
+  // 出错：还在这个对话里就在列表里放一行小字（点开看原因）；已经离开了就在顶部提示一下是谁回复失败。
+  // 报错条记在这份记录里，回来时还在原处
   function showReplyError(err) {
     var here = appChatRoom.classList.contains('active') && charList[openingChatCharIdx] === replyChar && getActiveHistory(openingChatCharIdx) === hist;
-    if (here) showErrNotice(err, getActiveMsgListEl(), null, cfg);
-    else showToast('「' + ((replyChar && (replyChar.charAlias || replyChar.charName)) || '角色') + '」回复失败：' + explainError(err).title, 'error');
+    if (here) { showErrNotice(err, getActiveMsgListEl(), null, cfg, hist); return; }
+    errRemember(hist, err, cfg);
+    showToast('「' + ((replyChar && (replyChar.charAlias || replyChar.charName)) || '角色') + '」回复失败：' + explainError(err).title, 'error');
   }
 
   function endGen() {

@@ -66,6 +66,7 @@
   <link rel="stylesheet" href="css/char/look.css">
   <link rel="stylesheet" href="css/char/assistant.css">
   <link rel="stylesheet" href="css/prompt/prompt.css">
+  <link rel="stylesheet" href="css/desk/pet.css">
 </head>
 <body class="phone-fullscreen">
   <!-- 载入页：脚本全部加载完后淡出（见 js/core/boot.js） -->
@@ -152,6 +153,11 @@
         <div class="dock-item" id="dockMeet">
           <div class="dock-icon">🫂</div>
           <span class="dock-label">见面</span>
+        </div>
+        <!-- 桌宠（js/desk/pet.js） -->
+        <div class="dock-item" id="dockPet">
+          <div class="dock-icon"><svg class="dock-svg" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><g fill="#D97757"><rect x="3" y="6" width="18" height="10"/><rect x="0" y="9" width="3" height="3"/><rect x="21" y="9" width="3" height="3"/><rect x="4" y="16" width="2" height="4"/><rect x="7" y="16" width="2" height="4"/><rect x="15" y="16" width="2" height="4"/><rect x="18" y="16" width="2" height="4"/></g><rect x="7" y="8" width="2" height="3" fill="#2a2422"/><rect x="15" y="8" width="2" height="3" fill="#2a2422"/></svg></div>
+          <span class="dock-label">桌宠</span>
         </div>
       </div>
       <!-- 编辑桌面 -->
@@ -1552,6 +1558,77 @@
         <span class="settings-title">见面</span>
       </div>
       <div class="settings-content"></div>
+    </div>
+
+    <!-- 桌宠：小窝（里面养着的都在这里玩）、宠物列表、跟着的开关（js/desk/pet.js） -->
+    <div class="app-screen" id="appPet">
+      <div class="settings-nav">
+        <button class="back-btn" id="backPet" aria-label="返回">
+          <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <span class="settings-title">桌宠</span>
+      </div>
+      <div class="settings-content">
+        <div class="pet-home" id="petHome"></div>
+        <div class="pet-home-tip">点一下摸摸它，按住可以拖着走</div>
+        <div class="settings-card">
+          <div id="petList"></div>
+          <button class="pet-add-btn" id="petAddBtn">＋ 添加宠物</button>
+          <div class="pet-set-hint">右边的开关打开，它就会跑到桌面上玩</div>
+        </div>
+        <div class="settings-card">
+          <div class="sb-row">
+            <span class="sb-row-label">打开别的界面也跟着</span>
+            <label class="toggle-wrap">
+              <input type="checkbox" id="petToggleFollow">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="pet-set-hint">跟着的时候它会爬到聊天、设置这些界面上面，挡住了就拖开它</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加 / 编辑宠物：捏一只像素小动物，或者用一张图片（Q 版的 TA） -->
+    <div class="mine-acc-overlay" id="petEditOverlay">
+      <div class="mine-acc-modal pet-edit-modal">
+        <div class="mine-acc-title" id="petEditTitle">添加宠物</div>
+        <div class="pet-edit-scroll">
+          <div class="pet-edit-preview" id="petEditPreview"></div>
+          <div class="pet-edit-label">名字</div>
+          <input class="pet-edit-input" id="petEditName" maxlength="12" placeholder="给它起个名字">
+          <div class="pet-edit-label">样子</div>
+          <div class="pet-chips" id="petEditKinds"></div>
+          <div class="pet-edit-pixel">
+            <div class="pet-edit-label">颜色</div>
+            <div class="pet-swatches"><span id="petEditColors"></span><input type="color" class="pet-color-input" id="petEditColor" value="#D97757" aria-label="自己调颜色"></div>
+            <div class="pet-edit-label">眼睛</div>
+            <div class="pet-chips" id="petEditEyes"></div>
+            <div class="pet-edit-label">小装饰</div>
+            <div class="pet-chips" id="petEditAccs"></div>
+          </div>
+          <div class="pet-edit-img">
+            <div class="pet-chips">
+              <button class="pet-chip" id="petEditPick">选图片</button>
+              <button class="pet-chip" id="petEditUseAv">用 TA 的头像</button>
+            </div>
+            <input type="file" id="petEditFile" accept="image/*" style="display:none">
+            <div class="pet-set-hint">透明底的 Q 版小人最好看</div>
+          </div>
+          <div class="pet-edit-label">是谁的</div>
+          <select class="pet-edit-input" id="petEditChar"></select>
+          <div class="pet-set-hint">关联角色后，它叫你用的是这个角色那边你的名字</div>
+          <div class="pet-edit-label">它会说的话</div>
+          <textarea class="pet-edit-input pet-edit-words" id="petEditWords" rows="3" placeholder="一行一句，可以写 {{user}}、{{char}}；空着就说默认的"></textarea>
+        </div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="petEditDel">删除</button>
+          <button class="mine-acc-btn mine-acc-btn-close" id="petEditCancel">取消</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="petEditSave">保存</button>
+        </div>
+      </div>
     </div>
 
     <div class="app-screen" id="appAnniv">
