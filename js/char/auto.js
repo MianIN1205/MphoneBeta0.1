@@ -116,6 +116,7 @@ function autoSendMessage(idx) {
     var added = commitAssistantReply(hist, text,
       showNow ? document.getElementById('chatMsgList') : null,
       showNow ? document.getElementById('chatRoomEmpty') : null);
+    if (added.length && typeof peekCaughtDone === 'function') peekCaughtDone(char);
     saveHistories();
     // 主动发来消息的角色出现在消息列表
     if (!char.inChat) { char.inChat = true; saveCharList(); }

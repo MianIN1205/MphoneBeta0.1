@@ -1,5 +1,6 @@
 // 眠花糖机 — 查手机：加号抽屉「查手机」，看角色手机里的信息（和你的是真实聊天，和别人的由 AI 按人设写）、备忘录、浏览器（搜索记录、收藏）、购物（购物车、钱包、账单）。
-// 每个 App 第一次打开时自动写一份存下来（mphone_peek），之后点右上 ↻ 才换新的
+// 每个 App 第一次打开时自动写一份存下来（mphone_peek），之后点右上 ↻ 才换新的。
+// 角色设置「聊天」页开了「TA 会发现你查手机」时，翻得多了 TA 可能察觉，下次聊天回复时提起（关着就永远不会发现）
 
 var peekStore = mphoneStore.load('mphone_peek', {}) || {};   // { 角色id: { chats|notes|browser|shop: { at, data } } }
 var PEEK_APPS = [
@@ -8,7 +9,7 @@ var PEEK_APPS = [
   { id: 'browser', name: '浏览器', icon: '🧭' },
   { id: 'shop', name: '购物', icon: '🛍️' }
 ];
-var peekState = { idx: -1, app: '', tab: '', detail: null, loading: {} };
+var peekState = { idx: -1, app: '', tab: '', detail: null, loading: {}, seen: [], t0: 0 };
 var appPeek = document.getElementById('appPeek');
 function peekChar() { return charList[peekState.idx]; }
 function peekBox(char) { var k = String(char.id); return peekStore[k] || (peekStore[k] = {}); }
@@ -84,12 +85,14 @@ function openPeek(idx) {
   var char = charList[idx];
   if (!char) return;
   peekState.idx = idx; peekState.app = ''; peekState.detail = null; peekState.tab = '';
+  peekState.seen = []; peekState.t0 = Date.now();
   renderPeek();
   appPeek.classList.add('active');
 }
 function peekGo(app) {
   peekState.app = app; peekState.detail = null;
   peekState.tab = app === 'browser' ? 'searches' : app === 'shop' ? 'cart' : '';
+  peekSee({ chats: '「信息」里的聊天列表', notes: '备忘录', browser: '浏览器的搜索记录', shop: '购物车' }[app]);
   var box = peekBox(peekChar());
   if (app && !box[app] && !box[app + 'Err']) peekLoad(app);   // 第一次打开自动写
   else renderPeek();
@@ -97,7 +100,38 @@ function peekGo(app) {
 function peekBack() {
   if (peekState.detail) { peekState.detail = null; renderPeek(); }
   else if (peekState.app) { peekState.app = ''; renderPeek(); }
-  else appPeek.classList.remove('active');
+  else { appPeek.classList.remove('active'); peekMaybeCaught(); }
+}
+
+// =============================================
+// 会不会被发现：这次翻了几样东西（打开的 App、栏目、点开的聊天 / 备忘录 / 收藏）、翻了多久。
+// 4 样以下不会发现，再多每多一样多 15% 的可能，最多 75%；被发现就记下来，下次聊天回复时提起，提过就清掉
+// =============================================
+function peekSee(what) {
+  if (what && peekState.seen.indexOf(what) < 0) peekState.seen.push(what);
+}
+function peekMaybeCaught() {
+  var char = peekChar();
+  if (!char) return;
+  var cc = Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {});
+  if (!cc.peekNotice) return;   // 关着：怎么翻都不会发现
+  var score = peekState.seen.length + (Date.now() - peekState.t0 > 120000 ? 1 : 0);
+  if (score < 4 || Math.random() >= Math.min(0.75, 0.15 * (score - 3))) return;
+  peekBox(char).caught = { at: Date.now(), seen: peekState.seen.slice(0, 10) };
+  savePeek();
+}
+function peekCaughtPrompt(char) {
+  var c = char && peekStore[String(char.id)] && peekStore[String(char.id)].caught;
+  if (!c || Date.now() - c.at > 24 * 3600000) return '';
+  var cc = Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {});
+  if (!cc.peekNotice) return '';
+  return '【你发现了】' + (typeof fmtAgo === 'function' ? fmtAgo(c.at) : '刚才') + '，用户偷偷翻了你的手机，你察觉到了（比如手机被动过、App 停在你没开过的页面）。' +
+    'TA 看了：' + c.seen.join('、') + '。这次回复里自然地提起这件事，反应要符合你的性格和你们现在的关系（可能害羞、慌张、生气、委屈、调侃、假装不在意、反过来逗 TA……）；' +
+    '被看到的内容里有你的小秘密、小心思的话，可以有相应的反应。提这一次就够了，之后不用反复说。';
+}
+function peekCaughtDone(char) {
+  var box = char && peekStore[String(char.id)];
+  if (box && box.caught) { delete box.caught; savePeek(); }
 }
 document.getElementById('peekBack').addEventListener('click', peekBack);
 document.getElementById('peekRefresh').addEventListener('click', function() {
@@ -188,7 +222,11 @@ function peekTabs(body, tabs) {
     var b = document.createElement('button');
     b.className = 'peek-tab' + (peekState.tab === t[0] ? ' active' : '');
     b.textContent = t[1];
-    b.addEventListener('click', function() { peekState.tab = t[0]; renderPeek(); });
+    b.addEventListener('click', function() {
+      peekState.tab = t[0];
+      peekSee({ searches: '浏览器的搜索记录', favs: '浏览器的收藏', cart: '购物车', wallet: '钱包余额', bills: '账单' }[t[0]]);
+      renderPeek();
+    });
     bar.appendChild(b);
   });
   body.appendChild(bar);
@@ -201,6 +239,7 @@ function renderPeekChats(body, char, d) {
   var you = char.userNickname || acc.nickname || '你';
   var last = hist[hist.length - 1];
   var youRow = peekRow('<div class="peek-av you"></div><div class="peek-row-main"><div class="peek-row-top"><b></b><span class="peek-row-time"></span></div><div class="peek-row-sub"></div></div>', function() {
+    peekSee('你们俩的聊天记录');
     peekDetail(you, function() {
       var wrap = document.createElement('div');
       wrap.className = 'peek-chat';
@@ -224,6 +263,7 @@ function renderPeekChats(body, char, d) {
     var msgs = Array.isArray(c.msgs) ? c.msgs : [], lm = msgs[msgs.length - 1] || {};
     var r = peekRow('<div class="peek-av">' + peekEsc(String(c.name || '?').slice(0, 1)) + '</div><div class="peek-row-main"><div class="peek-row-top"><b>' + peekEsc(c.name) +
       '</b>' + (c.relation ? '<span class="peek-rel">' + peekEsc(c.relation) + '</span>' : '') + '<span class="peek-row-time">' + peekEsc(lm.time || '') + '</span></div><div class="peek-row-sub">' + peekEsc(lm.text || '') + '</div></div>', function() {
+      peekSee('和「' + (c.name || '某人') + '」的聊天');
       peekDetail(c.name || '聊天', function() {
         var wrap = document.createElement('div');
         wrap.className = 'peek-chat';
@@ -248,6 +288,7 @@ function renderPeekNotes(body, d) {
   notes.forEach(function(n) {
     body.appendChild(peekRow('<div class="peek-row-main"><div class="peek-row-top"><b>' + peekEsc(n.title || '无标题') + '</b><span class="peek-row-time">' + peekEsc(n.date || '') +
       '</span></div><div class="peek-row-sub two">' + peekEsc(n.content || '') + '</div></div>', function() {
+      peekSee('备忘录「' + (n.title || '无标题') + '」');
       peekDetail(n.title || '备忘录', function() {
         var el = document.createElement('div');
         el.className = 'peek-page';
@@ -272,6 +313,7 @@ function renderPeekBrowser(body, d) {
   fs.forEach(function(f) {
     body.appendChild(peekRow('<div class="peek-ico">⭐</div><div class="peek-row-main"><div class="peek-row-top"><b>' + peekEsc(f.title) + '</b></div><div class="peek-row-sub">' +
       peekEsc([f.site, f.time].filter(Boolean).join(' · ')) + '</div></div>', function() {
+      peekSee('收藏的「' + (f.title || '网页') + '」');
       peekDetail(f.site || '收藏', function() {
         var el = document.createElement('div');
         el.className = 'peek-page';

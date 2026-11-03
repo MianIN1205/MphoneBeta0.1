@@ -206,6 +206,7 @@ function sendMsg(userText, requestOnly, onDone) {
                   getActiveHistory(openingChatCharIdx) === hist;
     var list = showing ? getActiveMsgListEl() : null;
     var added = commitAssistantReply(hist, text, list, null);
+    if (isChatView && added.length && typeof peekCaughtDone === 'function') peekCaughtDone(replyChar);   // 发现查手机的事已经提过了
     if (list) list.scrollTop = list.scrollHeight;
     if (!showing && added.length && replyChar) {
       chatUnread[replyChar.id] = (chatUnread[replyChar.id] || 0) + added.length;
