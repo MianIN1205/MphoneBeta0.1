@@ -82,7 +82,7 @@ function commitAssistantReply(hist, raw, list, empty) {
 function chatSplitLines(parts) {
   var out = [];
   parts.forEach(function(p) {
-    if (typeof p !== 'string') { out.push(p); return; }
+    if (typeof p !== 'string' || msgHtmlLike(p)) { out.push(p); return; }   // 带 HTML 的整条不拆，免得拆坏
     var lines = p.split(/\n+/).map(function(l) { return l.trim(); }).filter(Boolean);
     var pending = '';
     lines.forEach(function(l) {
@@ -98,7 +98,7 @@ function chatSplitLines(parts) {
   });
   // 一行里太长的，再按句子、逗号拆成几条短的
   var res = [];
-  out.forEach(function(p) { if (typeof p === 'string') chatSplitLong(p).forEach(function(x) { res.push(x); }); else res.push(p); });
+  out.forEach(function(p) { if (typeof p === 'string' && !msgHtmlLike(p)) chatSplitLong(p).forEach(function(x) { res.push(x); }); else res.push(p); });
   return res.map(function(p) {
     return typeof p === 'string' ? p.replace(/([^。.…])。(\s*(?:\*[^*]+\*)?\s*)$/, '$1$2') : p;
   });

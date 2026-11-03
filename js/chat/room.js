@@ -59,6 +59,9 @@ function lookCss(part, scope) {
 }
 // 当前子视图（聊天 / 剧情）用的那套美化
 function roomLookPart(char) {
+  // 正在预览 MianIN 改的样式（js/char/css-preview.js）：先用预览的那套，不动角色本身的数据
+  if (typeof cssPreviewOverride !== 'undefined' && cssPreviewOverride && char && cssPreviewOverride.charId === char.id &&
+      cssPreviewOverride.view === (currentCrSubView === 'contacts' ? 'drama' : 'chat')) return cssPreviewOverride.part;
   if (currentCrSubView === 'contacts' && char.dramaLook) return char.dramaLook;
   return { chatBg: char.chatBg, bubble: char.bubble, look: char.look, customCss: char.customCss };
 }

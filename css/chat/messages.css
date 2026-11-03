@@ -290,3 +290,7 @@
 /* 聊天窗口边生成边出的气泡（js/chat/reply.js 的 previewStream）：淡入 + 轻微放大 */
 .cr-stream-preview { animation: crStreamIn .22s ease-out; }
 @keyframes crStreamIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+
+/* 带 HTML 的消息：内容在 Shadow DOM 里（js/chat/render.js 的 setBubbleHtml） */
+.chat-msg-bubble.cr-html-bubble { white-space: normal; }
+.cr-html-box { max-width: 100%; overflow-x: auto; }

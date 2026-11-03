@@ -31,11 +31,28 @@ function appendMsg(role, content, isTyping, targetListEl, targetEmptyEl) {
   return { row: row, bubble: bubble };
 }
 
+// 消息里带 HTML（<div>、<span>、<b>、<br>、<img>、<style>、<details> 这类标签）：直接显示出来（用户要的）。
+// 放进 Shadow DOM，样式只管自己这一条；去掉脚本、事件这些（statusSafeHtml）
+var MSG_HTML_RE = /<(div|span|p|br|b|i|u|s|strong|em|table|tr|td|img|style|details|summary|font|h[1-6]|ul|ol|li|section|blockquote|hr|center|small|mark|ruby|rt|a|pre|code|svg|label|input|button|sup|sub|del|ins)\b[^>]*>/i;
+function msgHtmlLike(s) { return MSG_HTML_RE.test(String(s || '')); }
+function setBubbleHtml(bubble, html) {
+  bubble.textContent = '';
+  bubble.classList.add('cr-html-bubble');
+  var box = document.createElement('div');
+  box.className = 'cr-html-box';
+  box.attachShadow({ mode: 'open' }).innerHTML = '<style>:host{display:block;white-space:normal;word-break:break-word}img{max-width:100%}</style>' +
+    (typeof statusSafeHtml === 'function' ? statusSafeHtml(html) : html.replace(/<script[\s\S]*?<\/script>/gi, ''));
+  bubble.appendChild(box);
+  bubble._actions = { before: [], text: '', after: [] };
+}
+
 // 气泡文字；角色消息里「〔译〕」之后的内容显示为附加翻译
 // isChat：聊天窗口里，角色用 *星号* 包住的动作描写拿到气泡外面，显示成灰色斜体小字（气泡里只留说的话）
 function setBubbleText(bubble, content, isAi, isChat) {
   content = String(content || '');
   if (isAi) content = fillMacros(content, charList[openingChatCharIdx]);
+  if (msgHtmlLike(content)) { bubble.classList.remove('cr-action-only'); setBubbleHtml(bubble, content); return; }
+  bubble.classList.remove('cr-html-bubble');
   var i = isAi ? content.indexOf('〔译〕') : -1;
   var main = i < 0 ? content : content.slice(0, i).trim();
   var parts = (isAi && isChat) ? splitActions(main) : { before: [], text: main, after: [] };

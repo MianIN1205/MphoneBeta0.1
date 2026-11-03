@@ -23,7 +23,7 @@
 - `js/`：普通脚本（不是模块），按功能分在 6 个文件夹里：`core/` 公共、`desk/` 桌面、`settings/` 设置、`chat/` 聊天、`char/` 角色、`prompt/` 提示词。所有顶层名字都是全局共享的。
   - **加载顺序在 `js/core/boot.js` 的 `MPHONE_SCRIPTS` 里，和文件夹无关，顺序很重要**：后面的脚本会用到前面定义的东西，加载时（不在函数里）调用后面文件的函数会报错；要么用 `typeof` 判断，要么用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。2026-11-01 按功能拆分时保持了原来的加载顺序，所以同一个功能有时会分在两三个文件里（比如角色设置：`char/settings.js`、`char/settings-save.js`、`char/look.js`）。
   - 每个文件第一行写了它管什么，找东西先看第一行。
-  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v33`）。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v34`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。manifest 的 `orientation` 是 `portrait`：写成 `any` 时安卓桌面版会无视系统的方向锁定，躺着就转屏。
   - logo 是用户提供的图（粉色月牙 + 睡觉的小熊 + 蓝色小花），只有两张：`icons/icon.png` 是 App 图标（iPhone、安卓、通知、网页图标都用这一张，用户要求不分开做）：和开屏一样的粉蓝渐变底，logo 带白色边缘光和阴影，占 68%（安卓裁成圆也不会切到），manifest 里是 `any maskable`；`icons/logo.png` 是透明底加白色描边的 logo，小手机页面里（开屏）用。
   - 载入页在 `index.html` 开头（样式内联，小字随机；logo 沿轮廓发白光（用户要的是边缘发光，不是圆形光晕），不要做呼吸、缩放这类循环动画），`js/core/boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
@@ -71,7 +71,7 @@
 | room / room-view / room-lists | 聊天室：返回、齿轮、应用角色美化；聊天 / 剧情切换和底部抽屉开关；打开时画两个列表（分页）、相册发图 |
 | history | 聊天 / 剧情记录的存取（`stripMsg` 决定存哪些字段）、当前窗口用哪份记录、`getApiCfg(char)` |
 | prompt | 拼给 AI 的内容：`activityAsk(text)`（主动消息、发动态、评论、写日记等活动的要求：放最后一条、user 身份、标明是系统提示，并要求口吻和平时一致、只输出要求的内容），`MPHONE_FICTION_NOTE`（固定放在最前：虚构创作空间、角色是成年人、不为虚构情节道歉；不是破限，只是把情境说清楚；破限类内容 Claude 不写，用户自己的放在 Prompt 页的预设里），`buildMsgs`（聊天 / 剧情都按回合 + token 上限裁剪，剧情省略部分用隐藏的 `<前情>` 代替）、`chatFormatRules` 回复格式、`fillMacros`（{{char}} / {{user}}）、`realWorldContext` 现实感知（现在几点按角色时区、隔了多久没说话、真实电量、纪念日和日程，只放聊天窗口）、`lastStatusOf` 接上一次状态栏、`msgTextForAI` |
-| render | 消息显示（气泡长按不选中文字：`user-select: none`，复制在长按菜单里）：气泡、动作小字、引用、小时间（`refreshMsgStamps`）、版本切换、拍一拍、撤回提示 |
+| render | 消息显示（气泡长按不选中文字：`user-select: none`，复制在长按菜单里；消息里带 HTML 标签（`msgHtmlLike`）就直接显示，放进 Shadow DOM、用 `statusSafeHtml` 去掉脚本，用户要的；聊天窗口拆气泡时带 HTML 的那条整条不拆）：气泡、动作小字、引用、小时间（`refreshMsgStamps`）、版本切换、拍一拍、撤回提示 |
 | reply | 收到回复：`takeStatus` 取出状态（角色忘写 `</status>` 也认）、`commitAssistantReply` 拆成多条（|||；聊天窗口里 `chatSplitLines` 把每一行拆成一个气泡（用户看了效果后要日常微信那样一句一条、不要大段气泡；只有 *动作* 的行跟着下一句，〔译〕跟着上一句，句尾单个「。」去掉；每次回复条数设成 1 的不拆；再用 `chatSplitLong` 把超过 `CHAT_BUBBLE_MAX`=16 字的按句末标点、再按逗号拆成短条，引号括号里不断，有链接 / 表情包 / 翻译的不动——用户明确不想在线上聊天看到不分段的长句），提示词要求一条 5～20 字、不换行、不加句号；每次回复条数默认 2~5（`mphone_reply_count_v2` 把还是旧默认 1~3 的角色改过来一次）；开了「线上动作描写」时，动作 / 神态 / 心理 / 环境描写都放进 *星号* 小灰字，这是聊天窗口里写描写的地方；`<撤回>`、表情包、`<日程>`）、`sendMsg`、重新生成。聊天窗口边生成边出气泡（`previewStream`：写完一行或 ||| 就先冒出一个预览气泡 `.cr-stream-preview`，正在写的那句只显示「正在输入」小点，收完换成正式消息；用户要一个气泡一个气泡出现，不要整段流出来再拆）；剧情窗口仍是整段流式 |
 | file-send | 加号抽屉「文件」：发文件给角色读（txt / md / json / csv / 代码等文字文件按 UTF-8、不对再按 GBK；Word .docx 用 `readDocxText`；PDF 用到时才加载仓库里的 `lib/pdfjs`（pdf.js 3.11.174，不从外网拉），扫描版读不出字；.doc / .xlsx 等提示读不了）。存成 `m.file = { name, size, ext, text, cut }`（最多 30 万字），聊天里是文件卡片（颜色跟气泡），点开看全文、可复制。发给 AI：记录里那条只写「[发来一个文件：《名字》]」，全文另外放在聊天记录前面一段「【用户发来的文件】」（`filesContextFor`，不算进上下文上限，单独预算 `FILE_AI_BUDGET`=6 万 token，新发的优先，放不下的带前面一部分；不替换 {{user}}）。主要是给 MianIN 读资料用 |
 | compose-plus | 输入栏的小工具：相册（剧情底栏的图片键、加号抽屉的「相册」）点开是从按钮上方冒出来的小菜单（`#albumPop`，挪到 body 下用屏幕坐标摆，用户不要正中间的弹窗；从加号点的抽屉先不收、贴着「相册」图标冒出来，选好了再收抽屉；半透明毛玻璃）「照片 / 拍照 / 文字图片」（安卓选相册不能拍照，用户纠正过；拍照是 `capture` 的 `#crCameraInput`，发图走 room-lists 的 `sendPickedImage`）；文字图片 = 用一段文字描述照片，存 `m.textImg`，显示成动态那种文字图小卡片（`createTextImgEl`），发给 AI 是「[发来一张照片（用文字描述的画面）：…]」；剧情窗口输入栏上面一排快捷符号【】{{}}「」“”（`#crSymbolBar`，点了插入一对、光标在中间，有选中就包起来，不收键盘） |
@@ -94,7 +94,7 @@
 | migrate | 通讯录「导入角色」选 uwu 小手机完整备份时用（用户要的是导入角色时选，不是在已有角色上迁移）：读 uwu / ovo 小手机的完整备份（.ee = gzip 的一行一个 JSON，header `format` 含 stream-backup；`chat-start` 是角色资料，`chat-history` 是消息，`worldBooks` 是世界书），流式解压读两遍，不读 API / 密钥。弹窗选角色、勾人设 / 头像 / 聊天记录 / 世界书（默认勾这个角色关联的，原来全局的和其他的不勾）→ 变成新角色草稿进角色设置；保存时世界书按 `folderName`（原分类）放进同名文件夹、一样的直接关联，聊天记录 `pendingArc` 存成档案 |
 | auto | 自主活动：主动发消息、聊天后发动态、调度。主动消息只在「后台」发（用户要的）：正看着这个角色的聊天、TA 正在回复、或者打字 / 发消息 / 离开聊天室后 `AUTO_QUIET_MS`=5 分钟内都先等着（不重新排期，条件过了下一次检查就发），不会在用户发了两条还没点 ❄️ 时插进来。主动消息的要求放在最后一条、用 user 身份并标明「系统提示，不是对方发来的」（最后一条是角色自己的话时 Claude 等会当成要续写，像卡住重说一遍）；用户没回时把角色最近发的几条列出来，要求接着往下说、不重说、不重新回答旧话题（用户反馈过）。`callApiOnce(msgs, char)`（在 chat/feed）传角色时用 TA 自己的模型预设 |
 | import | 导入酒馆角色卡 PNG / JSON、Word |
-| assistant | 内置助手 MianIN（昵称慕斯、暮暮，用户称祂「祂」；原本是用户酒馆预设里的织梦者，「暮色」是祂编织的幻境，不是祂本人）。名字和人设固定在 `MIANIN_NAME` / `MIANIN_PERSONA`，小手机里只能看不能改（用户要求）。能力：加世界书、改 CSS、看报错、读用户发的文件、帮做状态栏；`ASSISTANT_GUIDE` 是给祂的应用说明（用户要求写全：「你能做的事」「你做不到的事」「应用结构」按界面分条），加新功能时顺手补上；里面提到 {{char}} / {{user}} 写法时中间夹零宽空格，不然发送时会被换成名字 |
+| assistant | 内置助手 MianIN（昵称慕斯、暮暮，用户称祂「祂」；原本是用户酒馆预设里的织梦者，「暮色」是祂编织的幻境，不是祂本人）。名字和人设固定在 `MIANIN_NAME` / `MIANIN_PERSONA`，小手机里只能看不能改（用户要求）。改样式：提示里带 `ASSISTANT_ROOM_HINT`（聊天室的 DOM 结构、主题颜色规则优先级高要 !important、改头像 / 排版的写法；用户说过祂改剧情界面头像和排版老改不到位）和各角色现在的聊天 / 剧情 CSS；确认卡片上有「预览」（js/char/css-preview.js：全局样式直接换上看；角色样式跳到那个角色的聊天 / 剧情窗口，用 `cssPreviewOverride` 让 room.js 的 `roomLookPart` 先用预览的那套、不动角色数据；顶上一条「取消 / 应用」，应用是先执行确认再回到原来的对话）。能力：加世界书、改 CSS、看报错、读用户发的文件、帮做状态栏；`ASSISTANT_GUIDE` 是给祂的应用说明（用户要求写全：「你能做的事」「你做不到的事」「应用结构」按界面分条），加新功能时顺手补上；里面提到 {{char}} / {{user}} 写法时中间夹零宽空格，不然发送时会被换成名字 |
 
 纪念日（desk/anniv）按 `charIds` 决定角色看不看得到：只和用户有关的、和自己有关的、和社交圈里认识的人有关的（`annivVisibleTo`）。用户说的 char / user / NPC 都站在当前角色的角度：char = 这个角色本人，user = 用户，NPC = 其他所有人（小手机里别的角色 + 用户身边的人，后者存在 `npc` 文字里）。
 

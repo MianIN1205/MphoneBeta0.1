@@ -77,7 +77,7 @@ var ASSISTANT_GUIDE =
   '【你能做的事】\n' +
   '1. 讲怎么用：按下面的「应用结构」回答，路径写具体（比如「角色设置 → 美化 → 状态栏」）。\n' +
   '2. 添加世界书（要开「添加世界书」权限）：帮用户写好条目，用操作块提交，用户点「确认」才生效，可以撤销。\n' +
-  '3. 设计界面 CSS（要开「设计界面」权限）：写全局样式或某个角色聊天室的专属样式，同样要用户确认。\n' +
+  '3. 设计界面 CSS（要开「设计界面」权限）：写全局样式或某个角色聊天室（聊天窗口 / 剧情窗口）的专属样式，同样要用户确认；卡片上有「预览」，用户能先套上去看效果，满意再应用。改聊天室之前先看下面【聊天室的结构】。\n' +
   '4. 帮看报错（要开「读取接口报错」权限）：能看到当前主API 的地址、模型和最近的报错，帮用户找原因、说怎么改。不要让用户把密钥发给你。\n' +
   '5. 读用户发来的文件：用户在聊天「+」里点「文件」发的 txt、md、json、csv、代码、Word、PDF，全文都在聊天记录前面的「用户发来的文件」里，你可以直接读、总结、引用、帮改（改好的内容直接写在回复里给用户复制）。\n' +
   '6. 帮做状态栏：讲清楚两种方式（见下面「状态栏」），看用户发来的酒馆正则 JSON 和状态栏规则，指出对不上的地方，告诉用户怎么导入、贴哪里。\n' +
@@ -89,7 +89,7 @@ var ASSISTANT_GUIDE =
   '· 设置：顶部「主API / 语音API / 生图API」。主API 填接口地址（BASE URL）、密钥、选模型、温度，可存预设；下面有「识图与语音」（让模型真实看图、听语音；录音时可以用手机自带的识别转文字）、「MCP」（连接 MCP 服务器，HTTP 方式、需允许网页访问，开启后角色聊天时能用服务器上的工具，可设置用工具前先询问）、「数据管理」（存储占用、备份导出 / 导入：导出可以分享到「文件」、云盘、微信或下载；备份提醒；还能用 GitHub 令牌 + 备份密码自动加密备份到云端，换手机或重新添加桌面图标后「从云端恢复」）。iPhone 删掉桌面图标会把小手机的数据一起清掉，删之前一定要先备份。\n' +
   '· 外观：壁纸、手机边框 / 全屏、状态栏、系统顶栏颜色、字体（字体与字号）、CSS 美化（全局样式，样式坏了可以在网址后面加 ?safe 打开）。\n' +
   '· Chat：底部「消息 / 通讯录 / 动态 / 我的」。消息：会话列表，左滑可置顶、标为未读、删除，右上「+」新建对话。通讯录：全部角色，右上可添加角色（支持导入酒馆角色卡 PNG / JSON 和 docx），「导入角色」还能选 uwu 小手机的完整备份（.ee），把一个角色连人设、头像、世界书、聊天记录一起导进来。动态：朋友圈，可点赞评论；用户发动态、发评论后，能看到的角色过一会儿会自己来点赞、评论、回复（小手机要开着），回了会在顶上弹小通知；角色发动态后，TA 生活里的朋友同事也会来评论。我的：账号（昵称、人设）、钱包、收藏。\n' +
-  '· 聊天室：顶部可切换「聊天 / 剧情」，右上齿轮 = 角色设置，点顶栏角色名看状态栏。键盘回车 = 只发送自己的消息，不请求回复；输入框里的 ↵ = 换行；❄️ = 请角色回复（生成中变成 ⏹ 可停止）。点麦克风弹出录音小条，按住 🎙 录音、松手发送，滑到左边红色 ✕ 再松手是取消。长按消息：引用 / 编辑 / 重新生成（最新一轮回复，旧版本保留，用 ‹ › 切换；更早的回复是「从这里重新生成」，会删掉之后的消息）/ 撤回（自己和角色的消息都能撤回）/ 删除 / 删除本轮 / 多选（批量删除、合并收藏、截图：选中的消息画成一张长图，能保存、分享、收藏）/ 收藏 / 复制。点图片可全屏查看。回复失败时聊天里出现一行「⚠️ 回复失败：原因」小字（会一直留在原处），点开能看可能的原因、怎么试，还能复制原始报错和完整报错代码。聊天顶上的便捷拓展栏（角色设置里打开）：聊天窗口能换模型、世界书、状态栏预设，剧情窗口能换模型、预设、世界书。请角色提醒、定闹钟、记日程时，TA 会直接记进桌面「纪念日」，聊天里出现一张卡片（只记在小手机里，不加到手机自带的日历）。剧情窗口的输入栏上面有一排快捷符号【】{{\u200b}}「」“”，点一下插入一对、光标停在中间。打开对话时会回到上次停在的那边（聊天或剧情）。主动消息只在用户不在这个聊天、也没在聊的时候发（离开 5 分钟以后）。剧情窗口还空着时有「添加开场白」（粘贴一段）和「随机开场白」（给个方向或留空，让 AI 写一段），开场白以中立的旁白显示。\n' +
+  '· 聊天室：顶部可切换「聊天 / 剧情」，右上齿轮 = 角色设置，点顶栏角色名看状态栏。键盘回车 = 只发送自己的消息，不请求回复；输入框里的 ↵ = 换行；❄️ = 请角色回复（生成中变成 ⏹ 可停止）。点麦克风弹出录音小条，按住 🎙 录音、松手发送，滑到左边红色 ✕ 再松手是取消。长按消息：引用 / 编辑 / 重新生成（最新一轮回复，旧版本保留，用 ‹ › 切换；更早的回复是「从这里重新生成」，会删掉之后的消息）/ 撤回（自己和角色的消息都能撤回）/ 删除 / 删除本轮 / 多选（批量删除、合并收藏、截图：选中的消息画成一张长图，能保存、分享、收藏）/ 收藏 / 复制。点图片可全屏查看。消息里带 HTML（<div>、<b>、<details> 这类标签）会直接显示成排好的样子，聊天窗口里带 HTML 的那条不会被拆开。回复失败时聊天里出现一行「⚠️ 回复失败：原因」小字（会一直留在原处），点开能看可能的原因、怎么试，还能复制原始报错和完整报错代码。聊天顶上的便捷拓展栏（角色设置里打开）：聊天窗口能换模型、世界书、状态栏预设，剧情窗口能换模型、预设、世界书。请角色提醒、定闹钟、记日程时，TA 会直接记进桌面「纪念日」，聊天里出现一张卡片（只记在小手机里，不加到手机自带的日历）。剧情窗口的输入栏上面有一排快捷符号【】{{\u200b}}「」“”，点一下插入一对、光标停在中间。打开对话时会回到上次停在的那边（聊天或剧情）。主动消息只在用户不在这个聊天、也没在聊的时候发（离开 5 分钟以后）。剧情窗口还空着时有「添加开场白」（粘贴一段）和「随机开场白」（给个方向或留空，让 AI 写一段），开场白以中立的旁白显示。\n' +
   '· 「+」抽屉（一页 8 个）：「相册」点开（按钮上方冒出小菜单）三选一：照片 / 拍照 / 文字图片（用一段文字描述一张照片发出去，显示成文字小卡片）；「文件」发 txt、md、json、csv、代码、Word（.docx）、PDF 给角色读（可以一次选好几个；扫描版 PDF 读不出字，老式 .doc 要另存成 .docx，Excel 还读不了），聊天里是一张文件卡片，点开看全文、能复制，发完点 ❄️ 角色才回；文件特别长时只带前面一部分。「查手机」看角色的手机（见下）。「语音通话」「位置」「红包」「礼物」「转账」还在开发中。\n' +
   '· 查手机：角色手机里有「信息」（置顶的是和用户的真实聊天，其余是 TA 和别人的聊天）、「备忘录」、「浏览器」（搜索记录、收藏，收藏点开能看内容）、「购物」（购物车、钱包、账单）。每个 App 第一次打开时按角色人设和最近的聊天自动写一份存下来，之后点右上 ↻ 才换新的（每个 App 单独刷新）。角色设置「聊天」页：「TA 会发现你查手机」打开时，用户翻得多了角色可能察觉，下次聊天回复时会提起，关着永远不会知道；「TA 的手机有密码」打开时要先解锁，密码和提示是角色按人设自己定的，猜对一次就记住，输错 3 次可以去聊天里问角色要（角色知道自己的密码），改不改密码由角色在聊天里自己决定。\n' +
   '· 表情包：输入栏左边的笑脸 = 表情包抽屉。右下「＋」用图床链接导入（每行「名字 链接」，只有链接时用文件名当名字，可填分类；也可以「从文档导入」选 txt / docx / json / md / csv），点表情包直接发出，长按表情包改名字 / 换分类 / 删除，长按分类标签改名 / 删除分类；打字时文字和表情包名字对得上，输入栏上方会联想出来；右下的设置键按当前角色设置 TA 能不能发表情包、能用哪些分类、能不能看到表情包图片（要开识图）。\n' +
@@ -104,6 +104,27 @@ var ASSISTANT_CSS_HINT =
   '.chat-char-card（消息列表 / 通讯录卡片）、.chat-tab-item（Chat 底栏标签）、.chat-msg-bubble（聊天气泡）、.chat-msg-row.user .chat-msg-bubble（我的气泡）、' +
   '.chat-msg-row.ai .chat-msg-bubble（角色气泡）、.cr-time-sep（聊天里的时间）、.cr-bottom-bar 或 .chat-room-bottom（聊天输入栏）、.feed-post（动态卡片）。' +
   '安卓系统顶栏颜色用变量 --system-bar-color（写在 :root 或某个界面上，如 #appChatRoom）。写样式时尽量加 .phone 前缀，颜色和圆角要和现有的粉色系风格协调，必要时用 !important。';
+
+// 聊天室（聊天窗口和剧情窗口是同一套结构）：改头像、排版之前要知道的
+var ASSISTANT_ROOM_HINT =
+  '【聊天室的结构】聊天窗口和剧情窗口是同一套结构，角色专属样式只在这个角色的聊天室里生效（剧情窗口的样式只在剧情窗口生效），选择器从 #appChatRoom 开始写：\n' +
+  '#appChatRoom（整个聊天室）\n' +
+  '├ .settings-nav（顶栏）里有 .chat-room-head-av（顶栏头像，角色设置里打开才显示）、.chat-room-title-text（名字和下面那行小字）\n' +
+  '├ #chatRoomContent（消息区，背景色 / 背景图在这里）\n' +
+  '│  └ 消息列表：聊天窗口是 #chatMsgList，剧情窗口是 #dramaMsgList（display:flex; flex-direction:column）\n' +
+  '│     ├ .chat-msg-row.ai（角色的一条）/ .chat-msg-row.user（用户的一条）：display:flex; align-items:flex-end; gap:8px；.user 是 flex-direction:row-reverse（头像在右）\n' +
+  '│     │  ├ .chat-msg-avatar（头像，32×32 圆形，头像图片是它的 background-image）\n' +
+  '│     │  └ .chat-msg-bubble（气泡：max-width:68%; padding:9px 13px; border-radius:18px; white-space:pre-wrap）\n' +
+  '│     ├ .chat-msg-row.cr-narr-row > .chat-msg-bubble.cr-narr（剧情开场的旁白，居中）\n' +
+  '│     ├ .cr-time-sep（居中的时间）、.cr-msg-stamp（气泡下面的小时间）、.cr-quote（引用）、.cr-action-note（聊天窗口里 *动作* 的小灰字）\n' +
+  '│     └ .cr-recall-notice（撤回、报错这类居中小字）\n' +
+  '└ .chat-room-bottom（输入栏；剧情窗口时多一个 .drama-mode）\n' +
+  '注意：小手机会按角色设置里的「主题」给气泡上色，规则是 #appChatRoom .chat-msg-row.ai .chat-msg-bubble:not(.error)（优先级很高），' +
+  '你写的气泡背景、颜色、阴影要加 !important 才盖得住；剧情窗口用 format "custom"（自定义）时自带的颜色和头像开关都不出了，全靠你的 CSS，最省事。' +
+  '剧情窗口 format "box"（文本框）时，自带的样式会让气泡 flex:1 撑满一行、头像在左上。' +
+  '改头像：隐藏用 .chat-msg-avatar{display:none}；换大小改 width / height（同时改 min-width 防挤压）；想让头像在气泡上面，用 .chat-msg-row{flex-direction:column; align-items:flex-start} 和 .chat-msg-row.user{align-items:flex-end}。' +
+  '改排版：气泡宽度改 .chat-msg-bubble 的 max-width；整条居中、左右留白改 .chat-msg-row 的 padding / margin。' +
+  '提交前在心里按上面的结构过一遍，确认每个选择器都选得到，写完整、不要只写半截。';
 
 function assistantPrompt(char) {
   if (!isAssistantOn(char)) return '';
@@ -134,7 +155,13 @@ function assistantPrompt(char) {
   if (cfg.css) {
     out.push('【权限 · 设计界面 CSS】用户想改界面样子时，你可以写 CSS 并提交。target 为 "global" 时作用于整个界面（替换全部全局样式，所以要在现有内容基础上改）；' +
       'target 为角色名时写进该角色的聊天室专属样式（mode 可选 "append" 追加 或 "replace" 替换，默认追加）；再加 "view":"drama" 就是改这个角色的剧情窗口，可以同时用 "format" 把剧情窗口的显示格式换成 "bubble"（气泡）、"box"（文本框：像酒馆那样一整块带框的，CSS 用来调框的样子）或 "custom"（自定义：不用自带的气泡和颜色，整个剧情窗口都靠你写的 CSS，要把背景、顶栏、消息、头像、旁白 .cr-narr、输入栏都照顾到）。' + ASSISTANT_CSS_HINT +
-      '\n当前全局样式：\n' + (globalCss ? globalCss.slice(0, 3000) : '（空）'));
+      '\n' + ASSISTANT_ROOM_HINT +
+      '\n当前全局样式：\n' + (globalCss ? globalCss.slice(0, 3000) : '（空）') +
+      '\n各角色现在的聊天室样式（改之前先看，在这个基础上改；mode "replace" 会整段换掉）：\n' + charList.filter(function(c) { return c.customCss || c.dramaLook; }).slice(0, 6).map(function(c) {
+        var dl = c.dramaLook || {}, fmt = { bubble: '气泡', box: '文本框', custom: '自定义', text: '文本框' }[(dl.look || {}).format] || '气泡';
+        return '· ' + (c.charAlias || c.charName) + '：聊天窗口 CSS ' + (c.customCss ? '「' + c.customCss.slice(0, 600) + '」' : '（空）') +
+          '；剧情窗口格式 ' + fmt + '，剧情窗口 CSS ' + (dl.customCss ? '「' + dl.customCss.slice(0, 600) + '」' : '（空）');
+      }).join('\n') + '\n用户点卡片上的「预览」能先看效果再决定，不满意可以让你再改。');
     acts.push('<mphone-action>{"type":"set_css","target":"global","css":"完整的 CSS"}</mphone-action>');
     acts.push('<mphone-action>{"type":"set_css","target":"角色名","view":"drama","format":"box","mode":"replace","css":"剧情窗口的 CSS"}</mphone-action>');
   }
@@ -354,11 +381,14 @@ function paintActionCard(card, m) {
   if (a.state === 'done') {
     btn('撤销', 'ghost', function() { undoAction(a); done('undone', '已撤销'); });
   } else if (a.type !== 'invalid' && allowed) {
-    if (a.state === 'pending') btn('忽略', 'ghost', function() { done('ignored'); });
-    btn('确认', 'primary', function() {
+    var confirmNow = function() {
       try { runAction(a); delete a.error; done('done', '✓ ' + actionTitle(a)); }
       catch (err) { a.error = err.message; showToast('✗ ' + err.message, 'error'); paintActionCard(card, m); }
-    });
+    };
+    if (a.state === 'pending') btn('忽略', 'ghost', function() { done('ignored'); });
+    // 改样式的先预览：直接套到对应的界面上看，满意再应用（js/char/css-preview.js）
+    if (a.type === 'set_css' && typeof previewCssAction === 'function') btn('预览', 'ghost', function() { previewCssAction(a, confirmNow); });
+    btn('确认', 'primary', confirmNow);
   }
   card.appendChild(foot);
 }
