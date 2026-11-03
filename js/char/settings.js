@@ -466,14 +466,15 @@ function setLookPartForm(view) {
 // 剧情窗口：气泡（和现在一样）/ 文本框（像酒馆那样一整块带框的，框的颜色用主题颜色，样子可以用 CSS 再调）/ 自定义（整个剧情窗口都用 CSS 改）
 var DRAMA_FORMAT_HINT = {
   bubble: '和聊天窗口一样的气泡，颜色在下面的「主题」里选。',
-  box: '像酒馆那样，每条消息是一整块带框、带底色的文本框，框的颜色用下面的「主题」。想要别的样子，在最下面的「文本框样式」里写 CSS，也可以让 MianIN 帮你设计。',
-  custom: '不用小手机自带的气泡和颜色，整个剧情窗口都用最下面的 CSS 来改，像酒馆的美化主题一样。不会写可以跟 MianIN 说想要什么样子，祂会写好给你确认。'
+  box: '像酒馆那样一整块带框的文本框：顶上是头像、名字和时间，下面正文像文档一样一行行；同一个人连着发的几条合在一个框里。框的颜色用下面的「主题」，想要别的样子在最下面的「文本框样式」里写 CSS，也可以让 MianIN 帮你设计。',
+  custom: '排版和文本框一样（头像 + 名字 + 时间，连着发的合成一个框），但不加颜色和边框，整个剧情窗口都用最下面的 CSS 来改，像酒馆的美化主题一样。不会写可以跟 MianIN 说想要什么样子，祂会写好给你看效果。'
 };
 function syncDramaFormatUi() {
   var drama = csLookView === 'drama';
   var sel = document.querySelector('#dramaFormatRow .pf-radio-btn.selected');
   var fmt = drama && sel ? sel.dataset.format : '';
   document.getElementById('csDramaFmtWrap').style.display = drama ? '' : 'none';
+  document.getElementById('csLookPreview').style.display = drama ? 'none' : '';   // 气泡小预览只给聊天窗口
   document.getElementById('layoutFormatAutoRow').style.display = drama ? 'none' : '';
   document.getElementById('csThemeWrap').style.display = fmt === 'custom' ? 'none' : '';
   document.getElementById('layoutAvatarRow').style.display = fmt === 'custom' ? 'none' : '';

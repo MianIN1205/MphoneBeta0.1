@@ -25,9 +25,25 @@ function hexToRgba(hex, a) {
 }
 
 // 气泡颜色 / 透明度 / 效果 / 显示格式 → CSS（scope：聊天室，或美化页里的小预览）
+// 剧情窗口的文本框排版（文本框、自定义都用）：每一块顶上「头像 + 名字 + 时间」，下面正文像文档一样一行行；
+// 同一个人连着发的几条合成一个大框（后面那几条不再显示头像和名字，接在框里的下一行，用户要的）。旁白不动
+function dramaBoxCss(sel) {
+  var row = sel + ':not(.cr-narr-row)';
+  var cont = [sel + '.ai + .chat-msg-row.ai', sel + '.user + .chat-msg-row.user'];
+  var hasNext = [sel + '.ai:has(+ .chat-msg-row.ai)', sel + '.user:has(+ .chat-msg-row.user)'];
+  return row + ' { display: grid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "av head" "text text"; column-gap: 8px; row-gap: 6px; align-items: center; padding: 12px 14px; border-radius: 12px; }\n' +
+    row + ' > .chat-msg-avatar { grid-area: av; width: 28px; height: 28px; min-width: 28px; }\n' +
+    row + ' > .cr-msg-head { grid-area: head; display: flex; align-items: baseline; gap: 8px; min-width: 0; }\n' +
+    row + ' > .chat-msg-bubble:not(.error) { grid-area: text; max-width: none; padding: 0; border-radius: 0; line-height: 1.8; text-align: left; background: transparent !important; box-shadow: none !important; border: none; }\n' +
+    cont.join(', ') + ' { margin-top: -10px; padding-top: 2px; border-top-left-radius: 0; border-top-right-radius: 0; grid-template-areas: "text text"; }\n' +
+    cont.map(function(s) { return s + ' > .chat-msg-avatar, ' + s + ' > .cr-msg-head'; }).join(', ') + ' { display: none; }\n' +
+    hasNext.join(', ') + ' { border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding-bottom: 4px; }\n';
+}
 function lookCss(part, scope) {
   var look = Object.assign({}, DEFAULT_LOOK, part.look || {});
-  if (look.format === 'custom') return '';   // 剧情窗口「自定义」：全靠用户自己的 CSS
+  var sel0 = scope + ' .chat-msg-row';
+  // 剧情窗口「自定义」：排版和文本框一样（头像 + 名字 + 时间、连着的合成一个框），颜色、框都不加，全靠用户自己的 CSS
+  if (look.format === 'custom') return dramaBoxCss(sel0);
   var b = part.bubble || DEFAULT_BUBBLE;
   var colors = BUBBLE_PRESETS[b.preset] || BUBBLE_PRESETS[0];
   var op = (b.opacity === undefined ? 85 : b.opacity) / 100;
@@ -48,20 +64,22 @@ function lookCss(part, scope) {
            sel + ' .chat-msg-avatar { display: none; }\n' +
            sel + '.user .chat-msg-bubble:not(.error) { color: #8a6a76; text-align: right; }\n';
   }
-  // 文本框（剧情窗口）：像酒馆那样一整块带框的，颜色还是用主题颜色；旁白不动
+  // 文本框（剧情窗口）：像酒馆那样一整块带框的，底色用主题颜色；连着的合成一个框（框的上下边不画，连成一块）
   if (look.format === 'box') {
-    var box = sel + ' .chat-msg-bubble:not(.error):not(.cr-narr)';
-    css += sel + ':not(.cr-narr-row) { align-items: flex-start; }\n' +
-           box + ' { flex: 1; min-width: 0; max-width: 100%; border-radius: 12px; padding: 10px 14px; line-height: 1.8; text-align: left;' +
-           ' border: 1px solid rgba(255,255,255,0.75); box-shadow: 0 2px 10px rgba(120,80,100,0.08); }\n';
+    var row = sel + ':not(.cr-narr-row)';
+    css += dramaBoxCss(sel) +
+      row + ' { border: 1px solid rgba(255,255,255,0.75); box-shadow: 0 2px 10px rgba(120,80,100,0.08); }\n' +
+      row + '.ai { background: ' + hexToRgba(colors[0], op) + '; }\n' +
+      row + '.user { background: ' + hexToRgba(colors[1], op) + '; }\n' +
+      sel + '.ai + .chat-msg-row.ai, ' + sel + '.user + .chat-msg-row.user { border-top: none; }\n' +
+      sel + '.ai:has(+ .chat-msg-row.ai), ' + sel + '.user:has(+ .chat-msg-row.user) { border-bottom: none; box-shadow: none; }\n' +
+      sel + ' .cr-msg-head b { font-size: 13px; font-weight: 600; color: #5a4650; }\n' +
+      sel + ' .cr-msg-head span { font-size: 11px; color: #a89aa0; }\n';
   }
   return css;
 }
 // 当前子视图（聊天 / 剧情）用的那套美化
 function roomLookPart(char) {
-  // 正在预览 MianIN 改的样式（js/char/css-preview.js）：先用预览的那套，不动角色本身的数据
-  if (typeof cssPreviewOverride !== 'undefined' && cssPreviewOverride && char && cssPreviewOverride.charId === char.id &&
-      cssPreviewOverride.view === (currentCrSubView === 'contacts' ? 'drama' : 'chat')) return cssPreviewOverride.part;
   if (currentCrSubView === 'contacts' && char.dramaLook) return char.dramaLook;
   return { chatBg: char.chatBg, bubble: char.bubble, look: char.look, customCss: char.customCss };
 }

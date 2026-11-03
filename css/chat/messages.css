@@ -294,3 +294,6 @@
 /* 带 HTML 的消息：内容在 Shadow DOM 里（js/chat/render.js 的 setBubbleHtml） */
 .chat-msg-bubble.cr-html-bubble { white-space: normal; }
 .cr-html-box { max-width: 100%; overflow-x: auto; }
+
+/* 剧情窗口每条的「名字 + 时间」：只有文本框、自定义格式显示（js/chat/room.js 的 dramaBoxCss） */
+.cr-msg-head { display: none; }

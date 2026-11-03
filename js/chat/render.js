@@ -100,6 +100,24 @@ function placeActionNotes(row) {
   a.after.forEach(function(t) { row.parentNode.insertBefore(make(t, 'after'), next); });
 }
 
+// 剧情窗口每条前面的「名字 + 时间」：文本框、自定义格式时显示在头像旁边（js/chat/room.js 的 dramaBoxCss），气泡格式时藏着
+function addDramaHead(row, bubble, m) {
+  if (!row || !bubble || row.querySelector('.cr-msg-head')) return;
+  var char = charList[openingChatCharIdx] || {};
+  var head = document.createElement('div');
+  head.className = 'cr-msg-head';
+  var b = document.createElement('b');
+  b.textContent = m.role === 'user' ? ((resolveCharAccount(char) || {}).nickname || '我') : (char.charAlias || char.charName || '角色');
+  head.appendChild(b);
+  if (m.time) {
+    var t = document.createElement('span');
+    var d = new Date(m.time);
+    t.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    head.appendChild(t);
+  }
+  row.insertBefore(head, bubble);
+}
+
 // 渲染一条历史消息（含图片、引用、状态栏）；行元素记住对应的记录（_msg）和附属元素（_extras），方便编辑 / 删除
 function renderHistMsg(m, list, empty) {
   list = list || getActiveMsgListEl();
@@ -145,6 +163,7 @@ function renderHistMsg(m, list, empty) {
         : appendMsg(role, m.content, false, list, empty);
   r.row._msg = m;
   r.row._extras = thinkBar ? [thinkBar] : [];
+  if (list.id === 'dramaMsgList') addDramaHead(r.row, r.bubble, m);
   if (m.quote) r.row._extras.push(appendQuoteBlock(list, m.quote, role));
   if (m.alts && m.alts.length > 1) { r.row._extras.push(appendAltSwitch(list, m)); list._altTime = m.time || 1; }
   // 角色刚发就撤回的：先正常显示两秒半，再换成「撤回了一条消息」

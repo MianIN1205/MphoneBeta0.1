@@ -1,63 +1,99 @@
-// 眠花糖机 — 预览 MianIN 改的样式：确认卡片上点「预览」，直接套到对应的界面上看（不存），顶上一条「取消 / 应用」
-// 全局样式：整个小手机先换上新样式，可以到处点点看；角色的样式：跳到那个角色的聊天 / 剧情窗口看，看完回到原来的对话
+// 眠花糖机 — MianIN 改样式的确认卡片里放一张缩小版的效果图（用户不要看代码、也不要跳过去来回看）：
+// 用一个不跑脚本的小 iframe，带上小手机全部样式表，照真的结构摆一份聊天室（或桌面），套上新样式，缩小放进卡片
 
-var cssPreviewOverride = null;   // { charId, view: 'chat' | 'drama', part }：room.js 的 roomLookPart 会先用它
-var cssPreviewState = null;      // { a, onApply, back: { idx, view, active }, lastView, globalEl }
-var cssPreviewBar = document.getElementById('cssPreviewBar');
-document.body.appendChild(cssPreviewBar);
-
-function cssPreviewOpenRoom(idx, view) {
-  var char = charList[idx];
-  if (!char) return;
-  openingChatCharIdx = idx;
-  chatRoomTitle.textContent = char.charAlias || char.charName || '未命名';
-  renderRoomLists(idx);
-  switchChatRoomSubView(view === 'drama' ? 'contacts' : 'chat');
-  applyChatRoomStyle(char);
-  appChatRoom.classList.add('active');
+// 套用这个改动后，那个角色那个窗口的美化（和 runAction 的算法一样，只是不存）
+function cssPreviewPart(a, c) {
+  var drama = a.view === 'drama';
+  var base = drama ? (c.dramaLook || { chatBg: c.chatBg, bubble: c.bubble, look: c.look, customCss: c.customCss || '' })
+                   : { chatBg: c.chatBg, bubble: c.bubble, look: c.look, customCss: c.customCss || '' };
+  var part = JSON.parse(JSON.stringify(base));
+  part.customCss = a.mode === 'replace' ? String(a.css || '') : ((part.customCss ? part.customCss + '\n' : '') + String(a.css || ''));
+  if (drama && (a.format === 'bubble' || a.format === 'box' || a.format === 'custom')) part.look = Object.assign({}, part.look || {}, { format: a.format });
+  return part;
 }
-function previewCssAction(a, onApply) {
-  if (cssPreviewState) cssPreviewEnd(false);
-  var st = cssPreviewState = { a: a, onApply: onApply, back: { idx: openingChatCharIdx, view: currentCrSubView, active: appChatRoom.classList.contains('active') }, lastView: JSON.parse(JSON.stringify(crLastView)) };
-  var label;
-  if (!a.target || a.target === 'global') {
-    // 全局：先关掉现在的全局样式，换上新的（不存）
-    st.globalOld = globalCssEl.textContent;
-    globalCssEl.textContent = String(a.css || '');
-    label = '全局样式';
-  } else {
-    var c = findCharByName(a.target);
-    if (!c) { cssPreviewState = null; showToast('✗ 找不到角色「' + a.target + '」', 'error'); return; }
-    var drama = a.view === 'drama';
-    var base = drama ? (c.dramaLook || { chatBg: c.chatBg, bubble: c.bubble, look: c.look, customCss: c.customCss || '' })
-                     : { chatBg: c.chatBg, bubble: c.bubble, look: c.look, customCss: c.customCss || '' };
-    var part = JSON.parse(JSON.stringify(base));
-    part.customCss = a.mode === 'replace' ? String(a.css || '') : ((part.customCss ? part.customCss + '\n' : '') + String(a.css || ''));
-    if (drama && (a.format === 'bubble' || a.format === 'box' || a.format === 'custom')) part.look = Object.assign({}, part.look || {}, { format: a.format });
-    cssPreviewOverride = { charId: c.id, view: drama ? 'drama' : 'chat', part: part };
-    cssPreviewOpenRoom(charList.indexOf(c), drama ? 'drama' : 'chat');
-    label = '「' + (c.charAlias || c.charName) + '」的' + (drama ? '剧情窗口' : '聊天窗口');
+// 拿那个角色最近的几条（太长的截短）；没有记录就用两句示意
+function cssPreviewMsgs(c, drama) {
+  var hist = (drama ? dramaHistories[c.id] : chatHistories[c.id]) || [];
+  var msgs = hist.filter(function(m) { return !m.recalled && !m.pat && !m.action && !m.cal && (m.content || m.imgSrc || m.textImg); }).slice(-4)
+    .map(function(m) { var x = JSON.parse(JSON.stringify(m)); if (typeof x.content === 'string' && x.content.length > 90) x.content = x.content.slice(0, 90) + '…'; delete x.status; delete x.errs; delete x.think; delete x.alts; return x; });
+  if (!msgs.length) {
+    var t = Date.now();
+    msgs = drama
+      ? [{ role: 'user', narr: true, content: '黄昏的书房，窗外下着小雨。', time: t - 3000 }, { role: 'user', content: '你推开门，轻轻叫了一声。', time: t - 2000 },
+         { role: 'user', content: '「在忙吗？」', time: t - 1900 }, { role: 'assistant', content: '祂抬起头，眼睛亮了一下：「你来啦。」', time: t - 1000 }]
+      : [{ role: 'user', content: '今天下雨了', time: t - 2000 }, { role: 'assistant', content: '记得带伞呀', time: t - 1000 }];
   }
-  document.getElementById('cssPreviewText').textContent = '正在预览' + label + '的新样式';
-  cssPreviewBar.classList.add('open');
+  return msgs;
 }
-// apply：true = 应用（回到原来的对话后再执行确认），false = 取消
-function cssPreviewEnd(apply) {
-  var st = cssPreviewState;
-  if (!st) return;
-  cssPreviewState = null;
-  cssPreviewBar.classList.remove('open');
-  if (st.globalOld !== undefined) globalCssEl.textContent = st.globalOld;
-  cssPreviewOverride = null;
-  // 先应用（存好、卡片记成已生效），再回到原来的对话，回去时卡片按新状态重画
-  if (apply && st.onApply) st.onApply();
-  if (st.globalOld === undefined) {
-    // 回到原来的对话（预览前在哪个角色、哪一边）；预览时跳过去不算「上次停在哪」
-    if (st.back.idx >= 0 && charList[st.back.idx]) cssPreviewOpenRoom(st.back.idx, st.back.view === 'contacts' ? 'drama' : 'chat');
-    if (!st.back.active) appChatRoom.classList.remove('active');
-    crLastView = st.lastView;
-    mphoneStore.save('mphone_last_view', crLastView);
-  }
+function cssPreviewSheets() {
+  return Array.prototype.map.call(document.querySelectorAll('link[rel="stylesheet"]'), function(l) { return '<link rel="stylesheet" href="' + l.href + '">'; }).join('');
 }
-document.getElementById('cssPreviewCancel').addEventListener('click', function() { cssPreviewEnd(false); });
-document.getElementById('cssPreviewApply').addEventListener('click', function() { cssPreviewEnd(true); });
+// 聊天室：复制一份真的结构，把消息列表换成那个角色的几条
+function cssPreviewRoomHtml(a, c) {
+  var drama = a.view === 'drama', idx = charList.indexOf(c);
+  var list = document.createElement('div');
+  list.className = 'chat-msg-list';
+  list.id = drama ? 'dramaMsgList' : 'chatMsgList';
+  var empty = document.createElement('div');
+  var keep = openingChatCharIdx;
+  openingChatCharIdx = idx;   // 头像、名字、{{char}} 用那个角色的
+  try { cssPreviewMsgs(c, drama).forEach(function(m) { renderHistMsg(m, list, empty); }); }
+  finally { openingChatCharIdx = keep; }
+  var room = appChatRoom.cloneNode(true);
+  room.classList.add('active');
+  room.classList.remove('cr-qb-on');
+  room.removeAttribute('style');
+  room.querySelectorAll('.cr-status-panel, .cr-plus-panel, .cr-select-bar, .cr-qb, #crQuickBar, .stk-suggest').forEach(function(el) { el.remove(); });
+  room.querySelectorAll('.cr-view').forEach(function(v) { v.classList.toggle('active', (v.dataset.crview === 'contacts') === drama); });
+  var bar = room.querySelector('.chat-room-bottom');
+  if (bar) { bar.classList.toggle('drama-mode', drama); bar.classList.remove('panel-open'); }
+  var title = room.querySelector('.chat-room-title-text');
+  if (title && title.firstElementChild) title.firstElementChild.textContent = c.charAlias || c.charName || '';
+  var old = room.querySelector(drama ? '#dramaMsgList' : '#chatMsgList');
+  if (old) old.parentNode.replaceChild(list, old);
+  var other = room.querySelector(drama ? '#chatMsgList' : '#dramaMsgList');
+  if (other) other.innerHTML = '';
+  var part = cssPreviewPart(a, c), bg = part.chatBg || DEFAULT_CHAT_BG;
+  var content = room.querySelector('#chatRoomContent');
+  if (content) content.style.background = bg.image ? 'url(' + bg.image + ') center / cover no-repeat' : (bg.color || '');
+  return { html: room.outerHTML, css: lookCss(part, '#appChatRoom') + '\n' + (part.customCss || ''), global: globalCss };
+}
+// 全局样式：桌面（时钟、图标、程序坞）
+function cssPreviewDeskHtml(a) {
+  var phone = document.querySelector('.phone');
+  var wrap = phone.cloneNode(false);
+  ['.status-bar', '.wp-blur-layer', '.desktop', '.dock'].forEach(function(s) { var el = phone.querySelector(':scope > ' + s); if (el) wrap.appendChild(el.cloneNode(true)); });
+  return { html: wrap.innerHTML, css: '', global: String(a.css || ''), phoneStyle: phone.getAttribute('style') || '', phoneClass: phone.className };
+}
+function cssMiniPreview(a) {
+  var c = (!a.target || a.target === 'global') ? null : findCharByName(a.target);
+  if (a.target && a.target !== 'global' && !c) return null;
+  var p;
+  try { p = c ? cssPreviewRoomHtml(a, c) : cssPreviewDeskHtml(a); } catch (e) { console.warn('[Mphone] 预览没画出来:', e); return null; }
+  var W = 390, H = 560;
+  var doc = '<!doctype html><html><head><meta charset="utf-8"><base href="' + location.href.replace(/"/g, '') + '">' + cssPreviewSheets() +
+    '<style>html,body{margin:0;padding:0;overflow:hidden;background:transparent}' +
+    '.phone{transform:none!important;width:' + W + 'px!important;height:' + H + 'px!important;max-width:none!important;border-radius:0!important;margin:0!important}' +
+    '#appChatRoom{position:absolute!important;inset:0!important;transform:none!important;opacity:1!important;border-radius:0!important;transition:none!important}' +
+    '*{animation:none!important;transition:none!important}</style>' +
+    '<style>' + (p.global || '') + '</style><style>' + p.css + '</style></head><body>' +
+    '<div class="' + (p.phoneClass ? p.phoneClass.replace(/"/g, '') : 'phone fullscreen') + '"' + (p.phoneStyle ? ' style="' + p.phoneStyle.replace(/"/g, '&quot;') + '"' : '') + '>' + p.html + '</div></body></html>';
+  var box = document.createElement('div');
+  box.className = 'cr-css-mini';
+  var frame = document.createElement('iframe');
+  frame.setAttribute('sandbox', '');   // 不跑脚本，只看样子
+  frame.setAttribute('tabindex', '-1');
+  frame.style.width = W + 'px';
+  frame.style.height = H + 'px';
+  frame.srcdoc = doc;
+  box.appendChild(frame);
+  // 按卡片的宽度缩小
+  var fit = function() {
+    var w = box.clientWidth || 220, k = w / W;
+    frame.style.transform = 'scale(' + k + ')';
+    box.style.height = Math.round(H * k) + 'px';
+  };
+  requestAnimationFrame(fit);
+  setTimeout(fit, 300);
+  return box;
+}
