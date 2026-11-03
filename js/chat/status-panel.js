@@ -147,9 +147,34 @@ function renderStatusPanel() {
     var card = document.createElement('div');
     card.className = 'cr-status-card' + (lined ? ' cr-status-lined' : '');
     var root = card.attachShadow({ mode: 'open' });
-    root.innerHTML = '<style>:host{display:block}' + (look.statusCss || '') + '</style>' + body;
+    var cardHtml = '<style>:host{display:block}' + (look.statusCss || '') + '</style>' + body;
+    root.innerHTML = cardHtml;
     item.appendChild(time);
     item.appendChild(card);
+    // 每一条自己能上下滑（卡片长也看得全）；最下面留白，正中间放 删除 / 收藏 / 关闭（用户要的）
+    var acts = document.createElement('div');
+    acts.className = 'cr-sp-acts';
+    [['del', '删除'], ['fav', '收藏'], ['close', '关闭']].forEach(function(a) {
+      var b = document.createElement('button');
+      b.className = 'cr-sp-act';
+      b.textContent = a[1];
+      b.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (a[0] === 'close') { closeStatusPanel(); return; }
+        if (a[0] === 'fav') {
+          if (typeof addFav === 'function') addFav({ kind: 'status', html: cardHtml, lined: lined, text: '', images: [], source: '状态栏',
+            author: char.charAlias || char.charName || '', time: m.time || Date.now(), refId: 'status:' + char.id + ':' + (m.time || '') });
+          return;
+        }
+        openConfirm('删除这一条状态？（聊天消息还在，只删状态栏）', function() {
+          delete m.status;
+          saveHistories();
+          renderStatusPanel();
+        });
+      });
+      acts.appendChild(b);
+    });
+    item.appendChild(acts);
     track.appendChild(item);
   });
   crStatusPanel.appendChild(track);
@@ -173,18 +198,13 @@ function openStatusPanel() {
   crStatusPanel.style.top = top + 'px';
   // 高度一直到输入栏上面（卡片长的话在面板里上下滑）
   var barTop = crBottomBar ? crBottomBar.getBoundingClientRect().top - roomTop : appChatRoom.clientHeight;
-  crStatusPanel.style.maxHeight = Math.max(160, barTop - top - 4) + 'px';
+  var maxH = Math.max(160, barTop - top - 4);
+  crStatusPanel.style.maxHeight = maxH + 'px';
+  crStatusPanel.style.setProperty('--sp-max', maxH + 'px');   // 每一条在这个高度里自己上下滑
   crStatusPanel.classList.add('open');
   renderStatusPanel();
   crStatusPanel.scrollTop = 0;
-  statusPanelFade();
 }
-// 下面还有内容时底部淡出一点，提示可以往下滑
-function statusPanelFade() {
-  var more = crStatusPanel.scrollHeight - crStatusPanel.scrollTop - crStatusPanel.clientHeight > 8;
-  crStatusPanel.classList.toggle('more', more);
-}
-crStatusPanel.addEventListener('scroll', statusPanelFade, { passive: true });
 function closeStatusPanel() { crStatusPanel.classList.remove('open'); }
 // 新回复到达、角色设置改动后：面板开着就刷新
 function refreshStatusPanel() {

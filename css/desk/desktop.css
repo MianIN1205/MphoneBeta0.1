@@ -116,3 +116,15 @@
   color: var(--desk-text) !important;
   text-shadow: var(--desk-text-shadow);
 }
+
+/* 外观「桌面图标」（js/desk/desk-icons.js）：图片图标铺满圆角方块；隐藏名字 */
+.dock-icon .dock-custom-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+.dock-icon.dock-icon-custom { overflow: hidden; }
+.phone.hide-dock-labels .dock-label { display: none; }
+.desk-icon-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 6px; margin-top: 6px; }
+.desk-icon-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; border: none; background: none; padding: 0; cursor: pointer; font-family: inherit; }
+.desk-icon-prev { width: 44px; height: 44px; border-radius: 12px; background: rgba(0, 0, 0, 0.04); display: flex; align-items: center; justify-content: center; font-size: 22px; overflow: hidden; }
+.desk-icon-prev .dock-svg { width: 32px; height: 32px; }
+.desk-icon-prev .dock-custom-img { width: 100%; height: 100%; object-fit: cover; }
+.desk-icon-cell span { font-size: 11px; color: #666; }
+.desk-icon-edit-prev { margin: 10px auto 14px; overflow: hidden; }

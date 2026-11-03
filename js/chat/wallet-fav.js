@@ -23,7 +23,7 @@ function walletAdd(amount, note, uid) {
 function fmtMoney(n) { return (Math.round(n * 100) / 100).toFixed(2); }
 
 // 收藏：内容快照单独保存，原消息 / 动态删除后仍在
-// { id, kind: 'text' | 'image' | 'post', text, images: [], source, author, time, savedAt, refId }
+// { id, kind: 'text' | 'image' | 'post' | 'status', text, images: [], html（状态栏卡片）, source, author, time, savedAt, refId }
 function loadFavs() { return mphoneStore.load('mphone_favorites', []) || []; }
 function saveFavs(list) { mphoneStore.save('mphone_favorites', list); }
 function addFav(item) {
@@ -150,6 +150,12 @@ function renderFavs() {
       t.className = 'fav-item-text';
       t.textContent = f.text;
       el.appendChild(t);
+    }
+    if (f.html) {   // 收藏的状态栏：和面板里一样画在 Shadow DOM 里
+      var sc = document.createElement('div');
+      sc.className = 'fav-item-status cr-status-card' + (f.lined ? ' cr-status-lined' : '');
+      sc.attachShadow({ mode: 'open' }).innerHTML = f.html;
+      el.appendChild(sc);
     }
     if (f.images && f.images.length) {
       var imgs = document.createElement('div');

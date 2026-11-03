@@ -4,7 +4,7 @@
 #appChatRoom .chat-room-title-text { pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .cr-status-panel {
   position: absolute; left: 0; right: 0; z-index: 15;
-  max-height: 62%; overflow-y: auto; box-sizing: border-box;
+  max-height: 62%; overflow: hidden; box-sizing: border-box;
   padding: 8px 0 10px;
   display: flex; flex-direction: column; gap: 6px;
   opacity: 0; transform: scale(0.98); transform-origin: top center;
@@ -12,8 +12,6 @@
 }
 .cr-status-panel::-webkit-scrollbar { display: none; }
 .cr-status-panel.open { opacity: 1; transform: scale(1); pointer-events: auto; }
-/* 下面还有内容：底部淡出，提示能往下滑 */
-.cr-status-panel.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); }
 /* 一次一条，左右滑动翻看历史 */
 .cr-sp-track {
   display: flex; align-items: flex-start;
@@ -25,7 +23,16 @@
   flex: 0 0 100%; box-sizing: border-box; padding: 0 14px;
   scroll-snap-align: start; scroll-snap-stop: always;
   display: flex; flex-direction: column; gap: 3px;
+  /* 每一条自己上下滑：高度到输入栏上面为止（--sp-max 在 openStatusPanel 里算） */
+  max-height: calc(var(--sp-max, 420px) - 40px); overflow-y: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
+.cr-sp-item::-webkit-scrollbar { display: none; }
+/* 最下面：留白，正中间 删除 / 收藏 / 关闭 */
+.cr-sp-acts { display: flex; justify-content: center; gap: 10px; padding: 14px 0 18px; flex-shrink: 0; }
+.cr-sp-act { padding: 6px 16px; border-radius: 14px; border: 1px solid rgba(220, 180, 190, 0.5); background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #8a6a76; font-size: 12.5px; font-family: inherit; cursor: pointer; }
+.cr-sp-act:active { background: #fff; }
 .cr-sp-count { align-self: center; font-size: 10.5px; color: #b9a0a8; }
 .cr-sp-time { font-size: 10.5px; color: #b9a0a8; padding-left: 4px; flex-shrink: 0; }
 .cr-status-panel .cr-status-card {
@@ -49,3 +56,6 @@
   background: rgba(255,255,255,0.75); border-radius: 12px;
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
+
+/* 收藏里的状态栏卡片 */
+.fav-item-status { margin: 6px 0 0 !important; max-width: none !important; }

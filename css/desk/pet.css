@@ -76,3 +76,4 @@
 @keyframes petGlow { 0% { opacity: 0.35; } 50% { opacity: 0.75; } }
 .pet.is-img.act-pc .pet-img, .pet.is-img.act-book .pet-img { transform: translateY(4%); }
 .pet-home-acts { justify-content: center; margin: 0 0 8px; }
+

@@ -715,6 +715,20 @@
           </div>
         </div>
 
+        <!-- 桌面图标：换图片 / emoji、改名字，显示 / 隐藏名字（js/desk/desk-icons.js） -->
+        <div class="section-label">桌面图标</div>
+        <div class="settings-card">
+          <div class="sb-row">
+            <span class="sb-row-label">显示软件名称</span>
+            <label class="toggle-wrap">
+              <input type="checkbox" id="deskLabelToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="sb-custom-label">点一个图标换样子</div>
+          <div class="desk-icon-list" id="deskIconList"></div>
+        </div>
+
         <div class="section-label">状态栏</div>
 
         <div class="settings-card">
@@ -3086,6 +3100,27 @@
         </button>
       </div>
       <div class="peek-body" id="peekBody"></div>
+    </div>
+
+    <!-- 换桌面图标（js/desk/desk-icons.js） -->
+    <div class="mine-acc-overlay" id="deskIconEditOverlay">
+      <div class="mine-acc-modal">
+        <div class="mine-acc-title" id="deskIconEditTitle">图标</div>
+        <div class="desk-icon-edit-prev dock-icon" id="deskIconEditPrev"></div>
+        <div class="auto-row">
+          <button class="mine-acc-btn mine-acc-btn-close" id="deskIconEditPick" style="flex:1;">换成图片</button>
+          <input class="field-input" type="text" id="deskIconEditText" maxlength="4" placeholder="或者填 emoji" style="flex:1;text-align:center;">
+        </div>
+        <div class="auto-row">
+          <span class="auto-row-label">名字</span>
+          <input class="field-input" type="text" id="deskIconEditName" maxlength="8" style="flex:2;">
+        </div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="deskIconEditReset">恢复默认</button>
+          <button class="mine-acc-btn mine-acc-btn-close" id="deskIconEditCancel">取消</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="deskIconEditSave">保存</button>
+        </div>
+      </div>
     </div>
 
     <!-- 美化的导出 / 导入：勾要哪几样（js/char/look-share.js） -->
