@@ -30,6 +30,9 @@ function statusRegexOf(find) {
 // 状态栏外面那层标签的名字（[状态栏]、<StatusBlock> 这种），角色写成另一种括号时换成正则要的那种
 function statusRegexTag(find) {
   var s = String(find || '').replace(/^\//, '').replace(/^\^/, '');
+  // 两种括号都认的写法：[\[<]状态栏[\]>]
+  var both = s.match(/^\[\\\[<\]([^\[\]\\]+)\[\\\]>\]/);
+  if (both) return { name: both[1], square: true };
   var m = s.match(/^\\\[([^\\\[\]]+)\\\]/) || s.match(/^<([^>\s\\]+)>/);
   return m ? { name: m[1], square: s.charAt(0) === '\\' } : null;
 }
