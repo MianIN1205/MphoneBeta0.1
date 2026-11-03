@@ -83,3 +83,8 @@ html {
     0 36px 80px rgba(0,0,0,0.35),
     0 10px 28px rgba(0,0,0,0.20);
 }
+
+/* 长按不会变成选中文字（用户要的）：小手机里只有输入框、可以编辑的地方能选中；复制都在长按菜单 / 复制按钮里 */
+.phone, .phone *, .album-pop, .album-pop * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.phone input, .phone textarea, .phone [contenteditable="true"], .phone .voice-transcript,
+.album-pop input, .album-pop textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }

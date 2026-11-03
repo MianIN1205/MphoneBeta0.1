@@ -3,7 +3,7 @@
 // 只处理本站文件，AI / 语音 / 生图等外部接口请求完全不经过这里。
 
 // 文件拆分后 css/、js/ 也要预先缓存；改动这个列表时把版本号加一
-const CACHE = 'mphone-v32';
+const CACHE = 'mphone-v33';
 const CSS = ['core/base', 'core/app-screen', 'core/controls', 'core/avatar', 'core/image-picker',
              'desk/statusbar', 'desk/desktop', 'desk/widgets', 'desk/appearance', 'desk/bookshelf',
              'settings/settings', 'settings/mcp', 'desk/desk-apps', 'desk/memory-lib', 'core/dialogs',
@@ -20,7 +20,7 @@ const JS = ['core/boot', 'core/utils', 'desk/statusbar', 'settings/api', 'core/a
             'settings/data', 'settings/api-restore', 'chat/history', 'chat/prompt', 'chat/render',
             'chat/reply', 'chat/input', 'chat/voice', 'chat/room-lists', 'chat/mine',
             'chat/feed', 'char/auto', 'char/summary', 'char/backup', 'char/import',
-            'desk/memory-open', 'settings/media-api', 'chat/wallet-fav', 'chat/msg-menu', 'chat/media-send', 'chat/file-send', 'chat/compose-plus', 'char/look-share', 'desk/desk-icons', 'chat/peek',
+            'desk/memory-open', 'settings/media-api', 'chat/wallet-fav', 'chat/msg-menu', 'chat/media-send', 'chat/file-send', 'chat/compose-plus', 'char/look-share', 'desk/desk-icons', 'chat/msg-shot', 'chat/peek',
             'core/image-viewer', 'char/assistant', 'settings/assist', 'core/llm', 'core/mcp',
             'desk/gallery', 'desk/anniv', 'desk/diary', 'desk/widgets', 'char/memory',
             'desk/memory-lib', 'chat/quick-bar', 'chat/status-panel', 'chat/stickers', 'chat/msg-ops',

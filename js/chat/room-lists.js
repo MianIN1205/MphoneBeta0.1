@@ -11,7 +11,7 @@
     // 相册：弹出「照片 / 拍照 / 文字图片」三选一（js/chat/compose-plus.js）
     crAlbumBtn.addEventListener('click', function(e) {
       e.stopPropagation();
-      if (typeof openAlbumPick === 'function') openAlbumPick();
+      if (typeof openAlbumPick === 'function') openAlbumPick(crAlbumBtn);
       else { crAlbumFileInput.value = ''; crAlbumFileInput.click(); }
     });
 
@@ -59,7 +59,7 @@ function sendPickedImage(file) {
         var funcName = this.dataset.func || '';
         if (funcName === '相册' && crAlbumFileInput) {
           closeCrPlusPanel();
-          if (typeof openAlbumPick === 'function') openAlbumPick();
+          if (typeof openAlbumPick === 'function') openAlbumPick(document.getElementById('crPlusBtn'));   // 抽屉收起了，从「+」上方冒出来
           else { crAlbumFileInput.value = ''; crAlbumFileInput.click(); }
         } else if (funcName === '文件' && typeof openChatFilePicker === 'function') {
           openChatFilePicker();

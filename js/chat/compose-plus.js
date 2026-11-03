@@ -3,14 +3,29 @@
 // =============================================
 // 相册：照片（选图）/ 拍照（安卓也能直接开相机）/ 文字图片（用一段文字描述一张照片，像动态里的文字图）
 // =============================================
-var albumPickOverlay = document.getElementById('albumPickOverlay');
-function openAlbumPick() {
+// 从按钮上方冒出来的小菜单（用户不要正中间的弹窗）：放在 body 下面用屏幕坐标摆，底边贴着按钮上沿，点外面收起
+var albumPop = document.getElementById('albumPop');
+document.body.appendChild(albumPop);
+var albumPopAnchor = null;
+function placeAlbumPop() {
+  if (!albumPopAnchor) return;
+  var r = albumPopAnchor.getBoundingClientRect(), w = albumPop.offsetWidth;
+  albumPop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+  albumPop.style.bottom = (window.innerHeight - r.top + 8) + 'px';
+}
+function openAlbumPick(anchor) {
+  if (anchor) albumPopAnchor = anchor;
   document.getElementById('albumPickMain').style.display = '';
   document.getElementById('albumPickText').style.display = 'none';
   document.getElementById('albumTextInput').value = '';
-  albumPickOverlay.classList.add('open');
+  albumPop.classList.add('open');
+  placeAlbumPop();
+  setTimeout(placeAlbumPop, 320);   // 从加号抽屉点的：抽屉收起、输入栏落下来以后再摆一次
 }
-function closeAlbumPick() { albumPickOverlay.classList.remove('open'); }
+function closeAlbumPick() { albumPop.classList.remove('open'); }
+document.addEventListener('pointerdown', function(e) {
+  if (albumPop.classList.contains('open') && !albumPop.contains(e.target) && !(albumPopAnchor && albumPopAnchor.contains(e.target))) closeAlbumPick();
+}, true);
 document.getElementById('albumPickPhoto').addEventListener('click', function() {
   closeAlbumPick();
   var f = document.getElementById('crAlbumFileInput');
@@ -29,10 +44,10 @@ document.getElementById('crCameraInput').addEventListener('change', function() {
 document.getElementById('albumPickTextBtn').addEventListener('click', function() {
   document.getElementById('albumPickMain').style.display = 'none';
   document.getElementById('albumPickText').style.display = '';
+  placeAlbumPop();
   setTimeout(function() { document.getElementById('albumTextInput').focus(); }, 50);
 });
-document.getElementById('albumPickCancel').addEventListener('click', closeAlbumPick);
-document.getElementById('albumTextBack').addEventListener('click', openAlbumPick);
+document.getElementById('albumTextBack').addEventListener('click', function() { openAlbumPick(); });
 document.getElementById('albumTextSend').addEventListener('click', function() {
   var t = document.getElementById('albumTextInput').value.trim();
   if (!t) { shakeEl(document.getElementById('albumTextInput')); return; }
@@ -44,7 +59,6 @@ document.getElementById('albumTextSend').addEventListener('click', function() {
   saveHistories();
   closeAlbumPick();
 });
-closeOnBackdrop(albumPickOverlay);
 
 // 聊天里的文字图片：方形小卡片，点开画成一张图全屏看（和动态里的文字图一样）
 function appendTextImgMsg(role, m, list, empty) {

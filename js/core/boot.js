@@ -215,6 +215,7 @@ var MPHONE_SCRIPTS = [
   "js/chat/compose-plus.js",
   "js/char/look-share.js",
   "js/desk/desk-icons.js",
+  "js/chat/msg-shot.js",
   "js/chat/peek.js",
   "js/core/image-viewer.js",
   "js/char/assistant.js",

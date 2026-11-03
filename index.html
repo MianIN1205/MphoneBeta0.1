@@ -2166,6 +2166,7 @@
         <button class="cr-sel-btn" id="crSelAll">全选</button>
         <span class="cr-sel-count" id="crSelCount">已选 0 条</span>
         <button class="cr-sel-btn" id="crSelFav">收藏</button>
+        <button class="cr-sel-btn" id="crSelShot">截图</button>
         <button class="cr-sel-btn danger" id="crSelDel">删除</button>
         <button class="cr-sel-btn" id="crSelDone">完成</button>
       </div>
@@ -3138,25 +3139,18 @@
       </div>
     </div>
 
-    <!-- 相册三选一：照片 / 拍照 / 文字图片（js/chat/compose-plus.js） -->
-    <div class="mine-acc-overlay" id="albumPickOverlay">
-      <div class="mine-acc-modal album-pick-modal">
-        <div id="albumPickMain">
-          <div class="mine-acc-title">发图片</div>
-          <div class="album-pick-list">
-            <button class="album-pick-btn" id="albumPickPhoto">照片</button>
-            <button class="album-pick-btn" id="albumPickCamera">拍照</button>
-            <button class="album-pick-btn" id="albumPickTextBtn">文字图片</button>
-          </div>
-          <div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" id="albumPickCancel">取消</button></div>
-        </div>
-        <div id="albumPickText" style="display:none;">
-          <div class="mine-acc-title">文字图片</div>
-          <textarea class="pet-edit-input album-text-input" id="albumTextInput" rows="4" placeholder="用文字描述这张照片，比如：窗外的晚霞，橘粉色的云"></textarea>
-          <div class="mine-acc-actions">
-            <button class="mine-acc-btn mine-acc-btn-close" id="albumTextBack">返回</button>
-            <button class="mine-acc-btn mine-acc-btn-add" id="albumTextSend">发送</button>
-          </div>
+    <!-- 相册三选一：从按钮上方冒出来的小菜单（js/chat/compose-plus.js 会把它挪到 body 下面，按按钮的位置摆） -->
+    <div class="album-pop" id="albumPop">
+      <div id="albumPickMain" class="album-pop-list">
+        <button class="album-pop-btn" id="albumPickPhoto">照片</button>
+        <button class="album-pop-btn" id="albumPickCamera">拍照</button>
+        <button class="album-pop-btn" id="albumPickTextBtn">文字图片</button>
+      </div>
+      <div id="albumPickText" style="display:none;">
+        <textarea class="pet-edit-input album-text-input" id="albumTextInput" rows="3" placeholder="用文字描述这张照片，比如：窗外的晚霞，橘粉色的云"></textarea>
+        <div class="album-pop-acts">
+          <button class="mine-acc-btn mine-acc-btn-close" id="albumTextBack">返回</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="albumTextSend">发送</button>
         </div>
       </div>
     </div>

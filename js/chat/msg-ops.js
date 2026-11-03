@@ -1,4 +1,4 @@
-// 眠花糖机 — 消息操作：多选（批量删除 / 收藏）、删除本轮、从这里重新生成、清空记录
+// 眠花糖机 — 消息操作：多选（批量删除 / 收藏 / 截图，截图在 js/chat/msg-shot.js）、删除本轮、从这里重新生成、清空记录
 
 // =============================================
 // 一轮回复 = 角色同一次回复拆成的几条（时间相同的连续角色消息）
@@ -54,6 +54,7 @@ function paintSelectBar() {
   document.getElementById('crSelCount').textContent = '已选 ' + n + ' 条';
   document.getElementById('crSelDel').disabled = !n;
   document.getElementById('crSelFav').disabled = !n;
+  var shot = document.getElementById('crSelShot'); if (shot) shot.disabled = !n;
   var all = msgSel && n && n === selectableEls(msgSel.list).length;
   document.getElementById('crSelAll').textContent = all ? '全不选' : '全选';
 }
