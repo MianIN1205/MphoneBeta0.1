@@ -361,6 +361,50 @@ function stopRecOverlay() {
   _recAnalyser = null;
 }
 
+// ---------- 手机 / 浏览器自带的语音识别（保底转文字，不靠模型） ----------
+// 录音的同时让浏览器边听边转成文字，存进这条语音的转写：能听音频的模型照样听录音，听不了的就用这段文字
+// · 设置 → 识图与语音 →「录音时用手机自带的识别」可以关（mediaCfg.liveStt）
+// · 有的浏览器没有这个功能，或者要连谷歌的服务器（国内网络可能用不了）：识别不到就退回原来的语音识别接口
+var VoiceSR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+var _liveSR = null, _liveText = '', _liveInterim = '', _liveDone = null;
+function liveSttOn() { return !!VoiceSR && mediaCfg.liveStt !== false; }
+function startLiveStt() {
+  _liveText = ''; _liveInterim = ''; _liveDone = null; _liveSR = null;
+  if (!liveSttOn()) return;
+  try {
+    var sr = new VoiceSR();
+    sr.lang = (navigator.language && /^zh/i.test(navigator.language)) ? navigator.language : 'zh-CN';
+    sr.continuous = true;
+    sr.interimResults = true;
+    sr.onresult = function(ev) {
+      var fin = '', mid = '';
+      for (var i = 0; i < ev.results.length; i++) {
+        var t = ev.results[i][0] ? ev.results[i][0].transcript : '';
+        if (ev.results[i].isFinal) fin += t; else mid += t;
+      }
+      _liveText = fin; _liveInterim = mid;
+    };
+    sr.onerror = function(ev) { console.warn('[Mphone] 自带语音识别没用上:', ev && ev.error); };
+    _liveDone = new Promise(function(res) { sr.onend = function() { res(); }; });
+    sr.start();
+    _liveSR = sr;
+  } catch (err) { console.warn('[Mphone] 自带语音识别没用上:', err); _liveSR = null; _liveDone = null; }
+}
+// 停下识别，等它把最后一句交出来（最多等 2 秒）；返回识别到的文字（没有就是空）
+function stopLiveStt() {
+  var sr = _liveSR, done = _liveDone;
+  _liveSR = null; _liveDone = null;
+  if (!sr) return Promise.resolve('');
+  try { sr.stop(); } catch (_) {}
+  return Promise.race([done, new Promise(function(r) { setTimeout(r, 2000); })]).then(function() {
+    return (_liveText + _liveInterim).replace(/\s+/g, ' ').trim();
+  });
+}
+function abortLiveStt() {
+  var sr = _liveSR; _liveSR = null; _liveDone = null;
+  if (sr) { try { sr.abort(); } catch (_) {} }
+}
+
 // 按住 🎙：开始录音
 voiceRecBtn.addEventListener('pointerdown', function(e) {
   e.preventDefault();
@@ -381,6 +425,7 @@ voiceRecBtn.addEventListener('pointerdown', function(e) {
         };
         _mediaRecorder.start();
         _recordStart = Date.now();
+        startLiveStt();
         startRecOverlay();
         startLiveWaveform(stream);
       })
@@ -403,7 +448,7 @@ voiceRecBtn.addEventListener('pointermove', function(e) {
   if (on && navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
 });
 voiceRecBtn.addEventListener('pointerup', function() { finishRecording(!_voiceArmed); });
-voiceRecBtn.addEventListener('pointercancel', function() { finishRecording(false); });
+voiceRecBtn.addEventListener('pointercancel', function() { finishRecording(false); abortLiveStt(); });
 voiceRecBtn.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
 // 结束录音：send = true 发出去，false 丢掉
@@ -415,6 +460,7 @@ function finishRecording(send) {
   }
   _micHolding = false;
   var duration = (Date.now() - _recordStart) / 1000;
+  var liveP = send ? stopLiveStt() : (abortLiveStt(), Promise.resolve(''));
   _mediaRecorder.onstop = function() {
     if (!appChatRoom.classList.contains('active') || document.hidden) releaseMic();
     if (!send) { showToast('已取消', 'plain'); return; }
@@ -433,11 +479,24 @@ function finishRecording(send) {
       // 「转成文字」模式：录完自动转写；「发送音频」模式下，现在用的模型听不了音频时也先转好，发的时候用转写
       var hearCfg = typeof getApiCfg === 'function' ? getApiCfg(charList[openingChatCharIdx]) : null;
       var cantHear = mediaCfg.voiceMode === 'audio' && hearCfg && hearCfg.model && typeof llmCaps === 'function' && !llmCaps(hearCfg).audio;
-      if ((mediaCfg.voiceMode === 'text' || cantHear) && sttReady()) {
-        transcribeVoiceMsg(m, row && row._voiceTranscriptEl).catch(function(err) {
-          showToast('✗ 语音转写失败：' + err.message, 'error');
-        });
-      }
+      // 手机自带的识别先转出来了：直接当转写（能听的模型照样只听录音，见 js/chat/prompt.js）
+      m._transcribing = true;
+      liveP.then(function(text) {
+        delete m._transcribing;
+        if (text && !m.transcript) {
+          m.transcript = text;
+          var el = row && row._voiceTranscriptEl;
+          if (el) { el.textContent = text; el.closest('.voice-transcript-wrap').classList.add('open'); }
+          saveHistories();
+          return;
+        }
+        if (m.transcript) return;
+        if ((mediaCfg.voiceMode === 'text' || cantHear) && sttReady()) {
+          transcribeVoiceMsg(m, row && row._voiceTranscriptEl).catch(function(err) {
+            showToast('✗ 语音转写失败：' + err.message + '（点开语音可以自己输入）', 'error');
+          });
+        }
+      });
     };
     reader.readAsDataURL(blob);
   };

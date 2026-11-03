@@ -289,7 +289,11 @@
               <button class="pf-radio-btn" data-mode="audio">发送音频</button>
             </div>
           </div>
-          <div class="auto-hint">只有注意力范围内的图片和语音会以原样发送，更早的用文字代替。「转成文字」先用语音API页的语音识别，接口不支持（如 Gemini）时改让聊天模型听写；没转出文字的语音会直接把录音发给模型。「发送音频」：能听音频的模型（如 GPT-4o 音频版、Gemini）直接听录音，不看转写；听不了的模型自动改用转写文字（录完会先转好）</div>
+          <div class="auto-row">
+            <span class="auto-row-label">录音时用手机自带的识别（保底转文字）</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="mediaLiveStt" checked><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-hint">只有注意力范围内的图片和语音会以原样发送，更早的用文字代替。「转成文字」先用语音API页的语音识别，接口不支持（如 Gemini）时改让聊天模型听写；没转出文字的语音会直接把录音发给模型。「发送音频」：能听音频的模型（如 GPT-4o 音频版、Gemini）直接听录音，不看转写；听不了的模型自动改用转写文字（录完会先转好）。开着「手机自带的识别」时，录音的同时就转出文字，不靠模型；这个浏览器没有、或者网络连不上时，再用语音识别接口</div>
           <div class="api-test-row">
             <button class="action-btn btn-apply" id="mediaTestImgBtn">测试识图</button>
             <button class="action-btn btn-apply" id="mediaTestAudioBtn">测试语音</button>

@@ -3,12 +3,13 @@
 // =============================================
 // 识图与语音：真实图片 / 音频发给 AI，语音识别转写
 // =============================================
-// mediaCfg = { vision: 是否发送真实图片, voiceMode: 'text' 转成文字 | 'audio' 发送音频 }
-var mediaCfg = Object.assign({ vision: true, voiceMode: 'text' }, mphoneStore.load('mphone_media_cfg', {}));
+// mediaCfg = { vision: 是否发送真实图片, voiceMode: 'text' 转成文字 | 'audio' 发送音频, liveStt: 录音时用手机自带的识别（见 js/chat/voice.js） }
+var mediaCfg = Object.assign({ vision: true, voiceMode: 'text', liveStt: true }, mphoneStore.load('mphone_media_cfg', {}));
 var sttCfg   = Object.assign({ url: '', key: '', model: '' }, mphoneStore.load('mphone_stt_cfg', {}));
 
 function fillMediaForm() {
   document.getElementById('mediaVision').checked = mediaCfg.vision;
+  document.getElementById('mediaLiveStt').checked = mediaCfg.liveStt !== false;
   document.querySelectorAll('#mediaVoiceRow .pf-radio-btn').forEach(function(b) {
     b.classList.toggle('selected', b.dataset.mode === mediaCfg.voiceMode);
   });
@@ -19,6 +20,11 @@ function fillMediaForm() {
 document.getElementById('mediaVision').addEventListener('change', function() {
   mediaCfg.vision = this.checked;
   mphoneStore.save('mphone_media_cfg', mediaCfg);
+});
+document.getElementById('mediaLiveStt').addEventListener('change', function() {
+  mediaCfg.liveStt = this.checked;
+  mphoneStore.save('mphone_media_cfg', mediaCfg);
+  if (this.checked && !(window.SpeechRecognition || window.webkitSpeechRecognition)) showToast('这个浏览器好像没有自带的语音识别，会继续用语音识别接口', 'plain');
 });
 document.querySelectorAll('#mediaVoiceRow .pf-radio-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {

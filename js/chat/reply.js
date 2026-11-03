@@ -199,6 +199,7 @@ function sendMsg(userText, requestOnly, onDone) {
   // 只写进记录并记为未读；切走又切回来时打字气泡已被重绘掉，就画到当前列表里
   function deliver(text) {
     typing.row.remove();
+    clearPreview();
     var showing = appChatRoom.classList.contains('active') && charList[openingChatCharIdx] === replyChar &&
                   getActiveHistory(openingChatCharIdx) === hist;
     var list = showing ? getActiveMsgListEl() : null;
@@ -216,6 +217,39 @@ function sendMsg(userText, requestOnly, onDone) {
     return added;
   }
 
+  // 聊天窗口边生成边出气泡：写完一行（或 |||）就先冒出一个气泡，正在写的那句只显示「正在输入」的小点
+  // 这些气泡只是预览，回复完整收到后换成正式的消息（拆法和 commitAssistantReply 一样，看起来不会跳）
+  var rcCfg = Object.assign({}, DEFAULT_CHAT_CFG, (replyChar && replyChar.chatCfg) || {});
+  var bubbleStream = isChatView && rcCfg.replyMax > 1;
+  var previewRows = [], previewParts = [];
+  function clearPreview() {
+    previewRows.forEach(function(r) { (r._actionNotes || []).forEach(function(x) { x.remove(); }); r.remove(); });
+    previewRows = []; previewParts = [];
+  }
+  function previewStream(shown) {
+    var cut = Math.max(shown.lastIndexOf('\n'), shown.lastIndexOf('|||') >= 0 ? shown.lastIndexOf('|||') + 2 : -1);
+    if (cut < 0) return;
+    var done = shown.slice(0, cut + 1);
+    // 没写完的标记、表情包、撤回先不显示，等正式消息
+    done = done.replace(/<撤回>[\s\S]*?(<\/撤回>|$)/g, '').replace(/\[表情包[:：][^\]\n]*\]?/g, '').replace(/<[^>\n]*$/, '');
+    if (!rcCfg.actionOn) done = done.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
+    var parts = chatSplitLines(done.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean));
+    // 一行刚写完、后面的「〔译〕」或者跟着的动作还没到时，最后一条可能还会变：先不出
+    if (parts.length && /^(\*[^*]+\*\s*)+$/.test(String(parts[parts.length - 1]))) parts.pop();
+    var same = previewParts.every(function(p, i) { return parts[i] === p; });
+    if (!same) clearPreview();
+    var list = typing.row.parentNode;
+    if (!list) return;
+    for (var i = previewParts.length; i < parts.length; i++) {
+      previewParts.push(parts[i]);
+      if (typeof parts[i] !== 'string' || !parts[i]) continue;
+      var r = appendMsg('ai', parts[i], false, list);
+      r.row.classList.add('cr-stream-preview');
+      previewRows.push(r.row);
+      list.appendChild(typing.row);   // 「正在输入」一直在最下面
+    }
+  }
+
   // 聊天视图附加回复格式要求（剧情视图不拆条、不加状态栏）；请求按接口类型自动适配（见 js/core/llm.js）
   var started = false;
   function finishStream() {
@@ -228,6 +262,7 @@ function sendMsg(userText, requestOnly, onDone) {
       if (onDone) onDone(added);
     } else {
       typing.row.remove();
+      clearPreview();
       showReplyError(new Error('未收到回复内容'));
       if (onDone) onDone([]);
     }
@@ -245,13 +280,22 @@ function sendMsg(userText, requestOnly, onDone) {
     toolLabel: function(name) { var hit = mcpToolMap[name]; return hit ? (hit.tool.title || hit.tool.name) : name; },
     onStatus: function(text) { typing.bubble.textContent = text; if (activeList) activeList.scrollTop = 999999; },
     onText: function(full) {
-      if (!started) { typing.bubble.innerHTML = ''; started = true; }
       aiText = full;
       // 操作块不直接显示原始代码，写完后会变成确认卡片
-      typing.bubble.textContent = aiText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
+      var shown = aiText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
         .replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
         .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
         .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, '').trim();
+      if (bubbleStream && shown.indexOf('⚙️') < 0) {
+        // 聊天窗口：写完的句子一个一个冒出来，打字气泡保持小点
+        if (started) { typing.bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>'; started = false; }
+        previewStream(aiText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
+          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+          .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, ''));
+      } else {
+        if (!started) { typing.bubble.innerHTML = ''; started = true; }
+        typing.bubble.textContent = shown;
+      }
       if (activeList) activeList.scrollTop = 999999;
     }
   });
@@ -263,7 +307,7 @@ function sendMsg(userText, requestOnly, onDone) {
   .catch(function(err) {
     endGen();
     // 已收到的部分内容保留下来；手动停止时不显示错误
-    var added = aiText ? deliver(aiText) : (typing.row.remove(), []);
+    var added = aiText ? deliver(aiText) : (typing.row.remove(), clearPreview(), []);
     if (err.name !== 'AbortError') showReplyError(err);
     if (onDone) onDone(added);
   });
