@@ -3,7 +3,7 @@
 // =============================================
 // 相册：照片（选图）/ 拍照（安卓也能直接开相机）/ 文字图片（用一段文字描述一张照片，像动态里的文字图）
 // =============================================
-// 从按钮上方冒出来的小菜单（用户不要正中间的弹窗）：放在 body 下面用屏幕坐标摆，底边贴着按钮上沿，点外面收起
+// 从按钮上方冒出来的小菜单（用户不要正中间的弹窗）：放在 body 下面用屏幕坐标摆，底边贴着按钮上沿，点外面收起；半透明毛玻璃
 var albumPop = document.getElementById('albumPop');
 document.body.appendChild(albumPop);
 var albumPopAnchor = null;
@@ -20,20 +20,21 @@ function openAlbumPick(anchor) {
   document.getElementById('albumTextInput').value = '';
   albumPop.classList.add('open');
   placeAlbumPop();
-  setTimeout(placeAlbumPop, 320);   // 从加号抽屉点的：抽屉收起、输入栏落下来以后再摆一次
 }
 function closeAlbumPick() { albumPop.classList.remove('open'); }
+// 选好了（选照片 / 拍照 / 发文字图片）：小菜单和加号抽屉一起收
+function doneAlbumPick() { closeAlbumPick(); if (typeof closeCrPlusPanel === 'function') closeCrPlusPanel(); }
 document.addEventListener('pointerdown', function(e) {
   if (albumPop.classList.contains('open') && !albumPop.contains(e.target) && !(albumPopAnchor && albumPopAnchor.contains(e.target))) closeAlbumPick();
 }, true);
 document.getElementById('albumPickPhoto').addEventListener('click', function() {
-  closeAlbumPick();
+  doneAlbumPick();
   var f = document.getElementById('crAlbumFileInput');
   f.value = '';
   f.click();
 });
 document.getElementById('albumPickCamera').addEventListener('click', function() {
-  closeAlbumPick();
+  doneAlbumPick();
   var f = document.getElementById('crCameraInput');
   f.value = '';
   f.click();
@@ -57,7 +58,7 @@ document.getElementById('albumTextSend').addEventListener('click', function() {
   getActiveHistory(openingChatCharIdx).push(m);
   renderHistMsg(m);
   saveHistories();
-  closeAlbumPick();
+  doneAlbumPick();
 });
 
 // 聊天里的文字图片：方形小卡片，点开画成一张图全屏看（和动态里的文字图一样）

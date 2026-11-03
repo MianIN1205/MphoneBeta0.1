@@ -58,9 +58,9 @@ function sendPickedImage(file) {
         e.stopPropagation();
         var funcName = this.dataset.func || '';
         if (funcName === '相册' && crAlbumFileInput) {
-          closeCrPlusPanel();
-          if (typeof openAlbumPick === 'function') openAlbumPick(document.getElementById('crPlusBtn'));   // 抽屉收起了，从「+」上方冒出来
-          else { crAlbumFileInput.value = ''; crAlbumFileInput.click(); }
+          // 抽屉先不收，小菜单从「相册」这个图标上方冒出来（用户要的）；选好了再收
+          if (typeof openAlbumPick === 'function') openAlbumPick(this.querySelector('.cr-plus-box') || this);
+          else { closeCrPlusPanel(); crAlbumFileInput.value = ''; crAlbumFileInput.click(); }
         } else if (funcName === '文件' && typeof openChatFilePicker === 'function') {
           openChatFilePicker();
         } else if (funcName === '查手机' && typeof openPeek === 'function') {
