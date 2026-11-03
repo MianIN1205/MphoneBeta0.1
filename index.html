@@ -68,6 +68,7 @@
   <link rel="stylesheet" href="css/prompt/prompt.css">
   <link rel="stylesheet" href="css/desk/pet.css">
   <link rel="stylesheet" href="css/chat/file-send.css">
+  <link rel="stylesheet" href="css/chat/peek.css">
 </head>
 <body class="phone-fullscreen">
   <!-- 载入页：脚本全部加载完后淡出（见 js/core/boot.js） -->
@@ -3001,6 +3002,22 @@
 
     <!-- Prompt 条目删除确认弹窗 -->
     <!-- 报错分析：聊天里「回复失败」那行小字点开（见 js/core/errors.js） -->
+    <!-- 查手机：角色手机的主屏、信息 / 备忘录 / 浏览器 / 购物（js/chat/peek.js） -->
+    <div class="app-screen" id="appPeek">
+      <div class="settings-nav">
+        <button class="back-btn" id="peekBack" aria-label="返回">
+          <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <span class="settings-title" id="peekTitle">TA 的手机</span>
+        <button class="peek-refresh" id="peekRefresh" aria-label="换新的">
+          <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        </button>
+      </div>
+      <div class="peek-body" id="peekBody"></div>
+    </div>
+
     <!-- 看发过的文件全文（js/chat/file-send.js） -->
     <div class="mine-acc-overlay" id="fileViewOverlay">
       <div class="mine-acc-modal file-view-modal">

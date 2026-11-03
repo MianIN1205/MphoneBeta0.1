@@ -12,17 +12,17 @@
   - 大改之前用户可能要求先备份：把当前线上的 main 推成一条新分支（如 `backup-2026-11-03`）。存档：`backup-0.2`、`archive-2026-11-01`（拆分重构前）、私有仓库 MianIN1205/mphonebeta0.2。
 - 用户的私人资料（人设、世界书、聊天记录、备份文件）不要写进代码或提交到仓库（仓库是公开的）；要给她的文件放在 scratchpad 用 SendUserFile 发。破限类内容不写、不帮忙搬运（她自己的东西让她自己在小手机里导入）。
 - 不要擅自改用户已有的设计：空状态提示、占位图标、“开发中”这类文字都是故意留的；改界面文字、交互前先问。
-- 已定的交互：输入框里的 ↵ 是换行，键盘回车只发送用户消息不叫 AI，❄️ 才请求回复（生成中变 ⏹）；表情键和加号键弹出同样高度的底部抽屉；加号抽屉一页 8 个：相册、文件、语音通话、位置、红包、礼物、转账、查手机（拍摄、收藏是用户让去掉的，之后再考虑放不放回来；查手机的界面还在和用户商量）；MianIN 是内置默认角色兼系统助手。
+- 已定的交互：输入框里的 ↵ 是换行，键盘回车只发送用户消息不叫 AI，❄️ 才请求回复（生成中变 ⏹）；表情键和加号键弹出同样高度的底部抽屉；加号抽屉一页 8 个：相册、文件、语音通话、位置、红包、礼物、转账、查手机（拍摄、收藏是用户让去掉的，之后再考虑放不放回来）；MianIN 是内置默认角色兼系统助手。
 - 界面动效要克制：淡入 + 轻微缩放，不要回弹、不要花哨。**桌宠例外**（用户同意的）：可以蹲下、弹起、落地压扁、甩来甩去，要灵活可爱。
 - 本地备份放在 `F:\Ai资料\mhtj备份claude\`，文件夹名 `MMDDHHMMhtm<简短描述>`，例如 `10251216htm助手社交圈与通知`。
 
 ## 文件结构
 - `index.html`：只有界面结构（各个 app-screen、弹窗）。
-- `css/`：36 个样式文件，和 JS 一样分在 `core/ desk/ settings/ chat/ char/ prompt/` 里，每个文件第一行写了管什么。**`index.html` 里 `<link>` 的先后有影响**（同一个元素两条规则打架时后面的赢），2026-11-01 拆分时专门保持了原来的先后：比如 `core/dialogs.css`（通用弹窗）排在 `desk/desk-apps.css`、`desk/memory-lib.css` 后面，`char/settings.css` 排在 `chat/mine.css` 前面，`chat/contacts.css` 排在 `chat/list.css` 前面。新加规则时如果和别的文件里的规则作用在同一个元素上，要注意先后。
+- `css/`：37 个样式文件，和 JS 一样分在 `core/ desk/ settings/ chat/ char/ prompt/` 里，每个文件第一行写了管什么。**`index.html` 里 `<link>` 的先后有影响**（同一个元素两条规则打架时后面的赢），2026-11-01 拆分时专门保持了原来的先后：比如 `core/dialogs.css`（通用弹窗）排在 `desk/desk-apps.css`、`desk/memory-lib.css` 后面，`char/settings.css` 排在 `chat/mine.css` 前面，`chat/contacts.css` 排在 `chat/list.css` 前面。新加规则时如果和别的文件里的规则作用在同一个元素上，要注意先后。
 - `js/`：普通脚本（不是模块），按功能分在 6 个文件夹里：`core/` 公共、`desk/` 桌面、`settings/` 设置、`chat/` 聊天、`char/` 角色、`prompt/` 提示词。所有顶层名字都是全局共享的。
   - **加载顺序在 `js/core/boot.js` 的 `MPHONE_SCRIPTS` 里，和文件夹无关，顺序很重要**：后面的脚本会用到前面定义的东西，加载时（不在函数里）调用后面文件的函数会报错；要么用 `typeof` 判断，要么用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。2026-11-01 按功能拆分时保持了原来的加载顺序，所以同一个功能有时会分在两三个文件里（比如角色设置：`char/settings.js`、`char/settings-save.js`、`char/look.js`）。
   - 每个文件第一行写了它管什么，找东西先看第一行。
-  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v29`）。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v30`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。manifest 的 `orientation` 是 `portrait`：写成 `any` 时安卓桌面版会无视系统的方向锁定，躺着就转屏。
   - logo 是用户提供的图（粉色月牙 + 睡觉的小熊 + 蓝色小花），只有两张：`icons/icon.png` 是 App 图标（iPhone、安卓、通知、网页图标都用这一张，用户要求不分开做）：和开屏一样的粉蓝渐变底，logo 带白色边缘光和阴影，占 68%（安卓裁成圆也不会切到），manifest 里是 `any maskable`；`icons/logo.png` 是透明底加白色描边的 logo，小手机页面里（开屏）用。
   - 载入页在 `index.html` 开头（样式内联，小字随机；logo 沿轮廓发白光（用户要的是边缘发光，不是圆形光晕），不要做呼吸、缩放这类循环动画），`js/core/boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
@@ -72,6 +72,7 @@
 | render | 消息显示：气泡、动作小字、引用、小时间（`refreshMsgStamps`）、版本切换、拍一拍、撤回提示 |
 | reply | 收到回复：`takeStatus` 取出状态（角色忘写 `</status>` 也认）、`commitAssistantReply` 拆成多条（|||；聊天窗口里 `chatSplitLines` 把每一行拆成一个气泡（用户看了效果后要日常微信那样一句一条、不要大段气泡；只有 *动作* 的行跟着下一句，〔译〕跟着上一句，句尾单个「。」去掉；每次回复条数设成 1 的不拆；再用 `chatSplitLong` 把超过 `CHAT_BUBBLE_MAX`=16 字的按句末标点、再按逗号拆成短条，引号括号里不断，有链接 / 表情包 / 翻译的不动——用户明确不想在线上聊天看到不分段的长句），提示词要求一条 5～20 字、不换行、不加句号；每次回复条数默认 2~5（`mphone_reply_count_v2` 把还是旧默认 1~3 的角色改过来一次）；开了「线上动作描写」时，动作 / 神态 / 心理 / 环境描写都放进 *星号* 小灰字，这是聊天窗口里写描写的地方；`<撤回>`、表情包、`<日程>`）、`sendMsg`、重新生成。聊天窗口边生成边出气泡（`previewStream`：写完一行或 ||| 就先冒出一个预览气泡 `.cr-stream-preview`，正在写的那句只显示「正在输入」小点，收完换成正式消息；用户要一个气泡一个气泡出现，不要整段流出来再拆）；剧情窗口仍是整段流式 |
 | file-send | 加号抽屉「文件」：发文件给角色读（txt / md / json / csv / 代码等文字文件按 UTF-8、不对再按 GBK；Word .docx 用 `readDocxText`；PDF 用到时才加载仓库里的 `lib/pdfjs`（pdf.js 3.11.174，不从外网拉），扫描版读不出字；.doc / .xlsx 等提示读不了）。存成 `m.file = { name, size, ext, text, cut }`（最多 30 万字），聊天里是文件卡片（颜色跟气泡），点开看全文、可复制。发给 AI：记录里那条只写「[发来一个文件：《名字》]」，全文另外放在聊天记录前面一段「【用户发来的文件】」（`filesContextFor`，不算进上下文上限，单独预算 `FILE_AI_BUDGET`=6 万 token，新发的优先，放不下的带前面一部分；不替换 {{user}}）。主要是给 MianIN 读资料用 |
+| peek | 查手机（加号抽屉「查手机」，`#appPeek`）：TA 手机的主屏 + 4 个 App，用户定的：信息（第一个置顶的是和用户的真实聊天，最近 40 条，TA 的话在右边；其余是 AI 写的 TA 和别人的聊天，会带上动态里的 NPC 和之前的联系人名字）、备忘录、浏览器（搜索记录 / 收藏，收藏点开看内容）、购物（购物车 / 钱包 / 账单）。每个 App 第一次打开自动写（`charContextMsgs` + `activityAsk`，只要 JSON，`peekParse` 容错），存在 `mphone_peek` = { 角色id: { chats/notes/browser/shop: { at, data } } }，之后点右上 ↻ 才换新的（用户要求）。TA 不知道被翻了手机（用户没要求） |
 | input / voice / media-send | 输入栏（回车只发自己的、↵ 换行、引用、❄️）；语音：点麦克风弹出录音小条 `#voicePop`（✕ 取消、🎙 按住录音、时长、波纹、提示），按住 200ms 开始录，松手发送，滑到 ✕ 松手取消（用户不要再长按麦克风本身）；转写；识图与语音发给 AI。「发送音频」模式：能听的模型只收录音（base64 WAV），文字部分不带转写；听不了的（`llmCaps` 判断或被拒后记住）在 `llmPrepare` 里换成转写文字，录完时若当前模型听不了会先转写（用户要求：能听就别靠转文字）。保底转文字：录音的同时用浏览器自带的 `SpeechRecognition`（`startLiveStt` / `stopLiveStt`）转出文字存成 `m.transcript`，不靠模型（用户用 Claude 发语音时不想再被说「听不到」）；设置「录音时用手机自带的识别」（`mediaCfg.liveStt`）可关；没识别到再走语音识别接口。安卓 Chrome 的识别走谷歌服务器，国内网络可能用不了 |
 | msg-menu / msg-ops | 长按菜单；多选（批量删除 / 合并收藏）、删除本轮、从这里重新生成、清空记录。撤回：`m.recalledBy` 为 `user`（你撤回的，自己或角色的消息）或 `char`（角色写 `<撤回>…</撤回>`，先显示两秒再变撤回提示，角色设置可开「偷看」） |
 | feed / mine / wallet-fav | 动态（朋友圈）和社交圈（角色发动态后 `charNpcComments`：TA 生活里的人 1～4 个、每人 1～3 句来评论，作者 `{ type: "npc", ownerId }` 只有本人认识，名字记在 `char.feedNpcs`；角色看心情回全部 / 一部分 / 不回；用户的动态只有角色来评论。没有 ❄️ 按钮了：用户发动态 / 评论后 `feedScheduleReply` 记 `post._due`（几十秒到几分钟后），`feedTick` 到点 `requestFeedInteraction(post, { auto: true })`，回了弹 plain 小通知）、「我的」账号、钱包和收藏 |

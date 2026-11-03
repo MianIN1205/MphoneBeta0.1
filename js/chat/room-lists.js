@@ -57,6 +57,9 @@
           closeCrPlusPanel();
         } else if (funcName === '文件' && typeof openChatFilePicker === 'function') {
           openChatFilePicker();
+        } else if (funcName === '查手机' && typeof openPeek === 'function') {
+          closeCrPlusPanel();
+          openPeek(openingChatCharIdx);
         } else {
           showToast('「' + funcName + '」功能开发中', 'success');
         }
