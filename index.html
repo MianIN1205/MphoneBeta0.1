@@ -490,6 +490,20 @@
           <textarea class="field-input" id="imgNegative" rows="2"></textarea>
         </div>
 
+        <!-- 在哪里用生图：每个地方选文字图片还是生图（js/chat/img-use.js） -->
+        <div class="section-label">在哪里用生图</div>
+        <div class="settings-card">
+          <div class="auto-row"><span class="auto-row-label">聊天</span>
+            <div class="pf-radio-row img-use-row" data-scope="chat"><button class="pf-radio-btn" data-v="text">文字图片</button><button class="pf-radio-btn" data-v="gen">生图</button></div></div>
+          <div class="auto-row"><span class="auto-row-label">动态</span>
+            <div class="pf-radio-row img-use-row" data-scope="feed"><button class="pf-radio-btn" data-v="text">文字图片</button><button class="pf-radio-btn" data-v="gen">生图</button></div></div>
+          <div class="auto-row"><span class="auto-row-label">相册</span>
+            <div class="pf-radio-row img-use-row" data-scope="album"><button class="pf-radio-btn" data-v="text">文字图片</button><button class="pf-radio-btn" data-v="gen">生图</button></div></div>
+          <div class="auto-row"><span class="auto-row-label">剧情配图</span>
+            <div class="pf-radio-row img-use-row" data-scope="drama"><button class="pf-radio-btn" data-v="off">不配图</button><button class="pf-radio-btn" data-v="gen">生图</button></div></div>
+          <div class="auto-hint">文字图片 = 用一段文字描述画面，不花钱；生图 = 用上面的生图 API 真的画出来（每张都要调用一次）。聊天：角色偶尔给你发的照片；动态：角色发动态配的图；相册：查手机里 TA 的相册；剧情配图：每次剧情回复后按这一幕画一张。生图 API 没填好时，都先用文字图片</div>
+        </div>
+
         <div class="section-label">测试生成</div>
         <div class="settings-card">
           <input class="field-input" id="imgTestPrompt" type="text" value="一只在窗台晒太阳的小猫">

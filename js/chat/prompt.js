@@ -53,6 +53,8 @@ function chatFormatRules(char) {
     rules.push('你也可以像微信一样撤回自己刚发的消息：偶尔说漏嘴、发错或者害羞的时候，把那一条单独写成 <撤回>这条消息的内容</撤回>，' +
                '它会先发出去，过两秒变成「撤回了一条消息」，对方不一定看得到。很少用，不要每次都撤回。');
   }
+  // 角色可以发照片（设置里聊天选文字图片或生图都行：文字图片就显示成文字小卡片）
+  rules.push('想让对方看看你眼前的画面、你在做的事时（偶尔，不要每次都发），可以单独一行写 <照片>用一两句话描述照片里的画面（拍的是什么、在哪、光线）</照片>，对方会看到这张照片。');
   if (c.patOn) {
     rules.push('你也可以像微信一样拍一拍用户：想拍的时候在全部消息最后另起一行写 <拍一拍/>（偶尔用，不要每次都拍）。用户拍你时，记录里会出现「（用户拍了拍你…）」。');
   }
@@ -97,7 +99,9 @@ function fillMacros(text, char) {
 
 // 剧情回复的格式要求：最后写一句隐藏的前情。聊天窗口靠它知道剧情空间发生了什么，剧情太长时也用它代替省略的原文
 function dramaFormatRules(char) {
-  return [{ role: 'system', content: '【回复格式】在回复的最后另起一行写 <前情>用一句话概括这一轮发生了什么（30 字以内，第三人称，写清楚谁做了什么）</前情>。这一行不会显示出来，只用来记住剧情。' }];
+  var illus = (typeof imgUse === 'function' && imgUse('drama') === 'gen')
+    ? '再另起一行写 <配图>用一两句话描述这一幕的画面（人物外貌和动作、场景、光线、氛围），会照着它画一张配图</配图>，这一行也不会显示出来。' : '';
+  return [{ role: 'system', content: '【回复格式】在回复的最后另起一行写 <前情>用一句话概括这一轮发生了什么（30 字以内，第三人称，写清楚谁做了什么）</前情>。这一行不会显示出来，只用来记住剧情。' + illus }];
 }
 // 一个回合的前情（剧情回复里藏着的那句话）
 function roundRecap(r) {
@@ -386,7 +390,7 @@ function msgTextForAI(m) {
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   if (m.cal && typeof calTextForAI === 'function') return calTextForAI(m.cal);
   var c = (m.file && typeof fileTextForAI === 'function') ? fileTextForAI(m)
-        : m.textImg ? '[发来一张照片（用文字描述的画面）：' + m.textImg + ']'
+        : m.textImg ? (m.illus ? '（这一幕的配图）' : m.role === 'assistant' ? '[你发了一张照片：' + m.textImg + ']' : '[发来一张照片（用文字描述的画面）：' + m.textImg + ']')
         : m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
   if (m.quote) c = '「引用 ' + m.quote.author + '：' + m.quote.text + '」\n' + c;
   return c;

@@ -206,7 +206,17 @@ function fillImgForm() {
   $('imgStyle').value = c.style;
   $('imgNegative').value = c.negative;
   $('imgNegative').placeholder = p === 'novelai' ? '例：lowres, bad hands' : '例：低画质，多余手指（部分接口支持）';
+  // 在哪里用生图
+  var use = Object.assign({ chat: 'text', feed: 'text', album: 'text', drama: 'off' }, imgCfg.use || {});
+  document.querySelectorAll('.img-use-row').forEach(function(row) {
+    row.querySelectorAll('.pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.v === use[row.dataset.scope]); });
+  });
 }
+document.querySelectorAll('.img-use-row .pf-radio-btn').forEach(function(b) {
+  b.addEventListener('click', function() {
+    b.parentNode.querySelectorAll('.pf-radio-btn').forEach(function(x) { x.classList.toggle('selected', x === b); });
+  });
+});
 
 // 读当前表单到对应服务商下（不影响其他服务商）
 function readImgForm() {
@@ -230,6 +240,11 @@ function readImgForm() {
   }
   var out = Object.assign({}, imgCfg, { provider: p });
   out[p] = c;
+  out.use = {};
+  document.querySelectorAll('.img-use-row').forEach(function(row) {
+    var s = row.querySelector('.pf-radio-btn.selected');
+    out.use[row.dataset.scope] = s ? s.dataset.v : (row.dataset.scope === 'drama' ? 'off' : 'text');
+  });
   return out;
 }
 

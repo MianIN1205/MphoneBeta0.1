@@ -8,7 +8,8 @@ var PEEK_APPS = [
   { id: 'chats', name: '信息', icon: '💬' },
   { id: 'notes', name: '备忘录', icon: '📝' },
   { id: 'browser', name: '浏览器', icon: '🧭' },
-  { id: 'shop', name: '购物', icon: '🛍️' }
+  { id: 'shop', name: '购物', icon: '🛍️' },
+  { id: 'photos', name: '相册', icon: '🖼️' }
 ];
 var peekState = { idx: -1, app: '', tab: '', detail: null, loading: {}, seen: [], t0: 0, entry: '', wrong: 0 };
 var appPeek = document.getElementById('appPeek');
@@ -45,6 +46,10 @@ function peekAsk(app, char, old) {
   } else if (app === 'browser') {
     spec = '现在写「浏览器」：搜索记录 8～15 条（最近的在前，真实的搜索习惯：有正经的，也有暴露小心思的），收藏 4～8 个（文章、帖子、菜谱、攻略、网页等，content 写这个页面的主要内容 80～250 字）。' +
       '格式：{"searches":[{"q":"搜索词","time":"今天 01:20"}],"favs":[{"title":"网页标题","site":"网站名","time":"10-30","content":"页面内容"}]}';
+  } else if (app === 'photos') {
+    spec = '现在写「相册」：8～12 张照片（最近拍的在前），像真的手机相册：自拍、日常随手拍、吃的、风景、和朋友、截图、偷偷拍的用户（如果你们的关系会这样）等，按你的生活来。' +
+      'desc 用一两句话描述照片里的画面（拍的是什么、在哪、光线、氛围），date 拍摄时间，album 所属相册（比如 自拍、日常、旅行、截图、和 TA），note 你给这张照片的小备注（可以空着）。' +
+      '格式：{"photos":[{"desc":"","date":"11-02 18:40","album":"日常","note":""}]}';
   } else {
     spec = '现在写「购物」App：购物车 3～8 件（name 商品名，spec 规格，price 价格数字，note 你加购时的小心思，可以空着），钱包（balance 余额数字，cards 是 2～4 张银行卡或账户：name、amount 数字），' +
       '账单 8～15 条（最近的在前：title、time、amount 数字，支出写负数、收入写正数，note 可以空着）。金额要符合你的身份和收入。' +
@@ -102,7 +107,7 @@ function openPeek(idx) {
 function peekGo(app) {
   peekState.app = app; peekState.detail = null;
   peekState.tab = app === 'browser' ? 'searches' : app === 'shop' ? 'cart' : '';
-  peekSee({ chats: '「信息」里的聊天列表', notes: '备忘录', browser: '浏览器的搜索记录', shop: '购物车' }[app]);
+  peekSee({ chats: '「信息」里的聊天列表', notes: '备忘录', browser: '浏览器的搜索记录', shop: '购物车', photos: '相册' }[app]);
   var box = peekBox(peekChar());
   if (app && !box[app] && !box[app + 'Err']) peekLoad(app);   // 第一次打开自动写
   else renderPeek();
@@ -330,6 +335,7 @@ function renderPeek() {
   if (app === 'chats') renderPeekChats(body, char, d);
   else if (app === 'notes') renderPeekNotes(body, d);
   else if (app === 'browser') renderPeekBrowser(body, d);
+  else if (app === 'photos') renderPeekPhotos(body, char, d);
   else renderPeekShop(body, d);
 }
 function peekRow(html, onClick) {
@@ -448,6 +454,75 @@ function renderPeekBrowser(body, d) {
       });
     }));
   });
+}
+// 相册：默认是文字图片（一段文字描述画面）；设置里相册选了生图，就一张张画出来存着（下次打开直接看）
+function renderPeekPhotos(body, char, d) {
+  var ps = d.photos || [];
+  if (!ps.length) return peekEmpty(body, '相册是空的');
+  var gen = typeof imgUse === 'function' && imgUse('album') === 'gen';
+  var waiting = ps.filter(function(p) { return !p.img; }).length;
+  if (gen && waiting) {
+    var tip = document.createElement('div');
+    tip.className = 'peek-at';
+    tip.textContent = '正在把照片画出来，还剩 ' + waiting + ' 张…';
+    body.appendChild(tip);
+    peekGenPhotos(char, ps);
+  }
+  var grid = document.createElement('div');
+  grid.className = 'peek-photos';
+  ps.forEach(function(p) {
+    var cell = document.createElement('div');
+    cell.className = 'peek-photo';
+    if (p.img) { var im = document.createElement('img'); im.src = p.img; im.alt = ''; cell.appendChild(im); }
+    else cell.appendChild(peekTextImg(p.desc));
+    var meta = document.createElement('div');
+    meta.className = 'peek-photo-date';
+    meta.textContent = p.date || '';
+    cell.appendChild(meta);
+    var open = function() {
+      peekSee('相册里的「' + String(p.desc || '照片').slice(0, 12) + '」');
+      peekDetail(p.album || '照片', function() {
+        var el = document.createElement('div');
+        el.className = 'peek-page';
+        el.innerHTML = '<div class="peek-photo-big"></div><div class="peek-page-meta"></div><div class="peek-page-text"></div>';
+        var big = el.querySelector('.peek-photo-big');
+        if (p.img) { var bi = document.createElement('img'); bi.src = p.img; bi.alt = ''; big.appendChild(bi); bi.addEventListener('click', function() { openImgViewer(p.img, { source: '查手机 · 相册' }); }); }
+        else big.appendChild(peekTextImg(p.desc));
+        el.querySelector('.peek-page-meta').textContent = [p.date, p.album].filter(Boolean).join(' · ');
+        el.querySelector('.peek-page-text').textContent = (p.note ? '「' + p.note + '」\n\n' : '') + (p.desc || '');
+        return el;
+      });
+    };
+    cell.addEventListener('click', open);
+    grid.appendChild(cell);
+  });
+  body.appendChild(grid);
+}
+// 文字图片的方块（样子和动态里的文字图一样，点了由外面那层处理）
+function peekTextImg(desc) {
+  var el = document.createElement('div');
+  el.className = 'feed-textimg';
+  var sp = document.createElement('span');
+  sp.textContent = desc || '';
+  el.appendChild(sp);
+  return el;
+}
+var peekPhotoBusy = {};
+function peekGenPhotos(char, ps) {
+  var key = String(char.id);
+  if (peekPhotoBusy[key]) return;
+  peekPhotoBusy[key] = true;
+  var next = function() {
+    var p = ps.filter(function(x) { return !x.img && !x.genFail; })[0];
+    if (!p) { delete peekPhotoBusy[key]; return; }
+    queueImageGen(p.desc || '').then(function(src) { p.img = src; }, function(err) { p.genFail = true; console.warn('[Mphone] 相册照片没画出来:', err); })
+      .then(function() {
+        savePeek();
+        if (peekChar() === char && peekState.app === 'photos' && !peekState.detail && appPeek.classList.contains('active')) renderPeek();
+        next();
+      });
+  };
+  next();
 }
 function renderPeekShop(body, d) {
   peekTabs(body, [['cart', '购物车'], ['wallet', '钱包'], ['bills', '账单']]);

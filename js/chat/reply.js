@@ -47,7 +47,12 @@ function commitAssistantReply(hist, raw, list, empty) {
   if (rc && chatHistories[rc.id] === hist && !(rc.chatCfg && rc.chatCfg.actionOn)) {
     raw = raw.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
   }
+  // 剧情配图：<配图>这一幕的画面</配图> 拿出来，回复后面单独一条（设置里剧情配图选了生图才会写）
+  var illus = '', isDramaHist = !!(rc && dramaHistories[rc.id] === hist);
+  raw = raw.replace(/<配图>([\s\S]*?)(<\/配图>|$)/g, function(_, s) { illus = s.replace(/\s+/g, ' ').trim(); return ''; });
   var parts = raw.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean);
+  // 聊天窗口：角色发的照片 <照片>画面</照片> 拆成单独一条（js/chat/img-use.js）
+  if (rc && chatHistories[rc.id] === hist && typeof photoSplitParts === 'function') parts = photoSplitParts(parts);
   // 聊天窗口：像微信那样一句一个气泡（每次回复条数设成 1 的角色除外）
   if (rc && chatHistories[rc.id] === hist && Object.assign({}, DEFAULT_CHAT_CFG, rc.chatCfg || {}).replyMax > 1) parts = chatSplitLines(parts);
   // 聊天窗口：<撤回>…</撤回> 拆成单独一条，先显示两秒再变成撤回提示
@@ -64,6 +69,7 @@ function commitAssistantReply(hist, raw, list, empty) {
   if (added.length && recap) added[added.length - 1].recap = recap;
   actions.forEach(function(a) { added.push({ role: 'assistant', content: '', action: a, time: now }); });
   calItems.forEach(function(c) { added.push({ role: 'assistant', content: '', cal: c, time: now }); });
+  if (illus && isDramaHist && typeof imgUse === 'function' && imgUse('drama') === 'gen') added.push({ role: 'assistant', content: '[配图] ' + illus, textImg: illus, illus: true, time: now });
   var pc = charOfHistory(hist);
   if (patBack && pc && chatHistories[pc.id] === hist && pc.chatCfg && pc.chatCfg.patOn) added.push({ role: 'assistant', content: '', pat: 'user', time: now });
   added.forEach(function(m) {
@@ -72,6 +78,8 @@ function commitAssistantReply(hist, raw, list, empty) {
     else delete m._flash;   // 没在看这个对话：回来时直接是撤回提示
   });
   if (status && typeof refreshStatusPanel === 'function') refreshStatusPanel();
+  // 照片、配图：生图模式下排队画出来（画好前先是文字图片）
+  if (typeof genPendingPhotos === 'function' && rc && imgUse(isDramaHist ? 'drama' : 'chat') === 'gen') genPendingPhotos(hist, added.filter(function(m) { return m.textImg; }));
   return added;
 }
 
@@ -297,13 +305,13 @@ function sendMsg(userText, requestOnly, onDone) {
       // 操作块不直接显示原始代码，写完后会变成确认卡片
       var shown = liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
         .replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
-        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
         .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, '').trim();
       if (bubbleStream && shown.indexOf('⚙️') < 0) {
         // 聊天窗口：写完的句子一个一个冒出来，打字气泡保持小点
         if (started) { typing.bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>'; started = false; }
         previewStream(liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
-          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
           .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, ''));
       } else {
         if (!started) { typing.bubble.innerHTML = ''; started = true; }

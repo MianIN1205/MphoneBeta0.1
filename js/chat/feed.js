@@ -468,6 +468,7 @@ function generateCharPost(idx) {
     memLogFeed(char, '我在动态里发了：' + feedPosts[0].text.slice(0, 80));
     if (typeof notifyFeedPost === 'function') notifyFeedPost(char, feedPosts[0]);
     var post = feedPosts[0];
+    if (typeof feedGenImages === 'function') feedGenImages(post);
     charNpcComments(post, idx).catch(function(err) { console.warn('[Mphone] NPC 评论失败:', err); });
   });
 }
