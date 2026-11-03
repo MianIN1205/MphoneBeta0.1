@@ -1,7 +1,7 @@
 // 眠花糖机 — 查手机：加号抽屉「查手机」，看角色手机里的信息（和你的是真实聊天，和别人的由 AI 按人设写）、备忘录、浏览器（搜索记录、收藏）、购物（购物车、钱包、账单）。
 // 每个 App 第一次打开时自动写一份存下来（mphone_peek），之后点右上 ↻ 才换新的。
 // 角色设置「聊天」页开了「TA 会发现你查手机」时，翻得多了 TA 可能察觉，下次聊天回复时提起（关着就永远不会发现）；
-// 开了「手机有密码」时先要解锁：密码和提示由 TA 按人设自己定，猜对一次就记住，TA 发现你翻手机后会把密码改掉
+// 开了「手机有密码」时先要解锁：密码和提示由 TA 按人设自己定，猜对一次就记住；改不改密码由 TA 在聊天里自己决定（回复里写 <改密码>，用户看不到）
 
 var peekStore = mphoneStore.load('mphone_peek', {}) || {};   // { 角色id: { chats|notes|browser|shop: { at, data } } }
 var PEEK_APPS = [
@@ -121,9 +121,7 @@ function peekMaybeCaught() {
   if (score < 4 || Math.random() >= Math.min(0.75, 0.15 * (score - 3))) return;
   var seen = peekState.seen.slice(0, 10);
   if (peekState.wrong) seen.unshift('试着解锁你的手机，输错了 ' + peekState.wrong + ' 次密码');
-  var box = peekBox(char), relock = peekLockOn(char);
-  box.caught = { at: Date.now(), seen: seen, relock: relock };
-  if (relock) box.lock = {};   // 被发现了：TA 会把密码改掉，下次查手机时再定新的
+  peekBox(char).caught = { at: Date.now(), seen: seen };
   savePeek();
 }
 function peekCaughtPrompt(char) {
@@ -133,7 +131,7 @@ function peekCaughtPrompt(char) {
   if (!cc.peekNotice) return '';
   return '【你发现了】' + (typeof fmtAgo === 'function' ? fmtAgo(c.at) : '刚才') + '，用户偷偷翻了你的手机，你察觉到了（比如手机被动过、App 停在你没开过的页面）。' +
     'TA 看了：' + c.seen.join('、') + '。这次回复里自然地提起这件事，反应要符合你的性格和你们现在的关系（可能害羞、慌张、生气、委屈、调侃、假装不在意、反过来逗 TA……）；' +
-    '被看到的内容里有你的小秘密、小心思的话，可以有相应的反应。' + (c.relock ? '你已经把手机密码改掉了，可以顺口提一句。' : '') + '提这一次就够了，之后不用反复说。';
+    '被看到的内容里有你的小秘密、小心思的话，可以有相应的反应。' + (peekLockOn(char) ? '要不要改手机密码由你自己决定（也可以不改）。' : '') + '提这一次就够了，之后不用反复说。';
 }
 // 你的手机密码：TA 自己知道（聊天窗口每次都带上），用户问的时候看心情决定给不给
 function peekLockPrompt(char) {
@@ -141,7 +139,19 @@ function peekLockPrompt(char) {
   var lk = peekStore[String(char.id)] && peekStore[String(char.id)].lock;
   if (!lk || !lk.pass) return '';
   return '【你的手机】你的手机锁屏密码是 ' + lk.pass + (lk.hint ? '（锁屏上的提示是「' + lk.hint + '」）' : '') + '。' +
-    (lk.unlocked ? '用户已经知道这个密码了。' : '用户还不知道；TA 问你要的话，看心情和你们的关系决定给不给、怎么给（可以直接说、逗 TA、让 TA 猜）。') + '平时不用主动提。';
+    (lk.unlocked ? '用户已经知道这个密码了。' : '用户还不知道；TA 问你要的话，看心情和你们的关系决定给不给、怎么给（可以直接说、逗 TA、让 TA 猜）。') + '平时不用主动提。' +
+    '如果你决定改密码（比如聊天里说好了要改、或者你自己想改），在回复最后另起一行写 <改密码 提示="新的锁屏提示">新的 4～6 位数字</改密码>，这一行用户看不到；不改就别写。';
+}
+// 回复里的 <改密码 提示="…">数字</改密码>：换成新密码（用户要重新猜），这一行从回复里拿掉
+function peekTakeLockTag(char, text) {
+  return String(text || '').replace(/<改密码([^>]*)>([\s\S]*?)(<\/改密码>|$)/g, function(_, attr, body) {
+    var pass = String(body).replace(/\D/g, ''), hint = (String(attr).match(/提示\s*=\s*["“「]([^"”」]*)/) || [])[1];
+    if (char && peekLockOn(char) && pass.length >= 4 && pass.length <= 6) {
+      peekBox(char).lock = { pass: pass, hint: String(hint || '').slice(0, 16) };
+      savePeek();
+    }
+    return '';
+  });
 }
 
 // =============================================

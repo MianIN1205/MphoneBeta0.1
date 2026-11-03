@@ -113,6 +113,7 @@ function autoSendMessage(idx) {
     text = stripQuotes(text);
     var viewing = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;
     var showNow = viewing && currentCrSubView === 'chat';
+    if (typeof peekTakeLockTag === 'function') text = peekTakeLockTag(char, text);
     var added = commitAssistantReply(hist, text,
       showNow ? document.getElementById('chatMsgList') : null,
       showNow ? document.getElementById('chatRoomEmpty') : null);
