@@ -446,11 +446,21 @@ function stripQuotes(s) {
   return s.replace(/^["“「『]+|["”」』]+$/g, '').trim();
 }
 
+// 这个角色最近发过的动态（新的在前）：发新动态、写评论时给 TA 看，免得每次都一样（用户反馈过动态和评论全是重复的）
+function charRecentPosts(char, n) {
+  var me = charAuthor(char);
+  return feedPosts.filter(function(p) { return p.author && p.author.type === me.type && p.author.id === me.id; }).slice(0, n || 6);
+}
+var FEED_ANGLES = ['今天吃到 / 喝到的东西', '路上看到的一个小画面', '工作或学习里的一件小事', '天气和季节', '突然想起的一件旧事', '最近在听的歌、在看的书或剧', '一点说不清的小情绪', '身边的朋友或家人', '一个小小的计划或愿望', '和 {{user}} 有关、但不直说的一句话', '一句自言自语的吐槽', '睡前或刚醒时的念头'];
 function generateCharPost(idx) {
   var char = charList[idx];
   if (!char) return Promise.reject(new Error('角色不存在'));
+  var recent = charRecentPosts(char, 6).map(function(p) { return '· ' + fmtAgo(p.time) + '：' + String(p.text || '').slice(0, 80); });
+  var angle = FEED_ANGLES[Math.floor(Math.random() * FEED_ANGLES.length)];
   var msgs = charContextMsgs(idx).concat([activityAsk(
     '【发动态】现在是 ' + nowText(char) + '。请你以「' + charAuthor(char).name + '」的身份，发一条朋友圈式的个人动态。' +
+    (recent.length ? '你最近已经发过这些动态：\n' + recent.join('\n') + '\n这次要发一条新的：换一个话题、换一种说法，不要重复或改写上面任何一条，也不要和它们用一样的开头、句式和配图。' : '') +
+    '这次可以从「' + angle + '」这个角度想想（只是给你一点灵感，不合适就按你自己的生活来）。' +
     '像真人发朋友圈：内容可以和最近的聊天、生活、心情相关；一两句到几小句，口语，可以分行，一般不超过 100 字；不写动作描写和 *星号*，不加 # 话题标签。' +
     '想配图的话，在正文后面用 <文字图>画面描述</文字图> 附上 1～3 张「文字图」（用一两句话描述照片里的画面，比如：窗外的晚霞，橘粉色的云）；不配图也可以。'
   )]);
@@ -486,11 +496,18 @@ function charNpcComments(post, idx) {
   var me = charAuthor(char);
   var others = charList.filter(function(c) { return c !== char; }).map(function(c) { return c.charAlias || c.charName; }).filter(Boolean);
   var known = (char.feedNpcs || []).slice(-12);
+  var pastComments = [];
+  charRecentPosts(char, 5).forEach(function(p) {
+    if (p === post) return;
+    (p.comments || []).slice(0, 4).forEach(function(c) { if (c.author && c.author.type === 'npc') pastComments.push('· ' + c.author.name + '：' + String(c.text || '').slice(0, 40)); });
+  });
+  pastComments = pastComments.slice(0, 12);
   var msgs = charContextMsgs(idx).concat([activityAsk(
     '【动态评论区】你刚发了一条动态：\n「' + post.text + '」' + ((post.textImgs || []).length ? '（配图：' + post.textImgs.join('；') + '）' : '') + '\n' +
     '现在你现实生活里的人来评论了：按你的人设和生活安排 1～4 个人（朋友、同事、同学、家人、网友……），名字和称呼要像真人，' +
     '不要是{{user}}' + (others.length ? '，也不要是 ' + others.join('、') : '') + '。' +
     (known.length ? '以前在你动态下出现过的人：' + known.join('、') + '，可以还是他们，也可以有新的人。' : '') +
+    (pastComments.length ? '你之前几条动态下面已经有过这些评论：\n' + pastComments.join('\n') + '\n这次的评论要针对这条动态的具体内容，不要重复或改写上面的话，换不同的人、不同的说法。' : '') +
     '每人说 1～3 句，口语，像朋友圈评论那样各有各的语气，可以互相接话、打趣。' +
     '然后你看心情回复：可以都回、只回一部分，也可以一个都不回；回复一到三句，还是你平时的口吻。都不写动作描写和 *星号*。' +
     '只输出 JSON：{"comments": [{"name": "名字", "text": "评论"}], "replies": [{"to": "回复谁的名字", "text": "你的回复"}]}，不回复时 replies 为空数组。'
