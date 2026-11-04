@@ -148,7 +148,8 @@ function Pet(box, data, opt) {
 }
 Pet.prototype.setData = function(p) {
   this.data = p;
-  this.inner.innerHTML = petLook(p) + '<svg class="pet-prop" viewBox="0 -2 24 24" aria-hidden="true">' + (PET_PROPS[this.state] || '') + '</svg><span class="pet-z">z</span>';
+  this.inner.innerHTML = petLook(p) + '<svg class="pet-prop" viewBox="0 -2 24 24" aria-hidden="true">' + (PET_PROPS[this.state] || '') + '</svg><span class="pet-z">z</span>' +
+    '<span class="pet-mail" aria-hidden="true"><svg viewBox="0 0 24 18"><rect x="1" y="1" width="22" height="16" rx="3" fill="#fff" stroke="#e8879f" stroke-width="1.6"/><path d="M2 3 L12 10.5 L22 3" fill="none" stroke="#e8879f" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="11" r="2.2" fill="#f08aa6"/></svg></span>';
   this.prop = this.inner.querySelector('.pet-prop');
   var q = function(s) { return this.inner.querySelectorAll(s); }.bind(this);
   this.legs = Array.prototype.slice.call(q('.pet-leg'));
@@ -345,6 +346,12 @@ Pet.prototype.talk = function(waking) {
 Pet.prototype.pat = function() {
   var now = Date.now();
   this.lastTouch = now;
+  // 头上顶着小信封（关联的角色有没看的消息）：点一下直接打开和 TA 的聊天
+  if (this.el.classList.contains('has-mail') && this.data.charId && typeof openFromNotification === 'function') {
+    this.fx = { type: 'hop', t0: now };
+    openFromNotification({ open: 'chat', charId: this.data.charId });
+    return;
+  }
   if (this.state === 'sleep') { this.set('idle', 2000); this.talk(true); this.fx = { type: 'hop', t0: now }; return; }
   this.set('idle', 1800);
   this.fx = Math.random() < 0.6 ? { type: 'hop', t0: now } : { type: 'wave', t0: now };
@@ -418,7 +425,16 @@ document.querySelector('.phone').appendChild(petLayer);
 var screenPets = new PetGroup(petLayer, { size: 40, top: 46, bottom: 14 }, function(p) { return p.out; });
 var homePets = new PetGroup(document.getElementById('petHome'), { size: 60, top: 64, bottom: 18 }, function() { return true; });
 var appPet = document.getElementById('appPet');
+// 桌宠认人：关联的角色发来了还没看的消息，桌宠头上冒一个小信封（点一下打开聊天）
+function petMailSync(group) {
+  Object.keys(group.map).forEach(function(id) {
+    var pet = group.map[id], cid = pet.data.charId;
+    pet.el.classList.toggle('has-mail', !!(cid && typeof chatUnread !== 'undefined' && chatUnread[cid]));
+  });
+}
 function petRefresh() {
+  petMailSync(screenPets);
+  petMailSync(homePets);
   var covered = !!document.querySelector('.app-screen.active, .settings-screen.active');
   var show = !appPet.classList.contains('active') && (petCfg.follow || !covered) && petCfg.pets.some(function(p) { return p.out; });
   petLayer.classList.toggle('follow', petCfg.follow);

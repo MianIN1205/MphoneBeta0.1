@@ -77,3 +77,10 @@
 .pet.is-img.act-pc .pet-img, .pet.is-img.act-book .pet-img { transform: translateY(4%); }
 .pet-home-acts { justify-content: center; margin: 0 0 8px; }
 
+
+/* 桌宠认人：关联的角色有新消息时头上的小信封，轻轻上下浮 */
+.pet-mail { position: absolute; left: 50%; top: -14px; width: 18px; height: 14px; margin-left: -9px; opacity: 0; transform: translateY(4px) scale(0.8);
+  transition: opacity 0.2s, transform 0.2s; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(200, 100, 130, 0.3)); }
+.pet-mail svg { width: 100%; height: 100%; display: block; }
+.pet.has-mail .pet-mail { opacity: 1; transform: none; animation: petMailBob 1.6s ease-in-out infinite; }
+@keyframes petMailBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }

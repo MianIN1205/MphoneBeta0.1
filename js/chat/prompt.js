@@ -57,6 +57,8 @@ function chatFormatRules(char) {
   if (!(typeof photoRecentlySent === 'function' && photoRecentlySent(chatHistories[char.id]))) {
     rules.push('很少发照片：只有真的特别想让对方看看你眼前的画面时（大概十几二十轮聊天才有一次，平时都不要发），才单独一行写 <照片>用一两句话描述照片里的画面（拍的是什么、在哪、光线）</照片>，对方会看到这张照片。');
   }
+  // 星星瓶：偶尔悄悄叠一颗星星（js/desk/starjar.js），一天最多一颗
+  if (typeof starRuleFor === 'function') { var starRule = starRuleFor(char); if (starRule) rules.push(starRule); }
   if (c.patOn) {
     rules.push('你也可以像微信一样拍一拍用户：想拍的时候在全部消息最后另起一行写 <拍一拍/>（偶尔用，不要每次都拍）。用户拍你时，记录里会出现「（用户拍了拍你…）」。');
   }
@@ -204,6 +206,7 @@ function realWorldContext(char, hist) {
     var pct = Math.round(phoneBattery.level * 100);
     lines.push('{{user}}的手机电量 ' + pct + '%' + (phoneBattery.charging ? '，正在充电' : pct <= 20 ? '，快没电了' : '') + '。');
   }
+  if (typeof gardenContextLine === 'function') { var gl = gardenContextLine(); if (gl) lines.push(gl); }
   if (typeof calendarContextFor === 'function') {
     var cal = calendarContextFor(char);
     if (cal) lines.push(cal);
