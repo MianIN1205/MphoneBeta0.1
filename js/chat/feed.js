@@ -423,9 +423,9 @@ feedCommentInput.addEventListener('keydown', function(e) {
 
 // ---------- AI 调用（非流式，返回完整文本） ----------
 // char：用这个角色自己的模型（便捷拓展栏选过模型预设时），和 TA 聊天用的是同一个
-function callApiOnce(messages, char) {
-  // 按接口类型自动适配（见 js/core/llm.js）
-  return llmRequest(messages, { stream: false, cfg: char ? getApiCfg(char) : undefined }).then(function(text) {
+function callApiOnce(messages, char, signal) {
+  // 按接口类型自动适配（见 js/core/llm.js）；signal 可以中途停掉（主动消息被 ⏹ 打断时用）
+  return llmRequest(messages, { stream: false, cfg: char ? getApiCfg(char) : undefined, signal: signal }).then(function(text) {
     text = typeof takeThink === 'function' ? takeThink(text).text : String(text || '');
     if (!text) throw new Error('未收到回复内容');
     return String(text).trim();

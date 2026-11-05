@@ -160,7 +160,7 @@ function renderRoomLists(idx) {
 
   // 剧情子视图
   var dList = document.getElementById('dramaMsgList');
-  if (!dList) { setTimeout(scrollPendingLists, 0); return; }
+  if (!dList) { setTimeout(scrollPendingLists, 0); if (typeof genReattach === 'function') genReattach(); return; }
   var dEmpty = document.createElement('div');
   dEmpty.className = 'drama-empty-hint'; dEmpty.id = 'dramaRoomEmpty';
   dEmpty.innerHTML = '<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="17" y1="7" x2="22" y2="7"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="2" y1="17" x2="7" y2="17"></line></svg><span>暂无剧情</span>';
@@ -184,5 +184,6 @@ function renderRoomLists(idx) {
     dEmpty.appendChild(picker);
     dEmpty.appendChild(tip);
   }
+  if (typeof genReattach === 'function') genReattach();   // 这个角色还在生成的回复放回去
   setTimeout(scrollPendingLists, 0);
 }

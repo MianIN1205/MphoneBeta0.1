@@ -172,54 +172,79 @@ function splitRecallParts(parts) {
   return out;
 }
 
-// 正在生成的回复（同一时间只有一条）：生成时 ❄️ 变成 ⏹，点一下停止
-var genState = null;   // { ctrl: AbortController, char }
-function setGenerating(on) {
-  var b = document.querySelector('.cr-emoji-btn');
+// 正在生成的回复：每个角色的聊天、剧情窗口各管各的，可以同时给不同角色（或同一个角色的聊天和剧情）请求回复（用户要的）。
+// 键是「角色id:chat / drama」；❄️ / ⏹ 只看当前打开的这个窗口
+var genStates = {};   // 键 → { ctrl: AbortController, char, typing, previews() }
+function genKey(char, isChat) { return (char && char.id) + (isChat ? ':chat' : ':drama'); }
+function genHere() {
+  var c = charList[openingChatCharIdx];
+  return c ? genStates[genKey(c, currentCrSubView !== 'contacts')] || null : null;
+}
+function genBusyChar(char) { return !!(char && (genStates[genKey(char, true)] || genStates[genKey(char, false)])); }
+function syncGenBtn() {
+  var b = document.querySelector('.cr-emoji-btn'), on = !!genHere();
   b.classList.toggle('generating', on);
   b.textContent = on ? '⏹' : '❄️';
   b.setAttribute('aria-label', on ? '停止生成' : '请求回复');
 }
-function stopGenerating() { if (genState) genState.ctrl.abort(); }
+function stopGenerating() { var g = genHere(); if (g) g.ctrl.abort(); }
+// 重新打开一个还在生成的窗口时，把它的「正在输入」和已经冒出来的预览气泡放回列表最下面
+function genReattach() {
+  var c = charList[openingChatCharIdx];
+  if (c) [true, false].forEach(function(isChat) {
+    var g = genStates[genKey(c, isChat)], list = document.getElementById(isChat ? 'chatMsgList' : 'dramaMsgList');
+    if (!g || !list) return;
+    // 主动消息生成时还没有「正在输入」：打开 TA 的聊天时才画（这时头像才是 TA 的）
+    if (!g.typing) g.typing = appendMsg('ai', '', true, list);
+    else if (g.typing.row.parentNode === list) return;
+    g.previews().forEach(function(r) { list.appendChild(r); });
+    list.appendChild(g.typing.row);
+    var empty = list._empty; if (empty) empty.style.display = 'none';
+    list.scrollTop = list.scrollHeight;
+  });
+  syncGenBtn();
+}
 
 // onDone(added)：回复结束后调用，added 是写入记录的角色消息（失败或停止且没有内容时为空数组）
 function sendMsg(userText, requestOnly, onDone) {
   var cfg = getApiCfg(charList[openingChatCharIdx]);
   if (!cfg.url || !cfg.key) { showErrNotice(new Error('请先在设置中填写 API 地址和密钥'), null, getActiveEmptyEl(), cfg); if (onDone) onDone([]); return; }
   if (!cfg.model)           { showErrNotice(new Error('请先选择模型'), null, getActiveEmptyEl(), cfg); if (onDone) onDone([]); return; }
-  if (genState) { showToast('正在回复中，可以先点 ⏹ 停止', 'error'); if (onDone) onDone([]); return; }
   var hist = getActiveHistory(openingChatCharIdx);
   var replyCharIdx = openingChatCharIdx;
   var replyChar = charList[replyCharIdx];
-  var activeList = getActiveMsgListEl();
   var isChatView = hist === getChatHistory(replyCharIdx);
+  var gKey = genKey(replyChar, isChatView);
+  if (genStates[gKey]) { showToast('正在回复中，可以先点 ⏹ 停止', 'error'); if (onDone) onDone([]); return; }
+  var listId = isChatView ? 'chatMsgList' : 'dramaMsgList';
   if (!requestOnly && userText) { var um = { role: 'user', content: userText, time: Date.now() }; hist.push(um); renderHistMsg(um); saveHistories(); }
   var typing = appendMsg('ai', '', true);
   var ctrl = new AbortController();
   var aiText = '';
-  genState = { ctrl: ctrl, char: replyChar };
-  setGenerating(true);
+  genStates[gKey] = { ctrl: ctrl, char: replyChar, typing: typing, previews: function() { return previewRows; } };
+  syncGenBtn();
+  // 这个角色的聊天室开着（不管在看聊天还是剧情）就画进对应的列表；切去别的角色时不碰那边的列表
+  function roomOpen() { return appChatRoom.classList.contains('active') && charList[openingChatCharIdx] === replyChar; }
+  function scrollLive() { var L = typing.row.parentNode; if (L) L.scrollTop = 999999; }
 
   // 出错：还在这个对话里就在列表里放一行小字（点开看原因）；已经离开了就在顶部提示一下是谁回复失败。
   // 报错条记在这份记录里，回来时还在原处
   function showReplyError(err) {
-    var here = appChatRoom.classList.contains('active') && charList[openingChatCharIdx] === replyChar && getActiveHistory(openingChatCharIdx) === hist;
-    if (here) { showErrNotice(err, getActiveMsgListEl(), null, cfg, hist); return; }
+    if (roomOpen()) { showErrNotice(err, document.getElementById(listId), null, cfg, hist); return; }
     errRemember(hist, err, cfg);
     showToast('「' + ((replyChar && (replyChar.charAlias || replyChar.charName)) || '角色') + '」回复失败：' + explainError(err).title, 'error');
   }
 
   function endGen() {
-    if (genState && genState.ctrl === ctrl) { genState = null; setGenerating(false); }
+    if (genStates[gKey] && genStates[gKey].ctrl === ctrl) { delete genStates[gKey]; syncGenBtn(); }
   }
   // 打字气泡换成正式消息（可能拆成多条、带状态栏）。回复到达时如果已经离开这个对话，
   // 只写进记录并记为未读；切走又切回来时打字气泡已被重绘掉，就画到当前列表里
   function deliver(text) {
     typing.row.remove();
     clearPreview();
-    var showing = appChatRoom.classList.contains('active') && charList[openingChatCharIdx] === replyChar &&
-                  getActiveHistory(openingChatCharIdx) === hist;
-    var list = showing ? getActiveMsgListEl() : null;
+    var showing = roomOpen();
+    var list = showing ? document.getElementById(listId) : null;
     if (typeof peekTakeLockTag === 'function') text = peekTakeLockTag(replyChar, text);   // TA 决定改手机密码
     if (typeof starTakeTag === 'function') text = starTakeTag(replyChar, text);   // 悄悄叠的星星放进星星瓶
     var added = commitAssistantReply(hist, text, list, null);
@@ -298,7 +323,7 @@ function sendMsg(userText, requestOnly, onDone) {
     tools: mcpTools,
     callTool: mcpTools.length ? mcpCallFromLLM : null,
     toolLabel: function(name) { var hit = mcpToolMap[name]; return hit ? (hit.tool.title || hit.tool.name) : name; },
-    onStatus: function(text) { typing.bubble.textContent = text; if (activeList) activeList.scrollTop = 999999; },
+    onStatus: function(text) { typing.bubble.textContent = text; scrollLive(); },
     onText: function(full) {
       aiText = full;
       // 导入的酒馆状态栏那段不在聊天里冒出来
@@ -318,7 +343,7 @@ function sendMsg(userText, requestOnly, onDone) {
         if (!started) { typing.bubble.innerHTML = ''; started = true; }
         typing.bubble.textContent = shown;
       }
-      if (activeList) activeList.scrollTop = 999999;
+      scrollLive();
     }
   });
   })
@@ -340,7 +365,7 @@ function regenerateLast() {
   var hist = getActiveHistory(openingChatCharIdx);
   var g = trailingReplyGroup(hist);
   if (!g.msgs.length) { showToast('没有可以重新生成的回复', 'error'); return; }
-  if (genState) { showToast('正在回复中', 'error'); return; }
+  if (genHere()) { showToast('正在回复中', 'error'); return; }
   var first = g.msgs[0];
   var alts = first.alts ? first.alts.slice() : [cloneGroup(g.msgs)];
   if (first.alts) alts[first.altIdx] = cloneGroup(g.msgs);

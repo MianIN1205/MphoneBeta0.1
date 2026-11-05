@@ -109,7 +109,17 @@ function autoSendMessage(idx) {
       '可以是分享日常、想念、追问之前的话题等，自然简短，符合人设与当前关系。只输出消息内容本身。';
   // 这段要求放在最后、用「用户」身份但标明不是对方说的：有的接口（比如 Claude）最后一条是角色自己的话时，会当成要接着写那条，像卡住了重说一遍
   var msgs = charContextMsgs(idx).concat(chatFormatRules(char)).concat([activityAsk('【主动消息】现在是 ' + nowText(char) + '。' + gap + ask)]);
-  return callApiOnce(msgs, char).then(function(text) {
+  // TA 正在写的时候算这个聊天窗口「正在回复」：点开能看到正在输入、❄️ 变 ⏹（点了就打断），不会再叫一次回复撞在一起
+  var gk = typeof genKey === 'function' ? genKey(char, true) : '', ctrl = new AbortController();
+  var gen = { ctrl: ctrl, char: char, auto: true, typing: null, previews: function() { return []; } };
+  if (gk) { genStates[gk] = gen; syncGenBtn(); }
+  function genDone() {
+    if (gk && genStates[gk] === gen) { delete genStates[gk]; syncGenBtn(); }
+    if (gen.typing) gen.typing.row.remove();
+  }
+  return callApiOnce(msgs, char, ctrl.signal).then(function(text) {
+    genDone();
+    if (ctrl.signal.aborted) return;
     text = stripQuotes(text);
     var viewing = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;
     var showNow = viewing && currentCrSubView === 'chat';
@@ -129,6 +139,10 @@ function autoSendMessage(idx) {
     }
     if (typeof notifyNewMessages === 'function') notifyNewMessages(char, added);
     renderChatCharList();
+  }, function(err) {
+    genDone();
+    if (ctrl.signal.aborted) return;   // 用户点 ⏹ 打断的，不算失败
+    throw err;
   });
 }
 
@@ -167,7 +181,7 @@ function autoTick() {
     if (!doPost) {
       var viewingThis = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;
       var recent = char._lastChatAt && now - char._lastChatAt < AUTO_QUIET_MS;
-      if (viewingThis || recent || (typeof genState !== 'undefined' && genState)) return;
+      if (viewingThis || recent || (typeof genBusyChar === 'function' && genBusyChar(char))) return;
     }
 
     // 到点：只执行一次（关闭页面期间错过的不补发多次），然后重新排期

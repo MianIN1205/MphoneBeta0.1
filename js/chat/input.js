@@ -27,6 +27,27 @@ function clearQuote() {
 }
 document.getElementById('crQuoteClose').addEventListener('click', clearQuote);
 
+// 输入框里没发出去的字和引用，每个角色的聊天 / 剧情窗口各留各的（以前切到别的角色还带着上一个的草稿和引用，会发错地方）
+var crDrafts = {}, crDraftKey = '';
+function crDraftSwap() {
+  var c = charList[openingChatCharIdx], key = c ? c.id + ':' + currentCrSubView : '';
+  if (key === crDraftKey) return;
+  if (crDraftKey) {
+    if (crInput.value || pendingQuote) crDrafts[crDraftKey] = { text: crInput.value, quote: pendingQuote };
+    else delete crDrafts[crDraftKey];
+  }
+  crDraftKey = key;
+  var d = crDrafts[key];
+  crInput.value = d ? d.text : '';
+  crInput.style.height = '';
+  if (crInput.value) crInput.dispatchEvent(new Event('input'));
+  if (d && d.quote) {
+    pendingQuote = d.quote;
+    document.getElementById('crQuoteText').textContent = '引用 ' + d.quote.author + '：' + d.quote.text;
+    document.getElementById('crQuoteBar').classList.add('open');
+  } else clearQuote();
+}
+
 // cr-send-btn（↵ 图标）：在输入框光标处插入换行，不发送
 crSendBtn.addEventListener('click', function(e) {
   e.stopPropagation();
@@ -53,6 +74,6 @@ crInput.addEventListener('input', function() { this.style.height = 'auto'; this.
 // ❄️ 请求回复：触发 AI 调用，使用已有历史，不追加用户消息
 document.querySelector('.cr-emoji-btn').addEventListener('click', function(e) {
   e.stopPropagation();
-  if (genState) { stopGenerating(); return; }
+  if (genHere()) { stopGenerating(); return; }
   if (openingChatCharIdx !== -1) sendMsg('', true);
 });

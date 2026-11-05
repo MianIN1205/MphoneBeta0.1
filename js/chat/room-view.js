@@ -52,6 +52,8 @@ function switchChatRoomSubView(view) {
     crBottomBar.classList.toggle('drama-mode', isDrama);
   }
   closeCrPlusPanel();
+  if (typeof crDraftSwap === 'function') crDraftSwap();   // 输入框草稿、引用跟着窗口走
+  if (typeof syncGenBtn === 'function') syncGenBtn();     // ❄️ / ⏹ 看这个窗口自己在不在生成
   if (typeof renderQuickBar === 'function') renderQuickBar();
   if (typeof applyChatRoomStyle === 'function' && charList[openingChatCharIdx]) applyChatRoomStyle(charList[openingChatCharIdx]);
   // 刚打开、还没显示过的列表停在最新消息

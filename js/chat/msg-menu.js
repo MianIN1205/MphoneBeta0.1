@@ -51,8 +51,8 @@ function snapshotBubble(bubble) {
         edit:   !!m && !m.imgSrc && !m.sticker && !m.file && !m.textImg,
         recall: !!m && !m.recalled,
         // 重新生成：最新一组回复直接重新生成（旧版本留着切换）；更早的回复要先删掉后面的消息
-        regen:     !!m && !genState && isLatest,
-        regenFrom: !!m && !genState && !ctxTarget.isUser && !isLatest,
+        regen:     !!m && !genHere() && isLatest,
+        regenFrom: !!m && !genHere() && !ctxTarget.isUser && !isLatest,
         delRound:  !!m && !ctxTarget.isUser,
         delete: true, select: !!m, fav: true, copy: true
       };

@@ -26,7 +26,7 @@ function deleteRound(listId, m) {
 
 // 从这里重新生成：删掉这一轮回复和之后的所有消息，再请 TA 重新回复这一轮
 function regenerateFrom(listId, m) {
-  if (genState) { showToast('正在回复中', 'error'); return; }
+  if (genHere()) { showToast('正在回复中', 'error'); return; }
   var hist = histOfList(listId), g = replyGroupOf(hist, m);
   if (!g) return;
   var after = hist.length - g.start;
