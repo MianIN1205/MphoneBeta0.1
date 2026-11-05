@@ -364,6 +364,29 @@ function renderGarden(fx) {
     info.querySelector('.gd-acts').appendChild(btn);
   });
   gdBody.appendChild(info);
+  // 分享给谁：分享了的角色才知道这盆花（会在 TA 的聊天里发一张花的照片），知道的角色会时不时悄悄来照顾它
+  var chars = charList.filter(function(c) { return c.id && (c.inChat || c.builtinAssistant); });
+  if (chars.length && hl !== 'dead') {
+    var share = document.createElement('div');
+    share.className = 'settings-card gd-share';
+    share.innerHTML = '<div class="bubble-section-label" style="margin-bottom:6px;">分享给 TA</div><div class="gd-share-sub">分享了的人才知道这盆花，也可能会悄悄来照顾它</div><div class="gd-share-list"></div>';
+    chars.forEach(function(c) {
+      var on = (g.sharedWith || []).indexOf(c.id) >= 0, b = document.createElement('button');
+      b.className = 'gd-share-chip' + (on ? ' on' : '');
+      var av = document.createElement('span');
+      av.className = 'gd-share-av';
+      if (typeof paintCharAvatar === 'function') paintCharAvatar(av, c);
+      var nm = document.createElement('span');
+      nm.textContent = (c.charAlias || c.charName || '未命名') + (on ? ' · 知道了' : '');
+      b.appendChild(av); b.appendChild(nm);
+      b.addEventListener('click', function() {
+        if (on) { showToast('TA 已经知道这盆花啦', 'plain'); return; }
+        openConfirm('把花的照片发给「' + (c.charAlias || c.charName || '未命名') + '」？', function() { gardenShareTo(c); });
+      });
+      share.querySelector('.gd-share-list').appendChild(b);
+    });
+    gdBody.appendChild(share);
+  }
   // 照顾记录
   if ((g.log || []).length) {
     var log = document.createElement('div');
@@ -371,7 +394,7 @@ function renderGarden(fx) {
     log.innerHTML = '<div class="bubble-section-label" style="margin-bottom:6px;">照顾记录</div>';
     g.log.slice(-8).reverse().forEach(function(x) {
       var d = new Date(x.t), row = document.createElement('div');
-      row.className = 'gd-log-row';
+      row.className = 'gd-log-row' + (x.by ? ' by-char' : '');
       row.textContent = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '　' + x.text;
       log.appendChild(row);
     });
@@ -480,9 +503,56 @@ function renderGardenPick(scene) {
 }
 document.getElementById('dockGreenhouse').addEventListener('click', function() { renderGarden(); });
 
-// 角色也知道花房里那盆花（聊天窗口的现实感知里带一句）
-function gardenContextLine() {
-  if (!garden || !garden.species) return '';
-  var sp = gardenSpecies(garden.species);
-  return '用户在小手机的花房里养了一盆' + sp.name + '（' + gardenMethodName(gardenMethodOf(garden)) + '），现在是「' + gardenStageName(sp, gardenStage(garden)) + '」，' + gardenHealthText(garden, gardenHealth(garden)) + '。';
+// 分享：在 TA 的聊天里发一张花的照片（文字图片），记下 TA 知道了
+function gardenPhotoText() {
+  var sp = gardenSpecies(garden.species), st = gardenStage(garden);
+  return '花房的小木桌上，一盆' + sp.name + '种在' + { soil: '陶土盆', water: '玻璃瓶的清水', pebble: '铺着小石子的白瓷浅盆' }[gardenMethodOf(garden)] + '里，' +
+    (st === 0 ? '还是一颗刚种下的种子' : '现在是「' + gardenStageName(sp, st) + '」') + '，' + gardenHealthText(garden, gardenHealth(garden));
+}
+function gardenShareTo(c) {
+  var idx = findCharIdx(c.id);
+  if (idx < 0 || !garden) return;
+  var t = gardenPhotoText();
+  getChatHistory(idx).push({ role: 'user', content: '[文字图片] ' + t, textImg: t, time: Date.now() });
+  if (!c.inChat && !c.builtinAssistant) c.inChat = true;
+  c.chatTouchedAt = Date.now();
+  saveHistories(); saveCharList();
+  garden.sharedWith = (garden.sharedWith || []).filter(function(id) { return id !== c.id; }).concat(c.id);
+  saveGarden();
+  if (typeof renderChatCharList === 'function') renderChatCharList();
+  showToast('✓ 照片发给「' + (c.charAlias || c.charName) + '」了', 'success');
+  renderGarden();
+}
+
+// 知道这盆花的角色时不时悄悄来照顾：一个角色一天最多一次，缺水先浇水、没晒太阳就晒，不然摸摸叶子；只记在照顾记录里，不弹提示
+var GARDEN_CHAR_CARE = { water: '悄悄给它浇了水', waterH: '悄悄给它换了一瓶清水', sun: '悄悄把它搬到窗边晒了晒太阳', feed: '悄悄给它施了一点肥', pet: '悄悄摸了摸它的叶子' };
+function gardenCharTick() {
+  if (!garden || !garden.species || !(garden.sharedWith || []).length || gardenHealth(garden) === 'dead') return;
+  var g = garden, changed = false;
+  g.charCare = g.charCare || {};
+  g.sharedWith.forEach(function(id) {
+    var c = charList.filter(function(x) { return x.id === id; })[0];
+    if (!c || Date.now() - (g.charCare[id] || 0) < 20 * 3600000 || Math.random() > 0.3) return;
+    var k = gardenHours(g.last.water || g.plantedAt) >= 20 ? 'water' : gardenHours(g.last.sun) >= 8 ? 'sun' : gardenHours(g.last.feed) >= 96 ? 'feed' : 'pet';
+    if (k !== 'pet' && gardenHours(g.last[k]) >= GARDEN_ACTS[k].cd) g.pts = (g.pts || 0) + GARDEN_ACTS[k].pts;
+    g.last[k] = Date.now();
+    g.charCare[id] = Date.now();
+    g.log = (g.log || []).concat({ t: Date.now(), by: id, text: '「' + (c.charAlias || c.charName || 'TA') + '」' + GARDEN_CHAR_CARE[k === 'water' && gardenMethodOf(g) === 'water' ? 'waterH' : k] }).slice(-40);
+    changed = true;
+  });
+  if (!changed) return;
+  saveGarden();
+  if (document.getElementById('appGreenhouse').classList.contains('active')) renderGarden();
+}
+onMphoneReady(function() {
+  setTimeout(gardenCharTick, 20000);
+  setInterval(gardenCharTick, 20 * 60000);
+});
+
+// 只有分享过的角色知道花房里那盆花（聊天窗口的现实感知里带一句；TA 悄悄照顾过也记得）
+function gardenContextLine(char) {
+  if (!garden || !garden.species || !char || (garden.sharedWith || []).indexOf(char.id) < 0) return '';
+  var sp = gardenSpecies(garden.species), care = (garden.charCare || {})[char.id];
+  return '{{user}}在小手机的花房里养了一盆' + sp.name + '（给你看过照片），现在是「' + gardenStageName(sp, gardenStage(garden)) + '」，' + gardenHealthText(garden, gardenHealth(garden)) + '。' +
+    (care && Date.now() - care < 3 * 86400000 ? '你' + (Date.now() - care < 3600000 ? '刚刚' : durText(Date.now() - care) + '前') + '悄悄去照顾过它，{{user}}不一定知道。' : '');
 }

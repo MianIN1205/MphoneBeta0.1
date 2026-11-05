@@ -206,7 +206,7 @@ function realWorldContext(char, hist) {
     var pct = Math.round(phoneBattery.level * 100);
     lines.push('{{user}}的手机电量 ' + pct + '%' + (phoneBattery.charging ? '，正在充电' : pct <= 20 ? '，快没电了' : '') + '。');
   }
-  if (typeof gardenContextLine === 'function') { var gl = gardenContextLine(); if (gl) lines.push(gl); }
+  if (typeof gardenContextLine === 'function') { var gl = gardenContextLine(char); if (gl) lines.push(gl); }
   if (typeof calendarContextFor === 'function') {
     var cal = calendarContextFor(char);
     if (cal) lines.push(cal);
