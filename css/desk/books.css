@@ -30,14 +30,16 @@
 .together-book-info { display: flex; flex-direction: column; min-width: 0; }
 .together-book-info b { font-size: 13.5px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .together-book-info small { font-size: 11px; color: #aaa; }
-/* 精装书的样子（用户选的）：封面一圈细边框、书名横着印在封面上、底下垂一根小丝带书签 */
-.book-frame { position: absolute; top: 7px; bottom: 7px; left: 13px; right: 6px; border: 1px solid rgba(255,255,255,0.75); border-radius: 2px 5px 5px 2px; pointer-events: none; z-index: 1;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18); }
-.book-title { position: absolute; left: 16px; right: 9px; top: 24px; z-index: 2; text-align: center; font-size: 10px; font-weight: 600; line-height: 1.35; color: #6b5050;
-  letter-spacing: 0.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; pointer-events: none; }
-.book-title.on-img { background: rgba(255,255,255,0.82); border-radius: 3px; padding: 3px 2px; top: 30px; }
-.book-ribbon { position: absolute; right: 13px; bottom: -10px; width: 6px; height: 17px; z-index: 0; background: linear-gradient(#e893a9, #d9718e);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%); pointer-events: none; }
+/* 精装书的样子（用户选的，第二版）：封面上方一块小白签印书名，签的上下各一道细线；封面下面压两道浅浅的烫印线；靠书脊那边垂一根细丝带 */
+.book-frame { position: absolute; left: 16px; right: 9px; bottom: 12px; height: 4px; border-top: 1px solid rgba(255,255,255,0.7); border-bottom: 1px solid rgba(255,255,255,0.5); pointer-events: none; z-index: 1; }
+.book-title { position: absolute; left: 16px; right: 8px; top: 16px; z-index: 2; padding: 5px 3px; text-align: center; font-size: 9.5px; font-weight: 600; line-height: 1.3; color: #6b5555;
+  letter-spacing: 0.3px; background: rgba(255,253,250,0.88); border-radius: 2px; box-shadow: 0 1px 2px rgba(80,50,40,0.12);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; pointer-events: none; }
+.book-title::before, .book-title::after { content: ''; position: absolute; left: 3px; right: 3px; height: 1px; background: rgba(150,110,100,0.25); }
+.book-title::before { top: 2px; } .book-title::after { bottom: 2px; }
+.book-title.on-img { background: rgba(255,253,250,0.92); }
+.book-ribbon { position: absolute; left: 19px; bottom: -8px; width: 4px; height: 13px; z-index: 0; background: linear-gradient(#e893a9, #d9718e);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%); pointer-events: none; }
 .sys-book .book-ribbon { background: linear-gradient(#9fb8e6, #7d9bd6); }
 /* 书架分类：每层左上角的小标签 */
 .notes-shelf-area .bookshelf { padding-top: 30px; min-height: 166px; box-sizing: border-box; }

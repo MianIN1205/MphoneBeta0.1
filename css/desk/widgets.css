@@ -128,13 +128,13 @@
   box-shadow: 0 10px 24px rgba(60,40,60,0.22), 0 2px 6px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(0,0,0,0.04);
 }
 .vinyl-record {
-  position: absolute; inset: 5%; border-radius: 50%;
+  position: absolute; inset: 2.5%; border-radius: 50%;
   background: repeating-radial-gradient(circle, #171517 0 1.4px, #232023 1.4px 2.8px);
   box-shadow: inset 0 0 0 1px #0d0c0d, inset 0 0 14px rgba(0,0,0,0.6);
 }
 .vinyl-record::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 210deg, transparent 0 8%, rgba(255,255,255,0.09) 13%, transparent 19% 58%, rgba(255,255,255,0.07) 63%, transparent 69%); pointer-events: none; }
 .vinyl-label {
-  position: absolute; left: 29%; top: 29%; width: 42%; height: 42%; border-radius: 50%; z-index: 1;
+  position: absolute; left: 21%; top: 21%; width: 58%; height: 58%; border-radius: 50%; z-index: 1;
   background: #1e1c1f center / cover no-repeat; box-shadow: 0 0 0 1.5px rgba(255,255,255,0.08);
   display: flex; align-items: center; justify-content: center;
 }
