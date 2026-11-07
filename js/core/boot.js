@@ -221,6 +221,7 @@ var MPHONE_SCRIPTS = [
   "js/desk/greenhouse.js",
   "js/desk/starjar.js",
   "js/desk/books.js",
+  "js/char/life.js",
   "js/chat/msg-shot.js",
   "js/char/css-preview.js",
   "js/chat/peek.js",

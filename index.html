@@ -2488,6 +2488,18 @@
           <div class="auto-hint" id="charPersonaFixed" style="display:none;margin-top:6px;">MianIN 的本名、人设和头像是固定的，这里只能看；「备注」（昵称）和「对你的称呼」可以改</div>
         </div>
 
+        <!-- 让 TA 活起来（js/char/life.js）：聊天里补齐的自己、记着要关心你的事 -->
+        <div class="section-label">越聊越清楚的 TA</div>
+        <div class="settings-card">
+          <div class="persona-header">
+            <span class="persona-title-sm">聊出来的设定</span>
+            <span class="persona-subtitle">一行一条</span>
+          </div>
+          <textarea class="persona-textarea life-facts" id="charSelfFacts" placeholder="聊天里 TA 第一次说起的关于自己的事（喜欢什么、小时候的事……）会记在这里，以后都保持一致；可以改、可以删"></textarea>
+          <div class="field-label" style="margin-top:10px;">TA 记着要关心你的事</div>
+          <div id="charFollowList"></div>
+        </div>
+
         <!-- USER：人设跟着账号走，这里选本聊天使用的账号 -->
         <div class="section-label">USER</div>
         <div class="settings-card">

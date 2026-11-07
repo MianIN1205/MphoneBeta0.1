@@ -551,6 +551,7 @@ function fillCharForm(char) {
   setAvatarBox('charAvatarBox', char.charAvatar, char.charAvatarColor);
   if (typeof fillAssistantForm === 'function') fillAssistantForm(char);
   fillCircleForm(char);
+  if (typeof fillLifeForm === 'function') fillLifeForm(char);   // 聊出来的设定、记着要关心的事（js/char/life.js）
   fillMemCfgForm(char.memCfg);
   setDiaryCfgForm(char.diaryCfg);
 
@@ -679,6 +680,7 @@ function readCharForm() {
     chatCfg:          readChatCfgForm(),
     look:             lc.look,
     circle:           readCircleForm(),
+    selfFacts:        typeof readLifeForm === 'function' ? readLifeForm() : old.selfFacts,
     memCfg:           readMemCfgForm(),
     diaryCfg:         readDiaryCfgForm(),
     assistant:        (typeof readAssistantForm === 'function') ? readAssistantForm(old) : old.assistant

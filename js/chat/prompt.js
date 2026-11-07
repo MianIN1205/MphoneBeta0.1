@@ -62,6 +62,8 @@ function chatFormatRules(char) {
   if (c.patOn) {
     rules.push('你也可以像微信一样拍一拍用户：想拍的时候在全部消息最后另起一行写 <拍一拍/>（偶尔用，不要每次都拍）。用户拍你时，记录里会出现「（用户拍了拍你…）」。');
   }
+  // 待关心、补人设、防复读（js/char/life.js）
+  if (typeof lifeFormatRules === 'function') lifeFormatRules(char).forEach(function(r) { rules.push(r); });
   // 名字下面那行小字：状态变了才写，跟着这次回复一起带回来
   // 个性签名（资料卡上那句，「此刻」卡片第一行）：还没有就写一个，之后很少换
   rules.push(char.charBio ? '你的个性签名（资料卡上那句话，像微信的个性签名）现在是「' + char.charBio + '」；心境有比较大的变化时才换（很少），换的时候在全部消息最后另起一行写 <个性签名>不超过 30 个字</个性签名>。'
@@ -211,12 +213,13 @@ function realWorldContext(char, hist) {
   }
   if (typeof gardenContextLine === 'function') { var gl = gardenContextLine(char); if (gl) lines.push(gl); }
   if (typeof togetherContextLine === 'function') { var tl = togetherContextLine(char); if (tl) lines.push(tl); }
+  if (typeof lifeContextLines === 'function') lifeContextLines(char).forEach(function(l) { lines.push(l); });   // TA 的今天、记着要关心的事（js/char/life.js）
   if (typeof calendarContextFor === 'function') {
     var cal = calendarContextFor(char);
     if (cal) lines.push(cal);
   }
   if (!lines.length) return '';
-  return '【现在】' + lines.join('\n') + '\n这些是你此刻自然知道的现实情况，需要时自然地带进对话（比如很晚了劝对方早点睡、好久没聊有点想念），不用每次都提。';
+  return '【现在】' + lines.join('\n') + '\n这些是你此刻自然知道的情况，需要时自然地带进对话（比如好久没聊有点想念），不用每次都提；时间只是你心里有数，除非正聊到，不要主动提几点了，也不要催{{user}}去睡觉。';
 }
 
 // 眠花糖机固定的创作说明：每个角色都带，用户改不了。讲清楚这里是虚构的角色扮演，减少莫名其妙的拒绝和道歉
@@ -274,6 +277,8 @@ function buildMsgs(idx, histOverride) {
   if (fixed) extra += '你的名字是：' + MIANIN_NAME + '。\n';
   else if (char.charAlias || char.charName) extra += '你的名字是：' + (char.charAlias || char.charName) + '。\n';
   if (persona)           extra += '你的人设：\n' + persona + '\n';
+  // 聊出来的设定：聊天里 TA 自己说过的新细节（js/char/life.js），也是设定，要前后一致
+  if ((char.selfFacts || []).length) extra += '你在聊天里补充过的自己（也是你的设定，要一直保持一致）：\n' + char.selfFacts.map(function(f) { return '- ' + f; }).join('\n') + '\n';
   // USER：本聊天选用的账号（人设跟着账号走）+ 角色对该账号的专属印象
   var acc = resolveCharAccount(char);
   if (acc.nickname)      extra += '用户的名字是：' + acc.nickname + '。\n';

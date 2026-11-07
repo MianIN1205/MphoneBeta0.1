@@ -460,3 +460,10 @@
 /* 关联世界书：聊天窗口 / 剧情窗口两栏 */
 .wb-view-row { margin: 4px 0 6px; }
 .wb-view-hint { margin: 0 0 8px; }
+
+/* 越聊越清楚的 TA（js/char/life.js） */
+.life-facts { min-height: 70px; }
+.life-follow-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.04); font-size: 12.5px; color: #666; }
+.life-follow-when { flex-shrink: 0; font-size: 11px; color: #c48a9c; }
+.life-follow-text { flex: 1; min-width: 0; }
+.life-follow-del { flex-shrink: 0; border: none; background: none; color: #bbb; font-size: 16px; cursor: pointer; padding: 0 4px; }
