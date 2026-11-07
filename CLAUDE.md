@@ -50,7 +50,7 @@
 | appearance / appearance-store | 外观设置（边框 / 全屏、状态栏、字体、字号、全局 CSS、系统顶栏颜色）；保存和启动时恢复（也恢复系统提示词） |
 | bookshelf | 书架（日记 / 相册是系统书） |
 | gallery / anniv / diary | 相册；纪念日与日程；日记 + 每日定时写日记并记成长期记忆 |
-| widgets | 桌面网格与小组件（编辑模式拖动；照片小组件、纪念日的图片背景都能换图）；时钟卡片左边的头像框点一下换图片、长按换回空白（`mphone_desk_avatar`） |
+| widgets | 桌面网格与小组件（编辑模式拖动）。小组件 `WIDGET_TYPES`：纪念日、照片、黑胶唱片（2×2，中间贴图、写歌名歌手，歌名显示在下面；默认慢慢转，点一下暂停 / 继续，唱臂跟着抬起放下，存 `w.playing`）、胶囊（横着的 2×1，和图标一样高：左边小圆图或 Emoji，右边一句话 + 一行小字；类型里的 `w` / `h` 定大小）；换图的弹窗有「恢复默认」。时钟卡片左边的头像框点一下换图片，弹窗里「恢复默认」换回空白（`mphone_desk_avatar`；`openImgPicker(cb, { onReset })` 多一个恢复默认按钮） |
 | desk-icons | 外观「桌面图标」：每个桌面 / 程序坞图标能换图片或 emoji、改名字（`mphone_desk_icons` = { 图标id: { img, text, name } }，原样子存在 `deskIconOrig` 用来恢复默认），「显示软件名称」开关（`mphone_desk_labels`，关了 .phone 加 `hide-dock-labels`） |
 | places | 花房 / 星星瓶 / 灯塔 / 见面的打开 / 返回；灯塔、见面暂时只有空白界面（灯塔没有 emoji，图标是画的小 SVG）。样式在 css/desk/places.css（慢信、花房、星星瓶共用） |
 | letters | 慢信（桌面 App 💌）：给「未来的自己」或某个角色写信，选拆信日期（明天以后，快捷一周 / 一个月 / 半年 / 一年），到日子前封着；可以拆了的桌面图标有小红点。写给角色的信拆开时 TA 回一封（`letterAskReply`，150～400 字，存 `l.reply`）。存 `mphone_letters` = [{ id, to, content, writtenAt, openAt, opened, reply }] |

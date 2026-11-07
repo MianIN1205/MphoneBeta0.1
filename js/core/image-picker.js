@@ -30,11 +30,20 @@ function compressImage(dataUrl, maxSize, cb) {
   img.src = dataUrl;
 }
 
-function openImgPicker(callback) {
+// opts.onReset：有的话多一个「恢复默认」按钮（比如桌面时钟旁的头像框）
+var _imgPickerReset = null;
+function openImgPicker(callback, opts) {
   _imgPickerCallback = callback;
+  _imgPickerReset = (opts && opts.onReset) || null;
+  document.getElementById('imgPickerReset').style.display = _imgPickerReset ? '' : 'none';
   imgPickerUrlInput.value = '';
   imgPickerOverlay.classList.add('open');
 }
+document.getElementById('imgPickerReset').addEventListener('click', function() {
+  var r = _imgPickerReset;
+  closeImgPicker();
+  if (r) r();
+});
 
 function closeImgPicker() {
   imgPickerOverlay.classList.remove('open');

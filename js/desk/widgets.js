@@ -9,8 +9,11 @@
 // =============================================
 var WIDGET_TYPES = {
   anniv: { name: '纪念日', icon: '💝', desc: '显示设为外显的纪念日和日程，点开看全部' },
-  photo: { name: '照片', icon: '🖼️', desc: '放一张喜欢的图片' }
+  photo: { name: '照片', icon: '🖼️', desc: '放一张喜欢的图片' },
+  vinyl: { name: '黑胶唱片', icon: '💿', desc: '一张会转的黑胶唱片，中间贴一张图，写上歌名；点一下暂停 / 继续转' },
+  capsule: { name: '胶囊', icon: '💊', desc: '横着的小胶囊：左边一张小圆图，右边写一句话', w: 2, h: 1 }
 };
+function widgetSize(w) { var t = WIDGET_TYPES[w.type] || {}; return { w: t.w || 2, h: t.h || 2 }; }
 var DESK_COLS = 4;
 var deskWidgets = mphoneStore.load('mphone_widgets', null);
 if (!Array.isArray(deskWidgets)) {
@@ -48,6 +51,23 @@ function makeAv(img) {
 function buildWidget(w) {
   var face = document.createElement('div');
   face.className = 'widget-face type-' + w.type + (w.type === 'anniv' ? ' style-' + (w.style || 'avatars') : '');
+  if (w.type === 'vinyl') {
+    // 唱片：一圈圈纹路的黑胶，中间贴图（没选就是粉色标签），右上角一根唱臂；转着的时候唱臂搭在唱片上
+    face.classList.toggle('playing', w.playing !== false);
+    face.innerHTML = '<div class="vinyl-disc"><div class="vinyl-shine"></div><div class="vinyl-label"></div><div class="vinyl-hole"></div></div><div class="vinyl-arm"><i></i></div>';
+    var lbl = face.querySelector('.vinyl-label');
+    if (w.image) lbl.style.backgroundImage = 'url(' + w.image + ')';
+    return face;
+  }
+  if (w.type === 'capsule') {
+    face.innerHTML = '<div class="capsule-pic"></div><div class="capsule-text"><b></b><small></small></div>';
+    var pic = face.querySelector('.capsule-pic');
+    if (w.image) pic.style.backgroundImage = 'url(' + w.image + ')'; else pic.textContent = w.emoji || '🌙';
+    face.querySelector('b').textContent = w.text1 || '今天也要开心';
+    face.querySelector('small').textContent = w.text2 || '';
+    if (!w.text2) face.querySelector('small').remove();
+    return face;
+  }
   if (w.type === 'photo') {
     var src = w.image || widgetLatestPhoto();
     if (src) face.style.backgroundImage = 'url(' + src + ')';
@@ -104,7 +124,7 @@ function deskItemList() {
   var apps = Array.prototype.map.call(deskGrid.querySelectorAll(':scope > .dock-item'), function(el) {
     return { id: 'app:' + el.id, el: el, w: 1, h: 1 };
   });
-  var wids = deskWidgets.map(function(w) { return { id: 'w:' + w.id, widget: w, w: 2, h: 2 }; });
+  var wids = deskWidgets.filter(function(w) { return WIDGET_TYPES[w.type]; }).map(function(w) { var z = widgetSize(w); return { id: 'w:' + w.id, widget: w, w: z.w, h: z.h }; });
   return wids.concat(apps);   // 第一次排布时小组件先占左上角
 }
 function rectsHit(a, b) { return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
@@ -143,7 +163,8 @@ function renderWidgets() {
       el.appendChild(buildWidget(it.widget));
       var lb = document.createElement('span');
       lb.className = 'dock-label';
-      lb.textContent = WIDGET_TYPES[it.widget.type].name;
+      lb.textContent = (it.widget.type === 'vinyl' && it.widget.text1) || WIDGET_TYPES[it.widget.type].name;
+      if (it.widget.type === 'capsule') el.classList.add('desk-widget-capsule');
       el.appendChild(lb);
       if (deskEditing) {
         var x = document.createElement('button');
@@ -157,6 +178,7 @@ function renderWidgets() {
           if (deskEditing) { openWidgetEdit(w); return; }
           if (w.type === 'anniv') openAnnivScreen();
           else if (w.type === 'photo') { var src = w.image || widgetLatestPhoto(); if (src) openImgViewer(src, { source: '桌面小组件' }); }
+          else if (w.type === 'vinyl') { w.playing = w.playing === false; saveWidgets(); var f = el.querySelector('.widget-face'); if (f) f.classList.toggle('playing', w.playing); }
         });
       })(it.widget);
       deskGrid.appendChild(el);
@@ -328,10 +350,17 @@ function fillWidgetEdit() {
   document.getElementById('wgEditTitle').textContent = '编辑' + WIDGET_TYPES[w.type].name + '小组件';
   document.getElementById('wgStyleWrap').style.display = anniv ? '' : 'none';
   document.getElementById('wgCharWrap').style.display = anniv && w.style === 'avatars' ? '' : 'none';
-  document.getElementById('wgImageWrap').style.display = (anniv && w.style === 'image') || w.type === 'photo' ? '' : 'none';
-  document.getElementById('wgEmojiWrap').style.display = anniv && w.style === 'emoji' ? '' : 'none';
-  document.getElementById('wgImageBtn').textContent = w.image ? '换一张图片' : '选择图片';
+  var vinyl = w.type === 'vinyl', capsule = w.type === 'capsule';
+  document.getElementById('wgImageWrap').style.display = (anniv && w.style === 'image') || w.type === 'photo' || vinyl || capsule ? '' : 'none';
+  document.getElementById('wgEmojiWrap').style.display = (anniv && w.style === 'emoji') || (capsule && !w.image) ? '' : 'none';
+  document.getElementById('wgImageBtn').textContent = vinyl ? (w.image ? '换唱片中间的图' : '给唱片中间贴一张图') : capsule ? (w.image ? '换小圆图' : '选一张小圆图（不选就用 Emoji）') : (w.image ? '换一张图片' : '选择图片');
   document.getElementById('wgEmoji').value = w.emoji || '';
+  document.getElementById('wgTextWrap').style.display = vinyl || capsule ? '' : 'none';
+  var t1 = document.getElementById('wgText1'), t2 = document.getElementById('wgText2');
+  t1.placeholder = vinyl ? '歌名（显示在唱片下面）' : '一句话，比如：今天也要开心';
+  t2.placeholder = vinyl ? '歌手（可不填）' : '下面一行小字（可不填）';
+  if (document.activeElement !== t1) t1.value = w.text1 || '';
+  if (document.activeElement !== t2) t2.value = w.text2 || '';
   document.querySelectorAll('#wgStyleRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.style === w.style); });
   var row = document.getElementById('wgCharRow');
   row.innerHTML = '';
@@ -359,7 +388,7 @@ document.querySelectorAll('#wgStyleRow .pf-radio-btn').forEach(function(b) {
 });
 document.getElementById('wgImageBtn').addEventListener('click', function() {
   var w = wgEditing;
-  openImgPicker(function(src) { w.image = src; widgetChanged(); });
+  openImgPicker(function(src) { w.image = src; widgetChanged(); }, w.image ? { onReset: function() { w.image = ''; widgetChanged(); } } : null);
 });
 document.getElementById('wgEmoji').addEventListener('input', function() {
   wgEditing.emoji = this.value.trim();
@@ -367,6 +396,15 @@ document.getElementById('wgEmoji').addEventListener('input', function() {
   var pv = document.getElementById('wgPreview');
   pv.innerHTML = '';
   pv.appendChild(buildWidget(wgEditing));
+});
+['wgText1', 'wgText2'].forEach(function(id, i) {
+  document.getElementById(id).addEventListener('input', function() {
+    wgEditing[i ? 'text2' : 'text1'] = this.value.trim();
+    saveWidgets(); renderWidgets();
+    var pv = document.getElementById('wgPreview');
+    pv.innerHTML = '';
+    pv.appendChild(buildWidget(wgEditing));
+  });
 });
 document.getElementById('wgDone').addEventListener('click', function() { widgetEditOverlay.classList.remove('open'); });
 closeOnBackdrop(widgetEditOverlay);
@@ -380,7 +418,7 @@ document.getElementById('wgDelete').addEventListener('click', function() {
   renderWidgets();
 });
 
-// 桌面时钟卡片左边的头像框：点一下换图片，长按换回空白（mphone_desk_avatar）
+// 桌面时钟卡片左边的头像框：点一下换图片，弹窗里有「恢复默认」（mphone_desk_avatar）
 var deskAvatarEl = document.querySelector('.info-card .avatar');
 var deskAvatar = mphoneStore.load('mphone_desk_avatar', '') || '';
 function paintDeskAvatar() {
@@ -388,12 +426,10 @@ function paintDeskAvatar() {
   deskAvatarEl.style.backgroundImage = deskAvatar ? 'url(' + deskAvatar + ')' : '';
 }
 paintDeskAvatar();
-bindPress(deskAvatarEl, function() {
+deskAvatarEl.addEventListener('click', function() {
   if (deskEditing) return;
-  openImgPicker(function(src) { deskAvatar = src; mphoneStore.save('mphone_desk_avatar', deskAvatar); paintDeskAvatar(); });
-}, function() {
-  if (deskEditing || !deskAvatar) return;
-  openConfirm('把头像换回空白？', function() { deskAvatar = ''; mphoneStore.save('mphone_desk_avatar', ''); paintDeskAvatar(); });
+  openImgPicker(function(src) { deskAvatar = src; mphoneStore.save('mphone_desk_avatar', deskAvatar); paintDeskAvatar(); },
+    deskAvatar ? { onReset: function() { deskAvatar = ''; mphoneStore.save('mphone_desk_avatar', ''); paintDeskAvatar(); } } : null);
 });
 
 // 聊天、头像、纪念日变化后，回到桌面时刷新一下小组件
