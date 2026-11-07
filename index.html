@@ -1273,11 +1273,18 @@
         <div id="wgEmojiWrap">
           <input class="mine-field-input" id="wgEmoji" type="text" maxlength="8" placeholder="💝">
         </div>
+        <div id="wgCapsWrap">
+          <input class="mine-field-input" id="wgCapTitle" type="text" maxlength="16" placeholder="最上面一行标题（可不填）">
+          <div class="wg-caps-btns">
+            <button class="mine-acc-btn mine-acc-btn-close" id="wgCapImg1">上面的小圆图</button>
+            <button class="mine-acc-btn mine-acc-btn-close" id="wgCapImg2">下面的小圆图</button>
+          </div>
+        </div>
         <div id="wgSideWrap">
           <div class="field-label">小圆图放在</div>
           <div class="pf-radio-row" id="wgSideRow">
-            <button class="pf-radio-btn" data-side="left">左边</button>
-            <button class="pf-radio-btn" data-side="right">右边</button>
+            <button class="pf-radio-btn" data-side="left">上左下右</button>
+            <button class="pf-radio-btn" data-side="right">上右下左</button>
           </div>
         </div>
         <div id="wgTextWrap">
@@ -1787,6 +1794,13 @@
                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
               </svg>
               导入图书
+            </div>
+            <div class="notes-popup-item" id="notesBtnShelf">
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+              </svg>
+              新加一层
             </div>
           </div>
           <input type="file" id="bookImportInput" accept=".txt,.md,.epub,.docx,.pdf,text/plain" style="display:none;">
@@ -2455,6 +2469,10 @@
               <div class="char-field-row">
                 <span class="char-field-label">备注 <span style="color:#E08080;font-weight:700;">*</span></span>
                 <input class="field-input" type="text" id="charAlias" placeholder="必填">
+              </div>
+              <div class="char-field-row">
+                <span class="char-field-label">个性签名</span>
+                <input class="field-input" type="text" id="charBio" maxlength="30" placeholder="空着 TA 会自己写">
               </div>
             </div>
           </div>
@@ -3179,8 +3197,8 @@
     <!-- 消息列表最上面的「此刻」（js/chat/moments.js） -->
     <div class="mine-acc-overlay" id="momentOverlay">
       <div class="mine-acc-modal moment-card" id="momentCard">
-        <div class="moment-card-head"><span class="moment-card-av"></span><div class="moment-card-who"><b class="moment-card-name"></b><span class="moment-card-when"></span></div></div>
-        <div class="moment-card-line"><span class="moment-card-k">此刻</span><span class="moment-card-status"></span></div>
+        <div class="moment-card-head"><span class="moment-card-av"></span><div class="moment-card-who"><b class="moment-card-name"></b><span class="moment-card-bio"></span></div></div>
+        <div class="moment-card-line"><span class="moment-card-k">此刻</span><span class="moment-card-post-body"><span class="moment-card-status"></span><span class="moment-card-when"></span></span></div>
         <div class="moment-card-line moment-card-post"><span class="moment-card-k">动态</span><span class="moment-card-post-body"><span class="moment-card-post-text"></span><span class="moment-card-post-when"></span></span></div>
         <div class="mine-acc-actions">
           <button class="mine-acc-btn mine-acc-btn-close" id="momentClose">关闭</button>
@@ -3227,7 +3245,7 @@
       <div class="mine-acc-modal">
         <div class="mine-acc-title">目录</div>
         <div class="reader-toc-list" id="readerTocList"></div>
-        <div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" id="readerTocClose">关闭</button></div>
+        <div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" id="readerCoverBtn">换封面</button><button class="mine-acc-btn mine-acc-btn-close" id="readerTocClose">关闭</button></div>
       </div>
     </div>
     <div class="mine-acc-overlay" id="togetherPickOverlay">

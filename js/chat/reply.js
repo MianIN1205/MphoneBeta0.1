@@ -23,6 +23,8 @@ function commitAssistantReply(hist, raw, list, empty) {
     if (rt.status) { if (!status) raw = rt.text; status = rt.status; }
   }
   raw = raw.replace(/<签名>([\s\S]*?)<\/签名>/g, function(_, s) { headStatus = s.replace(/\s+/g, ' ').trim().slice(0, 20); return ''; });
+  var charBio = '';
+  raw = raw.replace(/<个性签名>([\s\S]*?)(<\/个性签名>|$)/g, function(_, s) { charBio = s.replace(/\s+/g, ' ').trim().slice(0, 30); return ''; });
   raw = raw.replace(/<拍一拍\s*\/?>(\s*<\/拍一拍>)?/g, function() { patBack = true; return ''; });
   // 剧情回复里藏着的前情：记在这一轮最后一条消息上，不显示
   raw = raw.replace(/<前情>([\s\S]*?)<\/前情>/g, function(_, s) { recap = s.replace(/\s+/g, ' ').trim().slice(0, 80); return ''; });
@@ -42,6 +44,7 @@ function commitAssistantReply(hist, raw, list, empty) {
     saveCharList();
     if (charList[openingChatCharIdx] === rc) paintChatSubTitle(rc);
   }
+  if (rc && charBio && chatHistories[rc.id] === hist && rc.charBio !== charBio) { rc.charBio = charBio; rc.charBioAt = Date.now(); saveCharList(); }
   // 聊天窗口：TA 帮忙记的提醒 / 闹钟 / 日程，记进桌面「纪念日」，后面单独成一张卡片
   var calItems = [];
   if (rc && chatHistories[rc.id] === hist && typeof extractCalTags === 'function') raw = extractCalTags(rc, raw, calItems);
@@ -334,13 +337,13 @@ function sendMsg(userText, requestOnly, onDone) {
       // 操作块不直接显示原始代码，写完后会变成确认卡片
       var shown = liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
         .replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
-        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
         .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, '').trim();
       if (bubbleStream && shown.indexOf('⚙️') < 0) {
         // 聊天窗口：写完的句子一个一个冒出来，打字气泡保持小点
         if (started) { typing.bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>'; started = false; }
         previewStream(liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
-          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
           .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, ''));
       } else {
         if (!started) { typing.bubble.innerHTML = ''; started = true; }

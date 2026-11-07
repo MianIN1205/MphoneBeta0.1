@@ -121,36 +121,44 @@
 }
 .widget-preview-wrap .widget-face { pointer-events: none; }
 
-/* 黑胶唱片：左边方形封套（封面图），黑胶从右边露出一半，不转 */
-.widget-face.type-vinyl { padding: 0; background: linear-gradient(150deg, #fdf3f6, #efe6f6); border: 1px solid rgba(255,255,255,0.8); }
-.vinyl-record {
-  position: absolute; right: 7%; top: 50%; width: 62%; aspect-ratio: 1; transform: translateY(-50%); border-radius: 50%;
-  background: radial-gradient(circle, transparent 0 30%, rgba(255,255,255,0.05) 31% 33%, transparent 34% 52%, rgba(255,255,255,0.06) 53% 54%, transparent 55% 74%, rgba(255,255,255,0.05) 75% 76%, transparent 77%),
-    conic-gradient(from 20deg, #26222a, #3a3540 12%, #1d1a20 25%, #2e2a33 40%, #1b181e 55%, #38333d 70%, #211e25 85%, #26222a);
-  box-shadow: 0 5px 12px rgba(40,20,40,0.28), inset 0 0 0 1.5px #121014;
+/* 黑胶唱片（照用户给的参考图）：没有方框，圆形白色唱盘 + 黑胶 + 中间封面 + 右上角白色唱臂，不转 */
+.widget-face.type-vinyl { padding: 0; background: none !important; box-shadow: none; border: none; overflow: visible; }
+.vinyl-plate {
+  position: absolute; inset: 2%; border-radius: 50%; background: #fbfafc;
+  box-shadow: 0 10px 24px rgba(60,40,60,0.22), 0 2px 6px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(0,0,0,0.04);
 }
-.vinyl-label { position: absolute; left: 33%; top: 33%; width: 34%; height: 34%; border-radius: 50%; background: linear-gradient(135deg, #f7b9c9, #c9b6ec) center / cover no-repeat; }
-.vinyl-hole { position: absolute; left: 47%; top: 47%; width: 6%; height: 6%; border-radius: 50%; background: #f4eef2; }
-.vinyl-sleeve {
-  position: absolute; left: 8%; top: 50%; width: 62%; aspect-ratio: 1; transform: translateY(-50%); border-radius: 7px;
-  background: linear-gradient(145deg, #f9d3dd, #d9cdf2) center / cover no-repeat; box-shadow: 0 6px 14px rgba(110,60,90,0.22), inset 0 0 0 1px rgba(255,255,255,0.5);
+.vinyl-record {
+  position: absolute; inset: 5%; border-radius: 50%;
+  background: repeating-radial-gradient(circle, #171517 0 1.4px, #232023 1.4px 2.8px);
+  box-shadow: inset 0 0 0 1px #0d0c0d, inset 0 0 14px rgba(0,0,0,0.6);
+}
+.vinyl-record::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 210deg, transparent 0 8%, rgba(255,255,255,0.09) 13%, transparent 19% 58%, rgba(255,255,255,0.07) 63%, transparent 69%); pointer-events: none; }
+.vinyl-label {
+  position: absolute; left: 29%; top: 29%; width: 42%; height: 42%; border-radius: 50%; z-index: 1;
+  background: #1e1c1f center / cover no-repeat; box-shadow: 0 0 0 1.5px rgba(255,255,255,0.08);
   display: flex; align-items: center; justify-content: center;
 }
-.vinyl-sleeve::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(120deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 45%); pointer-events: none; }
-.vinyl-note { font-size: 22px; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(150,90,120,0.35); }
-.vinyl-sleeve.has-img .vinyl-note { display: none; }
+.vinyl-label span { transform: rotate(90deg); font-size: 8px; letter-spacing: 1.5px; color: #77707a; white-space: nowrap; }
+.vinyl-label.has-img span { display: none; }
+.vinyl-arm { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.28)); }
 
-/* 胶囊：横着占 2×1，和一个图标一样高；左边小圆图，右边一句话 */
-.desk-widget-capsule .widget-face.type-capsule {
-  height: 50px; border-radius: 25px; padding: 0 10px 0 5px; flex-direction: row; justify-content: flex-start; gap: 7px;
-  background-color: rgba(255,255,255,0.32); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid rgba(255,255,255,0.7);
+/* 胶囊（2×2，像用户给的「液态胶囊」）：上下两颗白色半透明胶囊，一颗图在左、一颗图在右，最上面可选一行标题 */
+.widget-face.type-capsule {
+  padding: 10px 8px; gap: 8px; justify-content: center;
+  background-color: rgba(255,255,255,0.24); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.6);
 }
-.capsule-pic { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: #fde4ea center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 17px; box-shadow: 0 0 0 2px #fff; }
-.capsule-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
-.widget-face.type-capsule.pic-right { flex-direction: row-reverse !important; padding: 0 5px 0 12px !important; justify-content: space-between !important; }
-.widget-face.type-capsule.pic-right .capsule-text { text-align: left; flex: 1; }
-.capsule-text b { font-size: 12px; font-weight: 600; color: #5a4249; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.capsule-text small { font-size: 10px; color: #a08890; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#wgPreview .widget-face.type-capsule { height: 50px; border-radius: 25px; padding: 0 10px 0 5px; flex-direction: row; justify-content: flex-start; gap: 7px; background-color: #fff; }
-#wgTextWrap .mine-field-input { width: 100%; box-sizing: border-box; }
+.caps-title { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 4px rgba(120,70,90,0.35); text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.caps-pill {
+  display: flex; align-items: center; gap: 6px; width: 100%; box-sizing: border-box; height: 34px; padding: 0 9px 0 3px; border-radius: 17px;
+  background: rgba(255,255,255,0.72); box-shadow: 0 4px 10px rgba(120,70,90,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+.caps-pill.rev, .widget-face.type-capsule.swap .caps-pill:not(.rev) { flex-direction: row-reverse; padding: 0 3px 0 9px; }
+.widget-face.type-capsule.swap .caps-pill.rev { flex-direction: row; padding: 0 9px 0 3px; }
+.capsule-pic { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, #cfe2fb, #f9d5e0) center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; box-shadow: 0 0 0 1.5px #fff; }
+.caps-text { flex: 1; min-width: 0; font-size: 11px; color: #6a5560; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.caps-pill.rev .caps-text, .widget-face.type-capsule.swap .caps-pill:not(.rev) .caps-text { text-align: right; }
+.widget-face.type-capsule.swap .caps-pill.rev .caps-text { text-align: left; }
+.wg-caps-btns { display: flex; gap: 8px; margin-top: 8px; }
+.wg-caps-btns .mine-acc-btn { flex: 1; font-size: 12.5px; }
+#wgCapsWrap .mine-field-input, #wgTextWrap .mine-field-input { width: 100%; box-sizing: border-box; }

@@ -195,8 +195,8 @@ document.getElementById('bookNewSave').addEventListener('click', function() {
   var totalSlots = 0;
   shelves.forEach(function(s) { totalSlots += s.querySelectorAll('.book-slot').length; });
 
-  // 4层书架全满（12本）时弹窗提示
-  if (shelves.length >= 4 && totalSlots >= 12) {
+  // 书架全满（8 层 24 本）时弹窗提示
+  if (shelves.length >= SHELF_MAX && totalSlots >= SHELF_MAX * 3) {
     bookNewOverlay.classList.remove('open');
     document.getElementById('shelfFullOverlay').classList.add('open');
     return;
@@ -240,13 +240,20 @@ function createBookSlot(data) {
   book.className = 'book';
   applyBookCover(book, data.color, data.cover);
   if (Array.isArray(data.pages)) book._bvPages = data.pages;
-  if (data.novel) {   // 导入的书（js/desk/books.js）：封面上竖着印书名
-    book._novel = data.novel;
-    var nt = document.createElement('span');
-    nt.className = 'book-novel-title';
-    nt.textContent = data.name;
-    book.appendChild(nt);
+  if (data.novel) book._novel = data.novel;   // 导入的书（js/desk/books.js）
+  // 精装书的样子（用户选的）：封面一圈细边框、书名横着印在封面上、底下垂一根小书签丝带
+  var deco = document.createElement('span');
+  deco.className = 'book-frame';
+  book.appendChild(deco);
+  if (!data.sys) {
+    var tt = document.createElement('span');
+    tt.className = 'book-title' + (data.cover ? ' on-img' : '');
+    tt.textContent = data.name;
+    book.appendChild(tt);
   }
+  var rb = document.createElement('span');
+  rb.className = 'book-ribbon';
+  book.appendChild(rb);
   if (data.sys) {
     book._sys = data.sys;
     var emblem = document.createElement('span');
@@ -279,20 +286,68 @@ function saveShelves() {
     });
   });
   mphoneStore.save('mphone_notes_shelves', data);
+  mphoneStore.save('mphone_shelf_names', Array.from(document.querySelectorAll('.notes-shelf-area .bookshelf')).map(function(s) { return s._name || ''; }));
 }
 
 function loadShelves() {
-  var data = mphoneStore.load('mphone_notes_shelves', null);
+  var data = mphoneStore.load('mphone_notes_shelves', null), names = mphoneStore.load('mphone_shelf_names', []) || [];
   if (!Array.isArray(data) || !data.length) return;
   var shelfArea = document.querySelector('.notes-shelf-area');
   shelfArea.innerHTML = '';
-  data.forEach(function(books) {
+  data.forEach(function(books, i) {
     var shelf = document.createElement('div');
     shelf.className = 'bookshelf';
+    shelf._name = names[i] || '';
     books.forEach(function(b) { shelf.appendChild(createBookSlot(b)); });
     shelfArea.appendChild(shelf);
   });
 }
+
+// 书架分类（用户要的）：每层左上角一个小标签写分类名，点一下就能改；书长按拖到别的层就算换了分类
+var SHELF_MAX = 8;   // 最多 8 层、每层 3 本
+function decorateShelf(shelf) {
+  var tag = shelf.querySelector(':scope > .shelf-name');
+  if (!tag) {
+    tag = document.createElement('span');
+    tag.className = 'shelf-name';
+    tag.addEventListener('click', function(e) { e.stopPropagation(); renameShelf(shelf); });
+    shelf.insertBefore(tag, shelf.firstChild);
+  }
+  tag.textContent = shelf._name || '+ 分类';
+  tag.classList.toggle('empty', !shelf._name);
+}
+function renameShelf(shelf) {
+  if (isDeleteMode) return;
+  var tag = shelf.querySelector(':scope > .shelf-name');
+  var inp = document.createElement('input');
+  inp.className = 'shelf-name-input';
+  inp.maxLength = 10;
+  inp.value = shelf._name || '';
+  inp.placeholder = '比如：小说、日常';
+  tag.replaceWith(inp);
+  inp.focus();
+  var done = false;
+  function finish() {
+    if (done) return;
+    done = true;
+    shelf._name = inp.value.trim();
+    inp.replaceWith(tag);
+    syncShelves();
+  }
+  inp.addEventListener('blur', finish);
+  inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+}
+document.getElementById('notesBtnShelf').addEventListener('click', function(e) {
+  e.stopPropagation();
+  notesPopup.classList.remove('open');
+  var area = document.querySelector('.notes-shelf-area');
+  if (area.querySelectorAll('.bookshelf').length >= SHELF_MAX) { showToast('最多 ' + SHELF_MAX + ' 层', 'plain'); return; }
+  var shelf = document.createElement('div');
+  shelf.className = 'bookshelf';
+  area.appendChild(shelf);
+  decorateShelf(shelf);
+  renameShelf(shelf);
+});
 
 function syncShelves() {
   var shelfArea = document.querySelector('.notes-shelf-area');
@@ -301,13 +356,14 @@ function syncShelves() {
   var shelves = Array.from(shelfArea.querySelectorAll('.bookshelf'));
   shelves.forEach(function(shelf) {
     var cur = Array.from(shelfArea.querySelectorAll('.bookshelf'));
-    if (cur.length > 1 && shelf.querySelectorAll('.book-slot').length === 0) {
+    if (cur.length > 1 && shelf.querySelectorAll('.book-slot').length === 0 && !shelf._name && !shelf.querySelector('.shelf-name-input')) {
       shelf.remove();
     }
   });
 
   // 重新获取
   shelves = Array.from(shelfArea.querySelectorAll('.bookshelf'));
+  shelves.forEach(decorateShelf);
 
   // 空提示：仅当唯一一层且为空时显示
   shelves.forEach(function(shelf) {

@@ -10,8 +10,8 @@
 var WIDGET_TYPES = {
   anniv: { name: '纪念日', icon: '💝', desc: '显示设为外显的纪念日和日程，点开看全部' },
   photo: { name: '照片', icon: '🖼️', desc: '放一张喜欢的图片' },
-  vinyl: { name: '黑胶唱片', icon: '💿', desc: '一张唱片封套，黑胶从右边露出半张；封面图自己选，写上歌名' },
-  capsule: { name: '胶囊', icon: '💊', desc: '横着的小胶囊：一张小圆图（放左边或右边）加一句话', w: 2, h: 1 }
+  vinyl: { name: '黑胶唱片', icon: '💿', desc: '一张圆圆的黑胶唱片，中间贴封面图，右上角一根唱臂；写上歌名' },
+  capsule: { name: '胶囊', icon: '💊', desc: '上下两颗横着的小胶囊，各一张小圆图加一句话，上面还能写一行标题' }
 };
 function widgetSize(w) { var t = WIDGET_TYPES[w.type] || {}; return { w: t.w || 2, h: t.h || 2 }; }
 var DESK_COLS = 4;
@@ -52,23 +52,29 @@ function buildWidget(w) {
   var face = document.createElement('div');
   face.className = 'widget-face type-' + w.type + (w.type === 'anniv' ? ' style-' + (w.style || 'avatars') : '');
   if (w.type === 'vinyl') {
-    // 唱片：左边一张方形封套（封面图自己选），黑胶从封套右边露出来一半，中间的小圆标签也是这张图；不转（用户要的）
-    face.innerHTML = '<div class="vinyl-record"><div class="vinyl-label"></div><div class="vinyl-hole"></div></div><div class="vinyl-sleeve"><span class="vinyl-note">♪</span></div>';
+    // 唱片（照用户给的参考图）：圆的，外面一圈白色唱盘，黑胶一圈圈细纹，中间贴封面（没选写 NO COVER），右上角一根白色唱臂；不转
+    face.innerHTML = '<div class="vinyl-plate"><div class="vinyl-record"><div class="vinyl-label"><span>NO COVER</span></div></div></div>' +
+      '<svg class="vinyl-arm" viewBox="0 0 100 100" aria-hidden="true"><path d="M86 13 L87 50 Q87 57 82 61" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>' +
+      '<rect x="74" y="58" width="11" height="15" rx="3" fill="#fff" transform="rotate(28 79.5 65.5)"/><circle cx="78.4" cy="63.3" r="1.1" fill="#c9c2cc"/><circle cx="77" cy="66.6" r="1.1" fill="#c9c2cc"/>' +
+      '<circle cx="86" cy="13" r="8.5" fill="#fff"/><circle cx="86" cy="13" r="4.5" fill="#efebf0"/></svg>';
     if (w.image) {
-      face.querySelector('.vinyl-sleeve').style.backgroundImage = 'url("' + w.image + '")';
-      face.querySelector('.vinyl-sleeve').classList.add('has-img');
-      face.querySelector('.vinyl-label').style.backgroundImage = 'url("' + w.image + '")';
+      var vl = face.querySelector('.vinyl-label');
+      vl.style.backgroundImage = 'url("' + w.image + '")';
+      vl.classList.add('has-img');
     }
     return face;
   }
   if (w.type === 'capsule') {
-    face.innerHTML = '<div class="capsule-pic"></div><div class="capsule-text"><b></b><small></small></div>';
-    if (w.picSide === 'right') face.classList.add('pic-right');   // 小圆图放右边
-    var pic = face.querySelector('.capsule-pic');
-    if (w.image) pic.style.backgroundImage = 'url(' + w.image + ')'; else pic.textContent = w.emoji || '🌙';
-    face.querySelector('b').textContent = w.text1 || '今天也要开心';
-    face.querySelector('small').textContent = w.text2 || '';
-    if (!w.text2) face.querySelector('small').remove();
+    // 两颗胶囊上下放（像用户给的「液态胶囊」参考图）：上面一颗图在左、下面一颗图在右（可以对调），最上面一行可选的标题
+    face.innerHTML = '<div class="caps-title"></div><div class="caps-pill"><span class="capsule-pic"></span><span class="caps-text"></span></div><div class="caps-pill rev"><span class="capsule-pic"></span><span class="caps-text"></span></div>';
+    if (w.picSide === 'right') face.classList.add('swap');
+    var tt = face.querySelector('.caps-title');
+    if (w.title) tt.textContent = w.title; else tt.remove();
+    [[w.image, w.text1 || '今天也要开心'], [w.image2, w.text2 || '早点睡觉']].forEach(function(p, i) {
+      var pill = face.querySelectorAll('.caps-pill')[i];
+      if (p[0]) pill.querySelector('.capsule-pic').style.backgroundImage = 'url("' + p[0] + '")'; else pill.querySelector('.capsule-pic').textContent = '♡';
+      pill.querySelector('.caps-text').textContent = p[1];
+    });
     return face;
   }
   if (w.type === 'photo') {
@@ -168,7 +174,6 @@ function renderWidgets() {
       lb.className = 'dock-label';
       // 胶囊下面不写名字（留一行空的，和图标的名字对齐）；唱片下面写歌名
       lb.textContent = it.widget.type === 'capsule' ? ' ' : (it.widget.type === 'vinyl' && it.widget.text1) || WIDGET_TYPES[it.widget.type].name;
-      if (it.widget.type === 'capsule') el.classList.add('desk-widget-capsule');
       el.appendChild(lb);
       if (deskEditing) {
         var x = document.createElement('button');
@@ -355,19 +360,24 @@ function fillWidgetEdit() {
   document.getElementById('wgStyleWrap').style.display = anniv ? '' : 'none';
   document.getElementById('wgCharWrap').style.display = anniv && w.style === 'avatars' ? '' : 'none';
   var vinyl = w.type === 'vinyl', capsule = w.type === 'capsule';
-  document.getElementById('wgImageWrap').style.display = (anniv && w.style === 'image') || w.type === 'photo' || vinyl || capsule ? '' : 'none';
-  document.getElementById('wgEmojiWrap').style.display = (anniv && w.style === 'emoji') || (capsule && !w.image) ? '' : 'none';
-  document.getElementById('wgImageBtn').textContent = vinyl ? (w.image ? '换封面图' : '选一张封面图') : capsule ? (w.image ? '换小圆图' : '选一张小圆图（不选就用 Emoji）') : (w.image ? '换一张图片' : '选择图片');
+  document.getElementById('wgImageWrap').style.display = (anniv && w.style === 'image') || w.type === 'photo' || vinyl ? '' : 'none';
+  document.getElementById('wgEmojiWrap').style.display = anniv && w.style === 'emoji' ? '' : 'none';
+  document.getElementById('wgImageBtn').textContent = vinyl ? (w.image ? '换封面图' : '选一张封面图') : (w.image ? '换一张图片' : '选择图片');
+  document.getElementById('wgEmoji').value = w.emoji || '';
+  // 胶囊：标题、上面一颗（图 + 一句话）、下面一颗（图 + 一句话）、图片位置
+  document.getElementById('wgCapsWrap').style.display = capsule ? '' : 'none';
   document.getElementById('wgSideWrap').style.display = capsule ? '' : 'none';
   document.querySelectorAll('#wgSideRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.side === (w.picSide === 'right' ? 'right' : 'left')); });
-  document.getElementById('wgEmoji').value = w.emoji || '';
+  document.getElementById('wgCapImg1').textContent = w.image ? '换上面的小圆图' : '上面的小圆图';
+  document.getElementById('wgCapImg2').textContent = w.image2 ? '换下面的小圆图' : '下面的小圆图';
   document.getElementById('wgTextWrap').style.display = vinyl || capsule ? '' : 'none';
-  var t1 = document.getElementById('wgText1'), t2 = document.getElementById('wgText2');
-  t1.placeholder = vinyl ? '歌名（显示在唱片下面）' : '一句话，比如：今天也要开心';
-  t2.placeholder = '下面一行小字（可不填）';
+  var t1 = document.getElementById('wgText1'), t2 = document.getElementById('wgText2'), t3 = document.getElementById('wgCapTitle');
+  t1.placeholder = vinyl ? '歌名（显示在唱片下面）' : '上面那颗写的话，比如：今天也要开心';
+  t2.placeholder = '下面那颗写的话，比如：早点睡觉';
   t2.style.display = vinyl ? 'none' : '';
   if (document.activeElement !== t1) t1.value = w.text1 || '';
   if (document.activeElement !== t2) t2.value = w.text2 || '';
+  if (document.activeElement !== t3) t3.value = w.title || '';
   document.querySelectorAll('#wgStyleRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.style === w.style); });
   var row = document.getElementById('wgCharRow');
   row.innerHTML = '';
@@ -399,6 +409,19 @@ document.getElementById('wgImageBtn').addEventListener('click', function() {
 });
 document.getElementById('wgEmoji').addEventListener('input', function() {
   wgEditing.emoji = this.value.trim();
+  saveWidgets(); renderWidgets();
+  var pv = document.getElementById('wgPreview');
+  pv.innerHTML = '';
+  pv.appendChild(buildWidget(wgEditing));
+});
+[['wgCapImg1', 'image'], ['wgCapImg2', 'image2']].forEach(function(x) {
+  document.getElementById(x[0]).addEventListener('click', function() {
+    var w = wgEditing;
+    openImgPicker(function(src) { w[x[1]] = src; widgetChanged(); }, w[x[1]] ? { onReset: function() { w[x[1]] = ''; widgetChanged(); } } : null);
+  });
+});
+document.getElementById('wgCapTitle').addEventListener('input', function() {
+  wgEditing.title = this.value.trim();
   saveWidgets(); renderWidgets();
   var pv = document.getElementById('wgPreview');
   pv.innerHTML = '';

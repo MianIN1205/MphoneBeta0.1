@@ -545,6 +545,7 @@ function scheduleLiveLook() {
 function fillCharForm(char) {
   document.getElementById('charName').value     = char.charName      || '';
   document.getElementById('charAlias').value    = char.charAlias     || '';
+  document.getElementById('charBio').value      = char.charBio       || '';
   document.getElementById('userNickname').value = char.userNickname  || '';
   document.getElementById('charPersona').value  = char.charPersona   || '';
   setAvatarBox('charAvatarBox', char.charAvatar, char.charAvatarColor);
@@ -661,6 +662,7 @@ function readCharForm() {
   return Object.assign({}, old, {
     charName:         document.getElementById('charName').value.trim(),
     charAlias:        document.getElementById('charAlias').value.trim(),
+    charBio:          document.getElementById('charBio').value.trim(),
     userNickname:     document.getElementById('userNickname').value.trim(),
     charPersona:      document.getElementById('charPersona').value,
     charAvatar:       document.getElementById('charAvatarBox')._img || '',

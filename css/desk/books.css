@@ -30,6 +30,17 @@
 .together-book-info { display: flex; flex-direction: column; min-width: 0; }
 .together-book-info b { font-size: 13.5px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .together-book-info small { font-size: 11px; color: #aaa; }
-/* 书架上导入的书：封面中间一张小白签，竖着印书名 */
-.book-novel-title { position: absolute; left: 23px; top: 12px; max-height: 76px; width: 20px; box-sizing: border-box; padding: 5px 3px; background: rgba(255,255,255,0.85); border-radius: 3px;
-  font-size: 11px !important; line-height: 1.2; letter-spacing: 0; word-break: break-all; text-align: center; color: #6b5a5a; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); pointer-events: none; z-index: 1; }
+/* 精装书的样子（用户选的）：封面一圈细边框、书名横着印在封面上、底下垂一根小丝带书签 */
+.book-frame { position: absolute; top: 7px; bottom: 7px; left: 13px; right: 6px; border: 1px solid rgba(255,255,255,0.75); border-radius: 2px 5px 5px 2px; pointer-events: none; z-index: 1;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18); }
+.book-title { position: absolute; left: 16px; right: 9px; top: 24px; z-index: 2; text-align: center; font-size: 10px; font-weight: 600; line-height: 1.35; color: #6b5050;
+  letter-spacing: 0.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; pointer-events: none; }
+.book-title.on-img { background: rgba(255,255,255,0.82); border-radius: 3px; padding: 3px 2px; top: 30px; }
+.book-ribbon { position: absolute; right: 13px; bottom: -10px; width: 6px; height: 17px; z-index: 0; background: linear-gradient(#e893a9, #d9718e);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%); pointer-events: none; }
+.sys-book .book-ribbon { background: linear-gradient(#9fb8e6, #7d9bd6); }
+/* 书架分类：每层左上角的小标签 */
+.notes-shelf-area .bookshelf { padding-top: 30px; min-height: 166px; box-sizing: border-box; }
+.shelf-name { position: absolute; top: 8px; left: 12px; z-index: 2; font-size: 11px; color: rgba(110,75,55,0.78); background: rgba(255,255,255,0.55); padding: 1px 9px; border-radius: 9px; cursor: pointer; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shelf-name.empty { color: rgba(140,105,85,0.45); background: rgba(255,255,255,0.28); }
+.shelf-name-input { position: absolute; top: 6px; left: 10px; z-index: 3; width: 120px; font-size: 12px; padding: 3px 8px; border-radius: 9px; border: 1px solid rgba(190,150,120,0.5); background: #fffaf5; font-family: inherit; outline: none; }

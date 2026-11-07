@@ -67,7 +67,7 @@ var bookImportInput = document.getElementById('bookImportInput');
 document.getElementById('notesBtnImport').addEventListener('click', function(e) {
   e.stopPropagation();
   notesPopup.classList.remove('open');
-  if (document.querySelectorAll('.notes-shelf-area .book-slot').length >= 12) { document.getElementById('shelfFullOverlay').classList.add('open'); return; }
+  if (document.querySelectorAll('.notes-shelf-area .book-slot').length >= SHELF_MAX * 3) { document.getElementById('shelfFullOverlay').classList.add('open'); return; }
   bookImportInput.value = '';
   bookImportInput.click();
 });
@@ -299,3 +299,23 @@ function togetherContextLine(char) {
   return '【一起看书】你和{{user}}正在一起看《' + meta.title + '》，{{user}}现在看到第 ' + (page + 1) + ' / ' + pages.length + ' 页（约 ' + Math.floor((page + 1) / pages.length * 100) + '%）。这一页写的是：\n「' + bookPageText(meta.id, page) + '」\n' +
     '聊天时可以自然地聊这一页的内容、人物和你的感受，像坐在一起看书的人；不用每次都提，不要整段复述，也不要说出后面还没看到的情节。';
 }
+
+// 换封面（目录弹窗里）：书架上那本也跟着换
+document.getElementById('readerCoverBtn').addEventListener('click', function() {
+  var meta = bookMeta(readerState.id);
+  if (!meta) return;
+  document.getElementById('readerTocOverlay').classList.remove('open');
+  var book = Array.from(document.querySelectorAll('.notes-shelf-area .book')).filter(function(b) { return b._novel === meta.id; })[0];
+  openImgPicker(function(src) {
+    meta.cover = src; saveBookMetas();
+    if (book) {
+      applyBookCover(book, book._color, src);
+      var t = book.querySelector('.book-title'); if (t) t.classList.add('on-img');
+      syncShelves();
+    }
+    showToast('✓ 封面换好了', 'success');
+  }, meta.cover ? { onReset: function() {
+    meta.cover = ''; saveBookMetas();
+    if (book) { book.style.backgroundImage = ''; applyBookCover(book, book._color, ''); var t = book.querySelector('.book-title'); if (t) t.classList.remove('on-img'); syncShelves(); }
+  } } : null);
+});

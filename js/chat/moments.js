@@ -18,7 +18,7 @@ function momentLatestPost(char) {
 // 有没有新东西：签名换了的时间、最新动态的时间，比上次点开晚
 function momentNewAt(char) {
   var post = momentLatestPost(char);
-  return Math.max(char.headStatusAt || 0, (post && post.time) || 0);
+  return Math.max(char.headStatusAt || 0, char.charBioAt || 0, (post && post.time) || 0);
 }
 function momentHasNew(char) { var t = momentNewAt(char); return t > 0 && t > (momentSeen[char.id] || 0); }
 
@@ -28,7 +28,7 @@ function renderMoments() {
   row.innerHTML = '';
   momentChars().forEach(function(c) {
     var item = document.createElement('div');
-    item.className = 'moment-item' + (momentHasNew(c) ? ' has-new' : '');
+    item.className = 'moment-item' + (momentHasNew(c) ? ' has-new' : '') + (c.builtinAssistant ? ' is-helper' : '');   // 有新东西：角色发蓝光，MianIN 粉光
     item.innerHTML = '<div class="moment-ring"><div class="chat-avatar moment-av"></div></div><span class="moment-name"></span>';
     if (typeof paintCharAvatar === 'function') paintCharAvatar(item.querySelector('.moment-av'), c);
     item.querySelector('.moment-name').textContent = c.charAlias || c.charName || '未命名';
@@ -51,7 +51,8 @@ function openMoment(c) {
   box.querySelector('.moment-card-name').textContent = c.charAlias || c.charName || '未命名';
   var st = box.querySelector('.moment-card-status');
   st.textContent = c.headStatus || (typeof CHAT_SUB_DEFAULT === 'string' ? CHAT_SUB_DEFAULT : '在呢');
-  box.querySelector('.moment-card-when').textContent = c.headStatusAt ? fmtAgo(c.headStatusAt) + '更新' : '';
+  box.querySelector('.moment-card-bio').textContent = c.charBio || '还没有个性签名';
+  box.querySelector('.moment-card-when').textContent = c.headStatusAt ? fmtAgo(c.headStatusAt) : '';
   var post = momentLatestPost(c), pb = box.querySelector('.moment-card-post');
   pb.style.display = post ? '' : 'none';
   if (post) {
