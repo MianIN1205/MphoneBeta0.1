@@ -402,3 +402,13 @@ document.getElementById('sysBarReset').addEventListener('click', function() {
   mphoneStore.remove('mphone_sysbar_color');
   applySysBarColor('');
 });
+
+// 载入页开关（默认关，用户要的）：存在 localStorage，因为载入页在脚本加载前就要知道（index.html 开头那段）
+(function() {
+  var t = document.getElementById('bootSplashToggle');
+  if (!t) return;
+  try { t.checked = localStorage.getItem('mphoneBootSplash') === '1'; } catch (e) {}
+  t.addEventListener('change', function() {
+    try { if (t.checked) localStorage.setItem('mphoneBootSplash', '1'); else localStorage.removeItem('mphoneBootSplash'); } catch (e) {}
+  });
+})();

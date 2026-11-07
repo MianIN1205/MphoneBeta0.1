@@ -30,6 +30,9 @@
     }
     #bootSplash .boot-name { margin-top: -4px; font-size: 18px; font-weight: 600; letter-spacing: 3px; color: #7a6080; }
     #bootSplash .boot-sub { font-size: 12px; letter-spacing: 1px; color: #a594b0; }
+    /* 外观里关掉载入页时（默认关）：只留一层和系统开屏一样颜色的底，等桌面画好就淡出，不显示 logo 和字 */
+    #bootSplash.plain { background: #F6E7F6; transition-duration: 0.25s; }
+    #bootSplash.plain > * { display: none; }
   </style>
   <!-- 样式：按功能分在 core / desk / settings / chat / char / prompt 文件夹里；顺序不能乱（后面的覆盖前面的） -->
   <link rel="stylesheet" href="css/core/base.css">
@@ -84,6 +87,9 @@
     (function() {
       var t = ['正在醒来…', '进入梦中…', '亲密链接…', '开始陪伴…'];
       document.getElementById('bootSub').textContent = t[Math.floor(Math.random() * t.length)];
+      var on = false;
+      try { on = localStorage.getItem('mphoneBootSplash') === '1'; } catch (e) {}
+      if (!on) document.getElementById('bootSplash').classList.add('plain');
     })();
   </script>
   <div class="phone fullscreen">
@@ -754,6 +760,19 @@
           </div>
           <div class="sb-custom-label">点一个图标换样子</div>
           <div class="desk-icon-list" id="deskIconList"></div>
+        </div>
+
+        <!-- 载入页开关：默认关（用户要的），关着时只是一层和系统开屏一样颜色的底，不显示 logo 和小字。存在 localStorage，载入页一打开就要读 -->
+        <div class="section-label">载入页</div>
+        <div class="settings-card">
+          <div class="sb-row">
+            <span class="sb-row-label">打开时显示载入页</span>
+            <label class="toggle-wrap">
+              <input type="checkbox" id="bootSplashToggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="sb-custom-label">logo、「眠花糖机 · Muse」和一句小字，等小手机准备好再淡出；关着时直接进</div>
         </div>
 
         <div class="section-label">状态栏</div>

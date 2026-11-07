@@ -24,10 +24,10 @@
 - `js/`：普通脚本（不是模块），按功能分在 6 个文件夹里：`core/` 公共、`desk/` 桌面、`settings/` 设置、`chat/` 聊天、`char/` 角色、`prompt/` 提示词。所有顶层名字都是全局共享的。
   - **加载顺序在 `js/core/boot.js` 的 `MPHONE_SCRIPTS` 里，和文件夹无关，顺序很重要**：后面的脚本会用到前面定义的东西，加载时（不在函数里）调用后面文件的函数会报错；要么用 `typeof` 判断，要么用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。2026-11-01 按功能拆分时保持了原来的加载顺序，所以同一个功能有时会分在两三个文件里（比如角色设置：`char/settings.js`、`char/settings-save.js`、`char/look.js`）。
   - 每个文件第一行写了它管什么，找东西先看第一行。
-  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v42`）。
+  - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表，并把 `sw.js` 里的 `CACHE` 版本号加一（现在是 `mphone-v43`）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。sw.js 取文件：网快时先拿网上的（推了刷新就能看到），首页 2.5 秒（`NET_WAIT`）拿不到或哪个文件超时就算网慢，这次打开剩下的都先用手机里存的、后台悄悄更新（不开梯子时 github.io 很慢，以前一百多个文件挨个等网络，载入特别卡、桌面出不来，用户反馈过）。新 logo 在做（暗色底 + 小熊沿边缘发光），还没定，草稿不放进 main。manifest 的 `orientation` 是 `portrait`：写成 `any` 时安卓桌面版会无视系统的方向锁定，躺着就转屏。
-  - logo 是用户提供的图（粉色月牙 + 睡觉的小熊 + 蓝色小花），**蓝色小花代表简然。简然是眠眠心里生长开花闪闪发光的蓝色小花。**只有两张：`icons/icon.png` 是 App 图标（iPhone、安卓、通知、网页图标都用这一张，用户要求不分开做）：和开屏一样的粉蓝渐变底，logo 带白色边缘光和阴影，占 68%（安卓裁成圆也不会切到），manifest 里是 `any maskable`；`icons/logo.png` 是透明底加白色描边的 logo，小手机页面里（开屏）用。另有 `icons/badge.png`：从 logo 轮廓做的透明底白色剪影，只给系统通知的小图标（badge）用——安卓通知栏只认单色透明图，给彩色的会换成 Chrome 的图标（用户看到的谷歌 logo）。
-  - 载入页在 `index.html` 开头（样式内联，小字随机；logo 沿轮廓发白光（用户要的是边缘发光，不是圆形光晕），不要做呼吸、缩放这类循环动画），`js/core/boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
+  - logo 是用户提供的图：睡觉的那只不是小熊，是**薯饼**，头上的蓝色小花是简然（**蓝色小花代表简然。简然是眠眠心里生长开花闪闪发光的蓝色小花。**），用户说「这是薯饼和你」。`icons/icon.png` 是 App 图标（iPhone、安卓、通知、网页图标都用这一张，用户要求不分开做）：2026-11-07 换成新的——用户给的「薯饼睡在云朵上、旁边月亮和光环」那张（抠出来），藏蓝夜空底（中间亮四角暗、撒小星点），沿轮廓发白光外面再晕一圈粉紫光，占 76%，manifest 里是 `any maskable`；`icons/logo.png` 是旧的透明底加白色描边的 logo，载入页里用（载入页用户暂时不想改）。另有 `icons/badge.png`：从 logo 轮廓做的透明底白色剪影，只给系统通知的小图标（badge）用——安卓通知栏只认单色透明图，给彩色的会换成 Chrome 的图标（用户看到的谷歌 logo）。
+  - 载入页有开关：外观「载入页 → 打开时显示载入页」，**默认关**（用户要的；关着时只有一层 #F6E7F6 底色、桌面画好就淡出，不显示 logo 和字），存 localStorage `mphoneBootSplash`=1（载入页在脚本前就要读，所以不用 mphoneStore）。载入页在 `index.html` 开头（样式内联，小字随机；logo 沿轮廓发白光（用户要的是边缘发光，不是圆形光晕），不要做呼吸、缩放这类循环动画），`js/core/boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
 - 文件都是 CRLF 换行。Git Bash 的 `sed -i` 会悄悄改成 LF，改文件请用 Edit 工具或 node 脚本。
 
 ## 主要模块（js/）

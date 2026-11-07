@@ -265,7 +265,7 @@ function hideBootSplash() {
   setTimeout(function() {
     el.classList.add('hide');
     setTimeout(function() { el.remove(); }, 450);
-  }, Math.max(0, 600 - (Date.now() - bootSplashStart)));
+  }, el.classList.contains('plain') ? 0 : Math.max(0, 600 - (Date.now() - bootSplashStart)));
 }
 setTimeout(hideBootSplash, 10000);
 
