@@ -394,11 +394,12 @@ function buildMsgs(idx, histOverride) {
   // 注入当前预设中已启用的提示词条目（按条目各自的 role 身份发送）。预设只给剧情窗口用（用户定的）：聊天窗口和各种活动只用世界书
   var curPreset = (typeof charPromptPreset === 'function') ? charPromptPreset(char) : (stPresets && stPresets[stActivePresetIdx]);
   var forDrama = (histOverride || getActiveHistory(idx)) === getDramaHistory(idx);
+  var presetAfter = [];   // 标着「聊天记录后」的条目：放在聊天记录后面，离回复最近
   if (forDrama && curPreset && Array.isArray(curPreset.entries)) {
     curPreset.entries.forEach(function(entry) {
       if (entry && entry.enabled && entry.content && entry.content.trim()) {
         var r = (entry.role === 'user' || entry.role === 'assistant') ? entry.role : 'system';
-        msgs.push({ role: r, content: entry.content.trim() });
+        (entry.pos === 'after' ? presetAfter : msgs).push({ role: r, content: entry.content.trim() });
       }
     });
   }
@@ -426,7 +427,7 @@ function buildMsgs(idx, histOverride) {
   var fill = function(m) { return typeof m.content === 'string' ? { role: m.role, content: fillMacros(m.content, char) } : m; };
   // 用户发来的文件：全文单独一段放在聊天记录前面（不替换 {{user}} 这些，原样给）
   var fileSys = (typeof filesContextFor === 'function') ? filesContextFor(history) : null;
-  return msgs.map(fill).concat(fileSys ? [fileSys] : [], rawHist, wbByPos.after.map(fill));
+  return msgs.map(fill).concat(fileSys ? [fileSys] : [], rawHist, wbByPos.after.map(fill), presetAfter.map(fill));
 }
 
 // 发给 AI / 用于总结的消息文字：撤回的只告诉它「撤回了一条消息」，引用的附上引用内容

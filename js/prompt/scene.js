@@ -37,7 +37,7 @@ var DEFAULT_SYSTEM_PROMPT = [
   '【剧情窗口：剧情演绎】',
   '- 在这里，你们的灵魂和思维在同一个空间：不再隔着屏幕，你和{{user}}可以身处同一个地方，面对面说话，也可以有近距离的接触。',
   '- 用叙事推进：写动作、神态、环境和心理，让场景有画面感；节奏有张有弛，不要一口气把所有事写完。',
-  '- 描写{{user}}用第二人称「你」；{{char}}和其他人用名字或「他 / 她」。',
+  '- 描写{{user}}默认用第二人称「你」，{{char}}和其他人用名字或「他 / 她」；字数、人称、视角、文风这些，预设里另有要求就按预设来。',
   '- 只写{{char}}和其他人物的言行；{{user}}的行动、台词、想法和结果留给{{user}}自己决定。',
   '- 可以按剧情需要引入其他人物、地点和事件，让故事往前走；聊天窗口里的事你也记得，可以作为前情自然延续。',
   '',
@@ -54,7 +54,7 @@ var sysPromptTA = document.getElementById('systemPromptTA');
   if (oldDefault) { mphoneStore.remove('mphone_system_prompt'); saved = null; }
   // 系统提示词改过（2026-11-07 加了「次元、第四面墙」，又整理了一遍）：存下来的要是没改过的以前的默认版，就换成新的（自己改过的不动）
   var sysHash = function(t) { var h = 5381; t = String(t).replace(/\r\n?/g, '\n').trim(); for (var i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h; };
-  if (typeof saved === 'string' && [1721911007, 3545766680].indexOf(sysHash(saved)) >= 0) { mphoneStore.remove('mphone_system_prompt'); saved = null; }
+  if (typeof saved === 'string' && [1721911007, 3545766680, 1418056656].indexOf(sysHash(saved)) >= 0) { mphoneStore.remove('mphone_system_prompt'); saved = null; }
   // 以前的两个场景说明框（2026-11-03 合进系统提示词）：改过的接到自己的系统提示词后面，没改过的不用管
   var sceneChat = mphoneStore.load('mphone_scene_chat', ''), sceneDrama = mphoneStore.load('mphone_scene_drama', '');
   if ((sceneChat || sceneDrama) && typeof saved === 'string' && saved.trim()) {

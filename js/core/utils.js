@@ -26,8 +26,13 @@ function shakeEl(el) {
 // 确认弹窗（全站共用）：「确认」后执行 onOk；点取消或弹窗外面就算了
 var confirmOverlay = document.getElementById('confirmOverlay');
 var confirmCallback = null;
+// 通用确认框：标题里说的是删除 / 清空 / 移除 / 扔掉这类，按钮写「确认删除」、下面一行「删除后无法恢复」；别的事（种下、发送、恢复默认……）按钮写「确定」，不显示那行
 function openConfirm(title, onOk) {
-  document.getElementById('confirmTitle').textContent = title || '删除此条目？';
+  title = title || '删除此条目？';
+  var del = /删|清空|移除|扔掉|拿出来|不要了/.test(title);
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmDesc').style.display = del ? '' : 'none';
+  document.getElementById('confirmOk').textContent = del ? '确认删除' : '确定';
   confirmCallback = onOk;
   confirmOverlay.classList.add('open');
 }

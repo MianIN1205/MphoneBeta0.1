@@ -1965,6 +1965,7 @@
             </div>
 
             <div class="auto-hint" style="margin:-2px 2px 10px;">预设只用在剧情窗口；聊天窗口、主动消息、动态、日记这些只用系统提示词和世界书。</div>
+            <div class="settings-card plot-card" id="stPlotCard" style="display:none;"></div>
             <div class="prompt-section-label">提示词条目（PROMPT ENTRIES）</div>
             <div class="auto-hint" style="margin:-2px 2px 8px;">可以导入酒馆（SillyTavern）的对话补全预设 JSON，条目的顺序和开关会一起导入；「聊天记录」「角色描述」「世界书」这类占位条目由应用自己处理，不导入。</div>
             <div id="stEntryList"></div>
@@ -1987,6 +1988,11 @@
                   <button class="pf-radio-btn selected" data-role="system">系统 (System)</button>
                   <button class="pf-radio-btn" data-role="user">用户 (User)</button>
                   <button class="pf-radio-btn" data-role="assistant">AI (Assistant)</button>
+                </div>
+                <div class="pf-field-label">放在哪里</div>
+                <div class="pf-radio-row" id="stEntryPosRow">
+                  <button class="pf-radio-btn selected" data-pos="before">聊天记录前</button>
+                  <button class="pf-radio-btn" data-pos="after">聊天记录后（更管用）</button>
                 </div>
                 <div class="pf-field-label">提示词内容</div>
                 <textarea class="pf-textarea" id="stEntryContentInput" rows="6" placeholder="输入此条目发送给模型的具体提示词内容…"></textarea>
@@ -3463,7 +3469,7 @@
     <div class="book-del-confirm-overlay" id="confirmOverlay">
       <div class="book-del-confirm-box">
         <div class="book-del-confirm-title" id="confirmTitle">删除此条目？</div>
-        <div class="book-del-confirm-desc">删除后无法恢复</div>
+        <div class="book-del-confirm-desc" id="confirmDesc">删除后无法恢复</div>
         <div class="book-del-confirm-btns">
           <button class="book-del-confirm-btn book-del-cancel-btn" id="confirmCancel">取消</button>
           <button class="book-del-confirm-btn book-del-ok-btn" id="confirmOk">确认删除</button>

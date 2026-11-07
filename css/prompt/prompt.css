@@ -447,3 +447,16 @@
 .pp-who { flex-shrink: 0; color: #a08890; }
 .pp-heads { flex: 1; min-width: 0; line-height: 1.5; word-break: break-all; }
 .pp-tk { flex-shrink: 0; font-size: 11px; color: #b49aa4; }
+
+/* 剧情设置（默认剧情预设上面那张卡片，js/prompt/presets.js） */
+.plot-card { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.plot-head { display: flex; align-items: center; justify-content: space-between; }
+.plot-head b { font-size: 14px; color: #5a4249; }
+.plot-reset { border: none; background: rgba(208,96,110,0.1); color: #c0607a; border-radius: 12px; padding: 4px 11px; font-family: inherit; font-size: 12px; cursor: pointer; }
+.plot-row { display: flex; align-items: flex-start; gap: 8px; }
+.plot-label { flex-shrink: 0; width: 64px; font-size: 12px; color: #a08890; line-height: 26px; }
+.plot-choices { flex: 1; display: flex; flex-wrap: wrap; gap: 5px; }
+.plot-chip { padding: 3px 10px !important; font-size: 12px !important; flex: 0 0 auto !important; white-space: nowrap; }
+.plot-len-wrap { font-size: 12px; color: #a08890; display: inline-flex; align-items: center; gap: 4px; }
+.plot-len-input { width: 64px; padding: 3px 6px; border: 1px solid rgba(200,160,170,0.5); border-radius: 8px; font-family: inherit; font-size: 12px; }
+.st-pos-badge { margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 10px; font-weight: 500; color: #7d9bd6; background: rgba(125,155,214,0.12); vertical-align: 1px; }
