@@ -54,17 +54,26 @@ function notifyIcon(char) {
   var av = char && char.charAvatar;
   return av && av.length < 300000 ? av : 'icons/icon.png';
 }
+// 通知显示名称：填了就用它当标题（比如「微信」），内容写成「角色：消息」
+var notifyNameInput = document.getElementById('notifyName');
+notifyNameInput.value = assistCfg.notifyName || '';
+notifyNameInput.addEventListener('input', function() { assistCfg.notifyName = this.value.trim(); saveAssistCfg(); });
+function notifyTitleBody(name, body) {
+  return assistCfg.notifyName ? [assistCfg.notifyName, name + '：' + body] : [name, body];
+}
 // 角色发来的新消息（只在应用处于后台时通知）
 function notifyNewMessages(char, added) {
   if (!notifyReady() || document.visibilityState === 'visible' || !char || !added || !added.length) return;
   var last = added[added.length - 1];
   var body = msgPreviewText(last) + (added.length > 1 ? '（共 ' + added.length + ' 条）' : '');
-  showSystemNotification(char.charAlias || char.charName || '新消息', body,
+  var tb = notifyTitleBody(char.charAlias || char.charName || '新消息', body);
+  showSystemNotification(tb[0], tb[1],
     { icon: notifyIcon(char), tag: 'chat-' + char.id, renotify: true, data: { open: 'chat', charId: char.id } });
 }
 function notifyFeedPost(char, post) {
   if (!notifyReady() || document.visibilityState === 'visible' || !char) return;
-  showSystemNotification((char.charAlias || char.charName || '角色') + ' 发布了新动态', post.text || '[图片]',
+  var tbf = notifyTitleBody((char.charAlias || char.charName || '角色') + ' 发布了新动态', post.text || '[图片]');
+  showSystemNotification(tbf[0], tbf[1],
     { icon: notifyIcon(char), tag: 'feed', renotify: true, data: { open: 'feed' } });
 }
 

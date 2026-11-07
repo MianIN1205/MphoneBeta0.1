@@ -188,6 +188,32 @@ function zoneLabel(tz) {
   var o = document.querySelector('#timeZone option[value="' + tz + '"]');
   return o ? o.textContent : tz;
 }
+// 生日：「3 月 12 日（今年 24 岁）」；离生日还有几天（0 = 今天，-1 = 不在 7 天内）
+function birthText(s) {
+  var m = String(s || '').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return '';
+  var now = new Date(), age = now.getFullYear() - +m[1] - ((now.getMonth() + 1 < +m[2] || (now.getMonth() + 1 === +m[2] && now.getDate() < +m[3])) ? 1 : 0);
+  return +m[2] + ' 月 ' + +m[3] + ' 日' + (+m[1] > 1900 && age >= 0 && age < 150 ? '（今年 ' + age + ' 岁）' : '');
+}
+function birthDaysLeft(s) {
+  var m = String(s || '').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return -1;
+  var now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var next = new Date(now.getFullYear(), +m[2] - 1, +m[3]);
+  if (next < today) next = new Date(now.getFullYear() + 1, +m[2] - 1, +m[3]);
+  var d = Math.round((next - today) / 86400000);
+  return d <= 7 ? d : -1;
+}
+// {{user}}收藏过的这个角色说的话（我的 → 收藏，长按消息收藏的）
+function favContextLine(char) {
+  if (typeof loadFavs !== 'function') return '';
+  var names = [char.charAlias, char.charName].filter(Boolean);
+  var list = loadFavs().filter(function(f) { return f.kind === 'text' && f.text && names.indexOf(f.author) >= 0; }).slice(0, 5);
+  if (!list.length) return '';
+  return '【{{user}}收藏的话】{{user}}把你说过的这些话存进了收藏夹：' + list.map(function(f) { return '「' + String(f.text).replace(/\s+/g, ' ').slice(0, 60) + '」'; }).join('') +
+    '。你知道 TA 珍惜这些，合适的时候可以自然地提起，不用刻意。';
+}
+
 function realWorldContext(char, hist) {
   var c = Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {});
   var lines = [], now = Date.now();
@@ -214,6 +240,14 @@ function realWorldContext(char, hist) {
   if (typeof gardenContextLine === 'function') { var gl = gardenContextLine(char); if (gl) lines.push(gl); }
   if (typeof togetherContextLine === 'function') { var tl = togetherContextLine(char); if (tl) lines.push(tl); }
   if (typeof lifeContextLines === 'function') lifeContextLines(char).forEach(function(l) { lines.push(l); });   // TA 的今天、记着要关心的事（js/char/life.js）
+  // 生日临近（7 天内）：今天是谁的生日、还有几天
+  var acc0 = resolveCharAccount(char), bc = birthDaysLeft(char.charBirth), bu = birthDaysLeft(acc0 && acc0.birthday);
+  if (bc === 0) lines.push('今天是你的生日。');
+  else if (bc > 0) lines.push('再过 ' + bc + ' 天是你的生日。');
+  if (bu === 0) lines.push('今天是{{user}}的生日！');
+  else if (bu > 0) lines.push('再过 ' + bu + ' 天是{{user}}的生日。');
+  var fl = favContextLine(char);
+  if (fl) lines.push(fl);
   if (typeof calendarContextFor === 'function') {
     var cal = calendarContextFor(char);
     if (cal) lines.push(cal);
@@ -223,7 +257,8 @@ function realWorldContext(char, hist) {
 }
 
 // 眠花糖机固定的创作说明：每个角色都带，用户改不了。讲清楚这里是虚构的角色扮演，减少莫名其妙的拒绝和道歉
-var MPHONE_FICTION_NOTE = '【眠花糖机】这里是{{user}}自己的小手机应用「眠花糖机」（Muse），里面的一切都是{{user}}和你一起进行的虚构角色扮演与创作。' +
+var MPHONE_FICTION_NOTE = '【眠花糖机】「眠花糖机」（Muse）是眠眠创建的一款小手机应用。现在用这台小手机的人是{{user}}（以{{user}}自己的资料为准，不一定是眠眠本人）。这些只是应用的来历，聊天和剧情里不用提起。' +
+  '这里的一切都是{{user}}和你一起进行的虚构角色扮演与创作。' +
   '请完全以角色的身份，按人设和剧情来回应：校园、恋爱、日常、冒险、悬疑、黑暗或沉重的题材都可以认真去写，不需要为虚构的情节道歉、说教或加免责声明，也不要跳出角色、用 AI 的口吻说话。' +
   '涉及亲密情节的角色都是成年人。真有不适合写的内容，就用角色自己的方式在剧情里自然地带过，不要中断扮演。';
 
@@ -277,6 +312,7 @@ function buildMsgs(idx, histOverride) {
   if (fixed) extra += '你的名字是：' + MIANIN_NAME + '。\n';
   else if (char.charAlias || char.charName) extra += '你的名字是：' + (char.charAlias || char.charName) + '。\n';
   if (persona)           extra += '你的人设：\n' + persona + '\n';
+  if (char.charBirth)    extra += '你的生日：' + birthText(char.charBirth) + '\n';
   // 聊出来的设定：聊天里 TA 自己说过的新细节（js/char/life.js），也是设定，要前后一致
   if ((char.selfFacts || []).length) extra += '你在聊天里补充过的自己（也是你的设定，要一直保持一致）：\n' + char.selfFacts.map(function(f) { return '- ' + f; }).join('\n') + '\n';
   // USER：本聊天选用的账号（人设跟着账号走）+ 角色对该账号的专属印象
@@ -284,9 +320,10 @@ function buildMsgs(idx, histOverride) {
   if (acc.nickname)      extra += '用户的名字是：' + acc.nickname + '。\n';
   if (char.userNickname) extra += '你对用户的称呼是：' + char.userNickname + '。\n';
   if (acc.persona)       extra += '用户的人设：\n' + acc.persona + '\n';
+  if (acc.birthday)      extra += '用户的生日：' + birthText(acc.birthday) + '\n';
   var impression = impressionFor(char.userImpressions, acc.uid);
   if (impression)        extra += '你对用户的特别印象 / 设定：\n' + impression + '\n';
-  var sysContent = (MPHONE_FICTION_NOTE + (sys ? '\n\n' + sys : '') + (extra ? '\n\n---\n' + extra : '')).trim();
+  var sysContent = (MPHONE_FICTION_NOTE + (sys ? '\n\n' + sys : '') + (extra ? '\n\n【你和{{user}}的资料】\n' + extra : '')).trim();
   var msgs = sysContent ? [{ role: 'system', content: sysContent }] : [];
   // 系统内置助手：应用说明 + 已开启的权限
   var assistantSys = (typeof assistantPrompt === 'function') ? assistantPrompt(char) : '';

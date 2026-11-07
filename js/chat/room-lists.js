@@ -66,6 +66,10 @@ function sendPickedImage(file) {
         } else if (funcName === '查手机' && typeof openPeek === 'function') {
           closeCrPlusPanel();
           openPeek(openingChatCharIdx);
+        } else if (funcName === '提示词' && typeof openPromptPreview === 'function') {
+          // 看这次会发给 TA 什么：直接打开当前这个角色、当前这个窗口的，先显示精简版
+          closeCrPlusPanel();
+          openPromptPreview({ charId: charList[openingChatCharIdx] && charList[openingChatCharIdx].id, view: currentCrSubView === 'contacts' ? 'drama' : 'chat', compact: true });
         } else if (funcName === '一起看' && typeof openTogether === 'function') {
           closeCrPlusPanel();
           openTogether(openingChatCharIdx);

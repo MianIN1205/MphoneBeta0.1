@@ -428,3 +428,22 @@
 /* 设置里一行右边的小选项按钮（左边是名字的那种）：扁扁的、贴着文字，不换行（用户要的；整行的大切换不动） */
 .auto-row .pf-radio-row, .sb-row .pf-radio-row { flex: none; gap: 4px; align-self: center; }
 .auto-row .pf-radio-btn, .sb-row .pf-radio-btn { flex: none; padding: 4px 10px; line-height: 1.35; border-radius: 8px; white-space: nowrap; }
+
+/* 注入预览（js/prompt/scene.js） */
+.prompt-preview-modal { width: 330px; max-height: 82%; }
+.prompt-preview-modal > #promptPreviewChars, .prompt-preview-modal > #promptPreviewView, .prompt-preview-modal > #promptPreviewMode, .prompt-preview-sum { flex-shrink: 0; }
+#promptPreviewChars { max-height: 66px; overflow-y: auto; }
+.prompt-preview-sum { font-size: 11.5px; color: #a08890; }
+.prompt-preview-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.prompt-preview-item { border-radius: 10px; background: rgba(250,244,246,0.95); padding: 6px 9px; }
+.prompt-preview-item summary { font-size: 12px; color: #8a6f78; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prompt-preview-item.role-user { background: rgba(236,244,252,0.95); }
+.prompt-preview-item.role-assistant { background: rgba(240,250,240,0.95); }
+.prompt-preview-text { margin-top: 6px; font-size: 11.5px; line-height: 1.6; color: #555; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow-y: auto; -webkit-user-select: text; user-select: text; }
+.prompt-preview-row { display: flex; align-items: baseline; gap: 6px; padding: 7px 9px; border-radius: 10px; background: rgba(250,244,246,0.95); font-size: 12px; color: #6f5a62; cursor: pointer; }
+.prompt-preview-row.role-user { background: rgba(236,244,252,0.95); }
+.prompt-preview-row.role-assistant { background: rgba(240,250,240,0.95); }
+.pp-no { flex-shrink: 0; width: 16px; color: #c4a2ad; text-align: right; }
+.pp-who { flex-shrink: 0; color: #a08890; }
+.pp-heads { flex: 1; min-width: 0; line-height: 1.5; word-break: break-all; }
+.pp-tk { flex-shrink: 0; font-size: 11px; color: #b49aa4; }

@@ -255,6 +255,7 @@
     mineIdInput.value       = normalizeAccId(acc ? (acc.id || '') : 'mphone_' + pad(mineAccounts.length + 1));
     mineBioInput.value      = acc ? (acc.bio || '') : '';
     document.getElementById('minePersonaInput').value = acc ? (acc.persona || '') : '';
+    document.getElementById('mineBirthInput').value = acc ? (acc.birthday || '') : '';
     mineEditOverlay.classList.add('open');
     mineNicknameInput.focus();
   }
@@ -308,7 +309,8 @@
     if (accId === '@') { shakeEl(mineIdInput); return; }
     var data = {
       nickname: nickname, id: accId, bio: mineBioInput.value.trim(),
-      persona: document.getElementById('minePersonaInput').value.trim()
+      persona: document.getElementById('minePersonaInput').value.trim(),
+      birthday: document.getElementById('mineBirthInput').value || ''
     };
     if (mineEditMode === 'edit') {
       Object.assign(mineAccounts[mineEditIdx], data);

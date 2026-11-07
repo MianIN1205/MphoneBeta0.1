@@ -87,6 +87,89 @@ document.getElementById('sysPromptReset').addEventListener('click', function() {
 // 每次发消息时告诉角色现在在哪个窗口（两个窗口的具体说明都在系统提示词里）
 function scenePrompt(isDrama) {
   return isDrama
-    ? '【现在】你和{{user}}在剧情窗口（剧情演绎）：你们的灵魂和思维在同一个空间。按系统提示词里「剧情窗口」那部分来。'
-    : '【现在】你和{{user}}在聊天窗口：你们在不同的次元，隔着小手机的屏幕聊天。按系统提示词里「聊天窗口」那部分来。';
+    ? '【在哪个窗口】你和{{user}}在剧情窗口（剧情演绎）：你们的灵魂和思维在同一个空间。按系统提示词里「剧情窗口」那部分来。'
+    : '【在哪个窗口】你和{{user}}在聊天窗口：你们在不同的次元，隔着小手机的屏幕聊天。按系统提示词里「聊天窗口」那部分来。';
 }
+
+// 注入预览（用户参考别的小手机想要的）：选一个角色、聊天或剧情窗口，看这次请求会发给 TA 的全部内容（和真正发送时拼法一样，{{char}} / {{user}} 已经换成名字）
+var ppState = { charId: '', view: 'chat', compact: true, open: -1 };
+function openPromptPreview(opts) {
+  opts = opts || {};
+  if (opts.charId) ppState.charId = opts.charId;
+  if (opts.view) ppState.view = opts.view;
+  if (typeof opts.compact === 'boolean') ppState.compact = opts.compact;
+  ppState.open = -1;
+  renderPromptPreview();
+  document.getElementById('promptPreviewOverlay').classList.add('open');
+}
+// 一段里的小标题：【…】开头的那几行；没有就取开头几个字
+function ppHeads(text) {
+  var heads = (text.match(/【[^】\n]{1,16}】/g) || []).filter(function(h, i, a) { return a.indexOf(h) === i; });
+  return heads.length ? heads.join(' ') : text.replace(/\s+/g, ' ').slice(0, 22) + (text.length > 22 ? '…' : '');
+}
+function renderPromptPreview() {
+  var chips = document.getElementById('promptPreviewChars');
+  chips.innerHTML = '';
+  charList.forEach(function(c) {
+    if (!c.id) return;
+    if (!ppState.charId) ppState.charId = c.id;
+    var chip = document.createElement('span');
+    chip.className = 'feed-visible-chip' + (c.id === ppState.charId ? ' on' : '');
+    chip.textContent = c.charAlias || c.charName || '未命名';
+    chip.addEventListener('click', function() { ppState.charId = c.id; renderPromptPreview(); });
+    chips.appendChild(chip);
+  });
+  document.querySelectorAll('#promptPreviewView .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.view === ppState.view); });
+  document.querySelectorAll('#promptPreviewMode .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', (b.dataset.mode === 'compact') === ppState.compact); });
+  var list = document.getElementById('promptPreviewList'), sum = document.getElementById('promptPreviewSum');
+  list.innerHTML = '';
+  var idx = findCharIdx(ppState.charId), char = charList[idx];
+  if (!char) { sum.textContent = '还没有角色'; return; }
+  var drama = ppState.view === 'drama', msgs;
+  try {
+    msgs = buildMsgs(idx, drama ? getDramaHistory(idx) : getChatHistory(idx))
+      .concat(drama ? dramaFormatRules(char) : chatFormatRules(char), cotRules(drama))
+      .map(function(m) { return typeof m.content === 'string' ? { role: m.role, content: fillMacros(m.content, char) } : m; });
+  } catch (e) { sum.textContent = '拼的时候出错了：' + e.message; return; }
+  var total = 0;
+  msgs.forEach(function(m, i) {
+    var text = typeof m.content === 'string' ? m.content : '[图片 / 语音等多媒体内容]';
+    var tk = typeof estTokens === 'function' ? estTokens(text) : Math.round(text.length / 1.5);
+    total += tk;
+    var roleName = { system: '系统', user: '用户', assistant: '角色' }[m.role] || m.role;
+    if (ppState.compact) {
+      // 精简版：一段一行，序号、谁、里面的小标题、多少 token；点一下切到全文并展开这一段
+      var row = document.createElement('div');
+      row.className = 'prompt-preview-row role-' + m.role;
+      row.innerHTML = '<span class="pp-no"></span><span class="pp-who"></span><span class="pp-heads"></span><span class="pp-tk"></span>';
+      row.querySelector('.pp-no').textContent = i + 1;
+      row.querySelector('.pp-who').textContent = roleName;
+      row.querySelector('.pp-heads').textContent = ppHeads(text);
+      row.querySelector('.pp-tk').textContent = tk;
+      row.addEventListener('click', function() { ppState.compact = false; ppState.open = i; renderPromptPreview(); });
+      list.appendChild(row);
+      return;
+    }
+    var box = document.createElement('details');
+    box.className = 'prompt-preview-item role-' + m.role;
+    if (ppState.open === i || (ppState.open < 0 && m.role === 'system' && i < 1)) box.open = true;
+    var head = document.createElement('summary');
+    head.textContent = (i + 1) + '. ' + roleName + ' · 约 ' + tk + ' token · ' + ppHeads(text);
+    var body = document.createElement('div');
+    body.className = 'prompt-preview-text';
+    body.textContent = text;
+    box.appendChild(head); box.appendChild(body);
+    list.appendChild(box);
+  });
+  sum.textContent = '一共 ' + msgs.length + ' 段，约 ' + total + ' token（估算）。' + (ppState.compact ? '点一行看那一段的全文' : '点一段展开看全文');
+  if (ppState.open >= 0) { var o = list.querySelectorAll('.prompt-preview-item')[ppState.open]; if (o) setTimeout(function() { o.scrollIntoView({ block: 'start' }); }, 30); }
+}
+document.getElementById('promptPreviewBtn').addEventListener('click', function() { openPromptPreview(); });
+document.querySelectorAll('#promptPreviewMode .pf-radio-btn').forEach(function(b) {
+  b.addEventListener('click', function() { ppState.compact = this.dataset.mode === 'compact'; ppState.open = -1; renderPromptPreview(); });
+});
+document.querySelectorAll('#promptPreviewView .pf-radio-btn').forEach(function(b) {
+  b.addEventListener('click', function() { ppState.view = this.dataset.view; renderPromptPreview(); });
+});
+document.getElementById('promptPreviewClose').addEventListener('click', function() { document.getElementById('promptPreviewOverlay').classList.remove('open'); });
+closeOnBackdrop(document.getElementById('promptPreviewOverlay'));

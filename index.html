@@ -568,6 +568,9 @@
             <label class="st-toggle-wrap"><input type="checkbox" id="notifyOn"><span class="st-toggle-slider"></span></label>
           </div>
           <div class="auto-hint" id="notifyHint">切到桌面或其他软件时，角色的回复、主动发来的消息和新动态会从屏幕上方弹出通知，点通知回到对话。</div>
+          <div class="field-label" style="margin-top:8px;">通知显示名称</div>
+          <input class="field-input" type="text" id="notifyName" maxlength="12" placeholder="留空就显示角色的名字">
+          <div class="auto-hint">比如填「微信」「QQ」，通知标题就显示这个，内容写成「角色：消息」</div>
         </div>
 
         <div class="section-label">后台保活</div>
@@ -1161,6 +1164,10 @@
           <div class="mine-field-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
             <span class="mine-field-label" style="width:auto;">个性签名</span>
             <textarea class="mine-field-textarea" id="mineBioInput" rows="2" placeholder="写一句展现个性的签名吧…"></textarea>
+          </div>
+          <div class="mine-field-row">
+            <span class="mine-field-label">生日</span>
+            <input class="mine-field-input" type="date" id="mineBirthInput">
           </div>
           <div class="mine-field-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
             <span class="mine-field-label" style="width:auto;">人设</span>
@@ -1904,6 +1911,7 @@
               <button class="action-btn btn-preset" id="sysPromptReset" style="flex:1;padding:12px 0;">恢复默认</button>
               <button class="action-btn btn-apply" id="sysPromptSave" style="flex:1;padding:12px 0;">保存</button>
             </div>
+            <button class="action-btn btn-preset" id="promptPreviewBtn" style="width:100%;margin-top:8px;padding:11px 0;">看看这次会发给 TA 什么</button>
             <div class="auto-hint" style="margin:6px 2px 0;">角色是谁、说话的语气、怎么和你互动、聊天窗口和剧情窗口各自怎么写、发动态写日记这些，都在这一份里，可以分类改。改完点「保存」才会记住；「恢复默认」回到眠花糖机自带的那版。提示词、人设、预设、世界书、开场白里都可以用 {{char}} 指角色、{{user}} 指你，发送时自动换成名字。</div>
           </div>
 
@@ -2341,6 +2349,19 @@
             </div>
             <span class="cr-plus-label">一起看</span>
           </button>
+          <button class="cr-plus-item" data-func="提示词">
+            <div class="cr-plus-box">
+              <svg viewBox="0 0 24 24">
+                <line x1="8" y1="6" x2="20" y2="6"></line>
+                <line x1="8" y1="12" x2="20" y2="12"></line>
+                <line x1="8" y1="18" x2="16" y2="18"></line>
+                <circle cx="4" cy="6" r="1"></circle>
+                <circle cx="4" cy="12" r="1"></circle>
+                <circle cx="4" cy="18" r="1"></circle>
+              </svg>
+            </div>
+            <span class="cr-plus-label">提示词</span>
+          </button>
         </div>
         </div>
         <div class="cr-plus-dots" id="crPlusDots"><i class="on"></i><i></i></div>
@@ -2473,6 +2494,10 @@
               <div class="char-field-row">
                 <span class="char-field-label">个性签名</span>
                 <input class="field-input" type="text" id="charBio" maxlength="30" placeholder="空着 TA 会自己写">
+              </div>
+              <div class="char-field-row">
+                <span class="char-field-label">生日</span>
+                <input class="field-input" type="date" id="charBirth">
               </div>
             </div>
           </div>
@@ -3223,6 +3248,25 @@
         <div class="mine-acc-title">放哪几个人上来</div>
         <div class="feed-visible-list" id="momentPickList"></div>
         <div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-add" id="momentPickDone">好了</button></div>
+      </div>
+    </div>
+
+    <!-- 注入预览：这次请求会发给角色的全部内容（js/prompt/scene.js） -->
+    <div class="mine-acc-overlay" id="promptPreviewOverlay">
+      <div class="mine-acc-modal prompt-preview-modal">
+        <div class="mine-acc-title">发给 TA 的全部内容</div>
+        <div class="feed-visible-list" id="promptPreviewChars"></div>
+        <div class="pf-radio-row" id="promptPreviewView">
+          <button class="pf-radio-btn selected" data-view="chat">聊天窗口</button>
+          <button class="pf-radio-btn" data-view="drama">剧情窗口</button>
+        </div>
+        <div class="pf-radio-row" id="promptPreviewMode">
+          <button class="pf-radio-btn selected" data-mode="compact">精简（标题和顺序）</button>
+          <button class="pf-radio-btn" data-mode="full">全文</button>
+        </div>
+        <div class="prompt-preview-sum" id="promptPreviewSum"></div>
+        <div class="prompt-preview-list" id="promptPreviewList"></div>
+        <div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-add" id="promptPreviewClose">关闭</button></div>
       </div>
     </div>
 
