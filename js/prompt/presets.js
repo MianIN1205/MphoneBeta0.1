@@ -37,7 +37,7 @@ var PLOT_OPTS = [
   { key: 'view', name: '视角', pos: 'before', choices: [['char', '跟着 TA'], ['omni', '全知旁观'], ['user', '跟着你']] },
   { key: 'speak', name: '抢话', pos: 'after', choices: [['strict', '绝不替你说话做事'], ['light', '可以补一点小动作']] },
   { key: 'inner', name: 'TA 的内心', pos: 'before', choices: [['more', '多写'], ['some', '适量'], ['none', '不写']] },
-  { key: 'style', name: '文风', pos: 'before', choices: [['delicate', '细腻'], ['romance', '细腻言情'], ['zhang', '华丽苍凉'], ['wang', '温润白描'], ['murakami', '疏离都市'], ['film', '电影镜头'], ['ancient', '古风'], ['clean', '简洁干净'], ['casual', '轻松口语'], ['literary', '文艺']] },
+  { key: 'style', name: '文风', pos: 'before', choices: [['delicate', '细腻'], ['romance', '细腻言情'], ['zhang', '华丽苍凉'], ['wang', '温润白描'], ['murakami', '疏离都市'], ['film', '电影镜头'], ['ancient', '古风'], ['funny', '搞笑'], ['flirty', '暧昧撩人'], ['clean', '简洁干净'], ['casual', '轻松口语'], ['literary', '文艺']] },
   { key: 'ratio', name: '对话和叙述', pos: 'before', choices: [['talk', '多对话'], ['balance', '平衡'], ['narr', '多叙述']] },
   { key: 'pace', name: '节奏', pos: 'before', choices: [['slow', '慢慢来'], ['normal', '正常'], ['fast', '推得快']] },
   { key: 'format', name: '格式', pos: 'after', choices: [['cn', '对话用「」'], ['en', '对话用“”']] }
@@ -71,20 +71,7 @@ function plotText(key, o) {
         none: '【内心】不直接写{{char}}的内心想法，情绪全靠动作、表情、语气和对话表现出来。'
       }[o.inner] || '【内心】{{char}}的内心适量写：只在关键的地方点到为止，大部分情绪通过动作、表情和语气透出来。';
     },
-    style: function() {
-      var ref = '（参考的作品只学笔法和味道，不照抄原句，也不在正文里提到这些作者和作品。）';
-      return {
-        romance: '【文风】细腻言情：把心思写得很细——一个眼神、一句话里藏着的在意，靠近又退开的拉扯，欲言又止的停顿；多写人物之间的小动作和气氛的变化，情绪一层层往上走，不直白喊出来。可以参考八月长安《你好，旧时光》、Priest、墨宝非宝那样的细腻情感描写。' + ref,
-        zhang: '【文风】华丽苍凉：用精准又出人意料的比喻和色彩写人写物，句子有华丽的质感，底色却是冷的、清醒的；人物的心思藏在衣饰、器物、天气和光影里，读完有一点凉。可以参考张爱玲《倾城之恋》《金锁记》的笔法。' + ref,
-        wang: '【文风】温润白描：语言平淡、干净、有生活气，用白描写日常的小事和人情，不煽情，温暖藏在细节里，读起来像慢慢喝一碗热汤。可以参考汪曾祺《受戒》《人间草木》、沈从文《边城》的笔法。' + ref,
-        murakami: '【文风】疏离都市：语气平静克制，带一点疏离和孤独感；用具体的物件、音乐、食物、天气写情绪，比喻新奇而准确，对话简短，留很多空白。可以参考村上春树《挪威的森林》的笔法。' + ref,
-        film: '【文风】电影镜头：像在写一部电影——注意镜头的远近和切换、光线和色调、声音和安静，用画面推进情绪，少用直接的心理说明。',
-        ancient: '【文风】古风：用词典雅，可以半文半白，但读起来要通顺自然；写景写人有古典的意境（衣袂、烛火、檐下雨声），人物说话合乎身份和时代，不夹现代口语。',
-        clean: '【文风】简洁干净：句子短，少修饰，用准确的动词和名词把场景和动作交代清楚，留一点空白给读的人。',
-        casual: '【文风】轻松口语：像在讲一个生动的故事，语气自然、有生活气，可以带一点幽默，不端着。',
-        literary: '【文风】文艺：语言有韵律和画面感，可以用恰当的比喻和意象，但不堆砌辞藻；情绪克制，点到为止。'
-      }[o.style] || '【文风】细腻：用具体的细节写出画面——光线、声音、温度、气味，人物细小的动作和表情；少用空泛的形容词和套话，让读的人自己感受到情绪，而不是直接告诉 TA。';
-    },
+    style: function() { return styleText(o.style); },
     ratio: function() {
       return {
         talk: '【对话和叙述】多用对话推动：人物之间多说话、多交锋，叙述只做必要的交代。',
@@ -454,9 +441,10 @@ function renderPlotCard(cur) {
     row.className = 'plot-row';
     row.innerHTML = '<span class="plot-label"></span><div class="plot-choices"></div>';
     row.querySelector('.plot-label').textContent = g.name;
-    g.choices.forEach(function(c) {
+    var choices = g.key === 'style' ? styleList().map(function(x) { return [x.id, x.name]; }) : g.choices;
+    choices.forEach(function(c) {
       var b = document.createElement('button');
-      b.className = 'pf-radio-btn plot-chip' + (o[g.key] === c[0] ? ' selected' : '');
+      b.className = 'pf-radio-btn plot-chip' + ((g.key === 'style' ? styleById(o.style).id : o[g.key]) === c[0] ? ' selected' : '');
       b.textContent = c[1];
       b.addEventListener('click', function() {
         o[g.key] = c[0];
@@ -478,6 +466,13 @@ function renderPlotCard(cur) {
       });
       var wrap = document.createElement('span'); wrap.className = 'plot-len-wrap'; wrap.appendChild(inp); wrap.appendChild(document.createTextNode(' 字左右'));
       row.querySelector('.plot-choices').appendChild(wrap);
+    }
+    // 文风：下面一行小字写着这个文风大概是什么样（就是发给 TA 的那段话，去掉开头的标题）
+    if (g.key === 'style') {
+      var desc = document.createElement('div');
+      desc.className = 'plot-desc';
+      desc.textContent = styleById(o.style).text.replace(STYLE_REF_NOTE, '');
+      row.querySelector('.plot-choices').appendChild(desc);
     }
     card.appendChild(row);
   });

@@ -460,3 +460,11 @@
 .plot-len-wrap { font-size: 12px; color: #a08890; display: inline-flex; align-items: center; gap: 4px; }
 .plot-len-input { width: 64px; padding: 3px 6px; border: 1px solid rgba(200,160,170,0.5); border-radius: 8px; font-family: inherit; font-size: 12px; }
 .st-pos-badge { margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 10px; font-weight: 500; color: #7d9bd6; background: rgba(125,155,214,0.12); vertical-align: 1px; }
+.plot-desc { flex-basis: 100%; margin-top: 3px; padding: 7px 10px; border-radius: 10px; background: rgba(250,240,244,0.85); font-size: 11.5px; line-height: 1.6; color: #8a7480; }
+
+/* 文风库：一张张卡片，正文最多三行 */
+.style-card { padding: 10px 12px; margin-bottom: 8px; border-radius: 12px; background: rgba(255,255,255,0.75); border: 1px solid rgba(232,200,214,0.6); cursor: pointer; }
+.style-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 13.5px; color: #5a4650; }
+.style-tag { font-size: 10.5px; padding: 1px 7px; border-radius: 8px; background: rgba(250,232,240,0.9); color: #b07a92; }
+.style-card-text { font-size: 11.5px; line-height: 1.6; color: #8a7480; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.style-edit-text { min-height: 150px; }

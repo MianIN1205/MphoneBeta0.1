@@ -187,6 +187,7 @@ var MPHONE_SCRIPTS = [
   "js/prompt/tabs.js",
   "js/prompt/worldbook.js",
   "js/prompt/cot.js",
+  "js/prompt/style-lib.js",
   "js/prompt/presets.js",
   "js/prompt/scene.js",
   "js/core/image-picker.js",
