@@ -60,7 +60,8 @@ function setBubbleText(bubble, content, isAi, isChat) {
   var onlyAction = i < 0 && !parts.text && (parts.before.length + parts.after.length) > 0;
   bubble.classList.toggle('cr-action-only', onlyAction);
   if (onlyAction) parts = { before: [], text: parts.before.concat(parts.after).join(' '), after: [] };
-  bubble.textContent = parts.text;
+  if (!isChat && !onlyAction && DRAMA_DQ_RE.test(parts.text)) fillDramaText(bubble, parts.text);
+  else bubble.textContent = parts.text;
   bubble._actions = parts;
   if (i >= 0) {
     var tr = document.createElement('span');
@@ -100,22 +101,67 @@ function placeActionNotes(row) {
   a.after.forEach(function(t) { row.parentNode.insertBefore(make(t, 'after'), next); });
 }
 
-// 剧情窗口每条前面的「名字 + 时间」：文本框、自定义格式时显示在头像旁边（js/chat/room.js 的 dramaBoxCss），气泡格式时藏着
+// 剧情窗口每条前面的信息区：文本框、自定义格式时显示（js/chat/room.js 的 dramaBoxCss），气泡格式时藏着。
+// 名字、时间（.cr-head-time 只有几点几分，.cr-head-date 是完整日期，「章节」风格用）、楼层 #N、字数、编辑按钮（编辑 / 收藏 / ⋯ 更多 = 长按菜单）
+// 类名都给好了，自定义 CSS 能随便摆：.cr-msg-head > .cr-head-who（.cr-head-name .cr-head-time .cr-head-date）、.cr-head-meta（.cr-head-floor .cr-head-words）、.cr-head-acts
+var DRAMA_HEAD_ICONS = {
+  edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  fav: '<svg viewBox="0 0 24 24"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>'
+};
 function addDramaHead(row, bubble, m) {
   if (!row || !bubble || row.querySelector('.cr-msg-head')) return;
   var char = charList[openingChatCharIdx] || {};
   var head = document.createElement('div');
   head.className = 'cr-msg-head';
+  var who = document.createElement('div');
+  who.className = 'cr-head-who';
   var b = document.createElement('b');
+  b.className = 'cr-head-name';
   b.textContent = m.role === 'user' ? ((resolveCharAccount(char) || {}).nickname || '我') : (char.charAlias || char.charName || '角色');
-  head.appendChild(b);
+  who.appendChild(b);
   if (m.time) {
-    var t = document.createElement('span');
     var d = new Date(m.time);
+    var t = document.createElement('span');
+    t.className = 'cr-head-time';
     t.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
-    head.appendChild(t);
+    who.appendChild(t);
+    var dt = document.createElement('span');
+    dt.className = 'cr-head-date';
+    dt.textContent = d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    who.appendChild(dt);
   }
+  head.appendChild(who);
+  var meta = document.createElement('div');
+  meta.className = 'cr-head-meta';
+  var hist = typeof getDramaHistory === 'function' ? getDramaHistory(openingChatCharIdx) : [];
+  var floor = hist.indexOf(m) + 1;
+  if (floor > 0) { var f = document.createElement('span'); f.className = 'cr-head-floor'; f.textContent = '#' + floor; meta.appendChild(f); }
+  var words = String(m.content || '').replace(/\s+/g, '').length;
+  if (words) { var w = document.createElement('span'); w.className = 'cr-head-words'; w.textContent = words + ' 字'; meta.appendChild(w); }
+  head.appendChild(meta);
+  var acts = document.createElement('div');
+  acts.className = 'cr-head-acts';
+  ['edit', 'fav', 'more'].forEach(function(k) {
+    if (k === 'edit' && (m.imgSrc || m.sticker || m.file || m.textImg || m.voice)) return;
+    var btn = document.createElement('button');
+    btn.dataset.hact = k;
+    btn.setAttribute('aria-label', { edit: '编辑', fav: '收藏', more: '更多' }[k]);
+    btn.innerHTML = DRAMA_HEAD_ICONS[k];
+    acts.appendChild(btn);
+  });
+  head.appendChild(acts);
   row.insertBefore(head, bubble);
+}
+// 剧情窗口里引号中的对话包成 .cr-dq：文本框风格给它换颜色（像酒馆美化那样一眼分出说话和叙述），气泡格式不加颜色
+var DRAMA_DQ_RE = /(“[^”\n]*”|「[^」\n]*」|"[^"\n]*")/;
+function fillDramaText(el, text) {
+  el.textContent = '';
+  String(text).split(DRAMA_DQ_RE).forEach(function(part, i) {
+    if (!part) return;
+    if (i % 2) { var sp = document.createElement('span'); sp.className = 'cr-dq'; sp.textContent = part; el.appendChild(sp); }
+    else el.appendChild(document.createTextNode(part));
+  });
 }
 
 // 渲染一条历史消息（含图片、引用、状态栏）；行元素记住对应的记录（_msg）和附属元素（_extras），方便编辑 / 删除

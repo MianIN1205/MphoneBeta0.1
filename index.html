@@ -2832,6 +2832,28 @@
             <button class="pf-radio-btn" data-format="custom">自定义</button>
           </div>
           <div class="auto-hint" id="dramaFormatHint"></div>
+          <!-- 文本框 / 自定义：头像放哪、风格、显示楼层字数和编辑按钮（js/chat/room.js 的 dramaBoxCss） -->
+          <div id="dramaBoxOpts">
+            <div class="bubble-section-label" style="margin-top:12px;">头像位置</div>
+            <div class="pf-radio-row" id="dramaBoxLayoutRow">
+              <button class="pf-radio-btn" data-v="center">居中</button>
+              <button class="pf-radio-btn" data-v="side">左右</button>
+              <button class="pf-radio-btn selected" data-v="left">左对齐</button>
+            </div>
+            <div id="dramaBoxStyleWrap">
+              <div class="bubble-section-label" style="margin-top:12px;">文本框风格</div>
+              <div class="drama-box-styles" id="dramaBoxStyleRow"></div>
+              <div class="auto-hint" id="dramaBoxStyleHint"></div>
+            </div>
+            <div class="auto-row" style="margin-top:8px;">
+              <span class="auto-row-label">显示楼层和字数</span>
+              <label class="st-toggle-wrap"><input type="checkbox" id="dramaBoxMeta" checked><span class="st-toggle-slider"></span></label>
+            </div>
+            <div class="auto-row">
+              <span class="auto-row-label">显示编辑按钮</span>
+              <label class="st-toggle-wrap"><input type="checkbox" id="dramaBoxActs" checked><span class="st-toggle-slider"></span></label>
+            </div>
+          </div>
         </div>
         </div>
 

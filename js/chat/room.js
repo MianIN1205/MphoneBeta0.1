@@ -27,25 +27,101 @@ function hexToRgba(hex, a) {
 }
 
 // 气泡颜色 / 透明度 / 效果 / 显示格式 → CSS（scope：聊天室，或美化页里的小预览）
-// 剧情窗口的文本框排版（文本框、自定义都用）：每一块顶上「头像 + 名字 + 时间」，下面正文像文档一样一行行；
-// 同一个人连着发的几条合成一个大框（后面那几条不再显示头像和名字，接在框里的下一行，用户要的）。旁白不动
-function dramaBoxCss(sel) {
+// 剧情窗口的文本框排版（文本框、自定义都用）：每一块顶上一块信息区（头像、名字、时间、楼层、字数、编辑按钮，render.js 的 addDramaHead），下面正文像文档一样；
+// 头像位置三选一（look.boxLayout，用户要的）：居中 center / 左右 side（你在右、TA 在左）/ 左对齐 left。
+// 同一个人连着发的几条合成一个大框（后面那几条不再显示信息区，接在框里的下一行，用户要的）。旁白不动
+function dramaBoxCss(sel, look) {
+  look = look || {};
+  var lay = look.boxLayout || 'left';
   var row = sel + ':not(.cr-narr-row)';
   var cont = [sel + '.ai + .chat-msg-row.ai', sel + '.user + .chat-msg-row.user'];
   var hasNext = [sel + '.ai:has(+ .chat-msg-row.ai)', sel + '.user:has(+ .chat-msg-row.user)'];
-  return row + ' { display: grid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "av head" "text text"; column-gap: 8px; row-gap: 6px; align-items: center; padding: 12px 14px; border-radius: 12px; }\n' +
+  var css = row + ' { display: grid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "av head" "text text"; column-gap: 8px; row-gap: 8px; align-items: center; padding: 12px 14px; border-radius: 12px; }\n' +
     row + ' > .chat-msg-avatar { grid-area: av; width: 28px; height: 28px; min-width: 28px; }\n' +
-    row + ' > .cr-msg-head { grid-area: head; display: flex; align-items: baseline; gap: 8px; min-width: 0; }\n' +
-    row + ' > .chat-msg-bubble:not(.error) { grid-area: text; max-width: none; padding: 0; border-radius: 0; line-height: 1.8; text-align: left; background: transparent !important; box-shadow: none !important; border: none; }\n' +
-    cont.join(', ') + ' { margin-top: -10px; padding-top: 2px; border-top-left-radius: 0; border-top-right-radius: 0; grid-template-areas: "text text"; }\n' +
+    row + ' > .cr-msg-head { grid-area: head; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }\n' +
+    row + ' .cr-head-who { display: flex; align-items: baseline; gap: 8px; min-width: 0; }\n' +
+    row + ' .cr-head-meta { display: flex; gap: 8px; font-size: 11px; opacity: 0.75; }\n' +
+    row + ' .cr-head-date { display: none; }\n' +
+    row + ' .cr-head-acts { display: flex; gap: 2px; margin-left: auto; }\n' +
+    row + ' .cr-head-acts button { width: 26px; height: 26px; padding: 0; border: none; border-radius: 50%; background: transparent; color: inherit; opacity: 0.5; display: flex; align-items: center; justify-content: center; cursor: pointer; }\n' +
+    row + ' .cr-head-acts button:active { opacity: 0.9; background: rgba(0,0,0,0.06); }\n' +
+    row + ' .cr-head-acts svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }\n' +
+    row + ' > .chat-msg-bubble:not(.error) { grid-area: text; max-width: none; padding: 0; border-radius: 0; line-height: 1.8; text-align: left; background: transparent !important; box-shadow: none !important; border: none; }\n';
+  if (lay === 'side') {
+    css += sel + '.user:not(.cr-narr-row) { grid-template-columns: minmax(0, 1fr) 28px; grid-template-areas: "head av" "text text"; }\n' +
+      sel + '.user:not(.cr-narr-row) > .cr-msg-head { flex-direction: row-reverse; }\n' +
+      sel + '.user:not(.cr-narr-row) .cr-head-who { flex-direction: row-reverse; }\n' +
+      sel + '.user:not(.cr-narr-row) .cr-head-acts { margin-left: 0; margin-right: auto; }\n';
+  } else if (lay === 'center') {
+    css += row + ' { grid-template-columns: minmax(0, 1fr); grid-template-areas: "av" "head" "text"; }\n' +
+      row + ' > .chat-msg-avatar { justify-self: center; width: 46px; height: 46px; min-width: 46px; }\n' +
+      row + ' > .cr-msg-head { flex-direction: column; align-items: center; text-align: center; gap: 4px; }\n' +
+      row + ' .cr-head-acts { margin-left: 0; }\n';
+  }
+  css += cont.join(', ') + ' { margin-top: -10px; padding-top: 2px; border-top-left-radius: 0; border-top-right-radius: 0; grid-template-areas: "text text"; }\n' +
+    (lay === 'center' ? cont.join(', ') + ' { grid-template-areas: "text"; }\n' : '') +
     cont.map(function(s) { return s + ' > .chat-msg-avatar, ' + s + ' > .cr-msg-head'; }).join(', ') + ' { display: none; }\n' +
     hasNext.join(', ') + ' { border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding-bottom: 4px; }\n';
+  if (look.boxMeta === false) css += row + ' .cr-head-meta { display: none; }\n';
+  if (look.boxActs === false) css += row + ' .cr-head-acts { display: none; }\n';
+  return css;
+}
+// 文本框风格（只在「文本框」格式里，look.boxStyle）：几套自带的；气泡样式不放这里（用户要放进气泡模式的预设）
+// 每套：框的底色、边框、字的颜色、名字颜色、对话（引号里的话，render.js 包成 .cr-dq）的颜色、信息区和正文之间的分隔线
+var DRAMA_BOX_STYLES = [
+  { id: 'soft', name: '柔和', desc: '框的颜色跟着下面的「主题」，白色细边，柔柔的', sw: ['#F6DCE6', '#5a4650', '#b5577a'] },
+  { id: 'glass', name: '毛玻璃', desc: '半透明毛玻璃，透出背后的背景图，适合换了剧情背景图的时候', sw: ['rgba(255,255,255,0.55)', '#3d3340', '#c2577e'] },
+  { id: 'paper', name: '书页', desc: '米色纸张、宋体字、虚线分隔，像在读一本书', sw: ['#fbf6ec', '#4a3d33', '#a65a32'] },
+  { id: 'night', name: '夜色', desc: '深色半透明，浅色字，对话是暖暖的金色，晚上看不刺眼', sw: ['#25223a', '#ebe5f3', '#f0c987'] },
+  { id: 'chapter', name: '章节', desc: '像连载小说：「作 / 名字」、日期、「章 #楼层」，配「居中」最好看', sw: ['rgba(255,252,248,0.7)', '#3d3340', '#b0803f'] }
+];
+function dramaBoxStyleCss(sel, look, colors, op) {
+  var row = sel + ':not(.cr-narr-row)', st = look.boxStyle || 'soft';
+  var cont = sel + '.ai + .chat-msg-row.ai, ' + sel + '.user + .chat-msg-row.user';
+  var hasNext = sel + '.ai:has(+ .chat-msg-row.ai), ' + sel + '.user:has(+ .chat-msg-row.user)';
+  var text = row + ':not(' + sel.replace(/^.* /, '') + '.ai + .chat-msg-row.ai):not(' + sel.replace(/^.* /, '') + '.user + .chat-msg-row.user) > .chat-msg-bubble:not(.error)';
+  function base(o) {
+    return row + ' { color: ' + o.fg + '; }\n' +
+      row + ' > .chat-msg-bubble:not(.error) { color: ' + o.fg + ' !important;' + (o.font ? ' font-family: ' + o.font + ';' : '') + (o.lh ? ' line-height: ' + o.lh + ';' : '') + ' }\n' +
+      (o.line ? text + ' { border-top: ' + o.line + '; padding-top: 10px; }\n' : '') +
+      row + ' .cr-head-name { font-size: 13px; font-weight: 600; color: ' + o.name + '; }\n' +
+      row + ' .cr-head-time, ' + row + ' .cr-head-date { font-size: 11px; color: ' + o.sub + '; }\n' +
+      row + ' .cr-head-meta { color: ' + o.sub + '; }\n' +
+      row + ' .cr-dq { color: ' + o.dq + '; font-weight: 500; }\n' +
+      cont + ' { border-top: none; }\n' + hasNext + ' { border-bottom: none; box-shadow: none; }\n';
+  }
+  if (st === 'glass') return base({ fg: '#3d3340', name: '#7a4a62', sub: 'rgba(61,51,64,0.55)', dq: '#c2577e', line: '1px solid rgba(255,255,255,0.75)' }) +
+    row + ' { border: 1px solid rgba(255,255,255,0.6); -webkit-backdrop-filter: blur(12px) saturate(1.2); backdrop-filter: blur(12px) saturate(1.2); box-shadow: 0 4px 18px rgba(60,40,70,0.10); }\n' +
+    row + '.ai { background: rgba(255,255,255,0.42); }\n' + row + '.user { background: rgba(255,240,246,0.48); }\n';
+  if (st === 'paper') return base({ fg: '#4a3d33', name: '#7a5a3e', sub: '#a8957f', dq: '#a65a32', line: '1px dashed #dccbb2', font: '"Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", serif', lh: '1.95' }) +
+    row + ' { border: 1px solid #e6d8c3; border-radius: 6px; box-shadow: 0 2px 8px rgba(120,90,60,0.08); }\n' +
+    row + '.ai { background: #fbf6ec; }\n' + row + '.user { background: #f6eee3; }\n';
+  if (st === 'night') return base({ fg: '#ebe5f3', name: '#f2d8a7', sub: 'rgba(235,229,243,0.55)', dq: '#f0c987', line: '1px solid rgba(255,255,255,0.12)' }) +
+    row + ' { border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 4px 16px rgba(10,8,20,0.25); }\n' +
+    row + '.ai { background: rgba(30,27,48,0.82); }\n' + row + '.user { background: rgba(54,46,74,0.82); }\n' +
+    row + ' .cr-head-acts button:active { background: rgba(255,255,255,0.12); }\n';
+  if (st === 'chapter') return base({ fg: '#3d3340', name: '#6a5560', sub: 'rgba(61,51,64,0.6)', dq: '#b0803f', lh: '1.95' }) +
+    row + ' { padding: 16px 16px 14px; border-radius: 10px; background: rgba(255,252,248,0.62); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }\n' +
+    row + ' .cr-head-who { flex-direction: column; align-items: inherit; gap: 6px; }\n' +
+    row + ' .cr-head-name { font-weight: 500; letter-spacing: 3px; }\n' +
+    row + ' .cr-head-name::before { content: "作 / "; }\n' +
+    row + ' .cr-head-time { display: none; }\n' +
+    row + ' .cr-head-date { display: inline; letter-spacing: 2px; }\n' +
+    row + ' .cr-head-date::before { content: "- "; } ' + row + ' .cr-head-date::after { content: " -"; }\n' +
+    row + ' .cr-head-meta { width: 100%; justify-content: space-between; align-items: baseline; opacity: 1; margin-top: 6px; }\n' +
+    row + ' .cr-head-floor { font-size: 20px; font-weight: 700; color: ' + '#4a3b44' + '; }\n' +
+    row + ' .cr-head-floor::before { content: "章 "; }\n';
+  // 柔和（默认）：底色用主题颜色
+  return base({ fg: '#4a3b42', name: '#5a4650', sub: '#a89aa0', dq: '#b5577a', line: '1px solid rgba(150,110,130,0.14)' }) +
+    row + ' { border: 1px solid rgba(255,255,255,0.75); box-shadow: 0 2px 10px rgba(120,80,100,0.08); }\n' +
+    row + '.ai { background: ' + hexToRgba(colors[0], op) + '; }\n' +
+    row + '.user { background: ' + hexToRgba(colors[1], op) + '; }\n';
 }
 function lookCss(part, scope) {
   var look = Object.assign({}, DEFAULT_LOOK, part.look || {});
   var sel0 = scope + ' .chat-msg-row';
   // 剧情窗口「自定义」：排版和文本框一样（头像 + 名字 + 时间、连着的合成一个框），颜色、框都不加，全靠用户自己的 CSS
-  if (look.format === 'custom') return dramaBoxCss(sel0);
+  if (look.format === 'custom') return dramaBoxCss(sel0, look);
   var b = part.bubble || DEFAULT_BUBBLE;
   var colors = BUBBLE_PRESETS[b.preset] || BUBBLE_PRESETS[0];
   var op = (b.opacity === undefined ? 85 : b.opacity) / 100;
@@ -66,18 +142,8 @@ function lookCss(part, scope) {
            sel + ' .chat-msg-avatar { display: none; }\n' +
            sel + '.user .chat-msg-bubble:not(.error) { color: #8a6a76; text-align: right; }\n';
   }
-  // 文本框（剧情窗口）：像酒馆那样一整块带框的，底色用主题颜色；连着的合成一个框（框的上下边不画，连成一块）
-  if (look.format === 'box') {
-    var row = sel + ':not(.cr-narr-row)';
-    css += dramaBoxCss(sel) +
-      row + ' { border: 1px solid rgba(255,255,255,0.75); box-shadow: 0 2px 10px rgba(120,80,100,0.08); }\n' +
-      row + '.ai { background: ' + hexToRgba(colors[0], op) + '; }\n' +
-      row + '.user { background: ' + hexToRgba(colors[1], op) + '; }\n' +
-      sel + '.ai + .chat-msg-row.ai, ' + sel + '.user + .chat-msg-row.user { border-top: none; }\n' +
-      sel + '.ai:has(+ .chat-msg-row.ai), ' + sel + '.user:has(+ .chat-msg-row.user) { border-bottom: none; box-shadow: none; }\n' +
-      sel + ' .cr-msg-head b { font-size: 13px; font-weight: 600; color: #5a4650; }\n' +
-      sel + ' .cr-msg-head span { font-size: 11px; color: #a89aa0; }\n';
-  }
+  // 文本框（剧情窗口）：像酒馆那样一整块带框的；风格从 DRAMA_BOX_STYLES 里选（柔和的底色用主题颜色），连着的合成一个框（框的上下边不画，连成一块）
+  if (look.format === 'box') css += dramaBoxCss(sel, look) + dramaBoxStyleCss(sel, look, colors, op);
   return css;
 }
 // 当前子视图（聊天 / 剧情）用的那套美化

@@ -122,7 +122,7 @@ var ASSISTANT_ROOM_HINT =
   '├ .settings-nav（顶栏）里有 .chat-room-head-av（顶栏头像，角色设置里打开才显示）、.chat-room-title-text（名字和下面那行小字）\n' +
   '├ #chatRoomContent（消息区，背景色 / 背景图在这里）\n' +
   '│  └ 消息列表：聊天窗口是 #chatMsgList，剧情窗口是 #dramaMsgList（display:flex; flex-direction:column）\n' +
-  '│     ├ .chat-msg-row.ai（角色的一条）/ .chat-msg-row.user（用户的一条）：display:flex; align-items:flex-end; gap:8px；.user 是 flex-direction:row-reverse（头像在右）。剧情窗口每条还有 .cr-msg-head（<b>名字</b><span>时间</span>，气泡格式时藏着）\n' +
+  '│     ├ .chat-msg-row.ai（角色的一条）/ .chat-msg-row.user（用户的一条）：display:flex; align-items:flex-end; gap:8px；.user 是 flex-direction:row-reverse（头像在右）。剧情窗口每条还有信息区 .cr-msg-head（气泡格式时藏着），里面是 .cr-head-who（b.cr-head-name 名字、span.cr-head-time 几点几分、span.cr-head-date 完整日期，默认藏着）、.cr-head-meta（.cr-head-floor 楼层 #N、.cr-head-words 字数）、.cr-head-acts（编辑 / 收藏 / ⋯ 三个 button）；正文里引号中的对话是 span.cr-dq\n' +
   '│     │  ├ .chat-msg-avatar（头像，32×32 圆形，头像图片是它的 background-image）\n' +
   '│     │  └ .chat-msg-bubble（气泡：max-width:68%; padding:9px 13px; border-radius:18px; white-space:pre-wrap）\n' +
   '│     ├ .chat-msg-row.cr-narr-row > .chat-msg-bubble.cr-narr（剧情开场的旁白，居中）\n' +
@@ -131,7 +131,7 @@ var ASSISTANT_ROOM_HINT =
   '└ .chat-room-bottom（输入栏；剧情窗口时多一个 .drama-mode）\n' +
   '注意：小手机会按角色设置里的「主题」给气泡上色，规则是 #appChatRoom .chat-msg-row.ai .chat-msg-bubble:not(.error)（优先级很高），' +
   '你写的气泡背景、颜色、阴影要加 !important 才盖得住。' +
-  '剧情窗口 format "box"（文本框）和 "custom"（自定义）时，每条 .chat-msg-row 是 display:grid 的一整块：第一行头像（28px）+ .cr-msg-head（名字、时间），下面一行是 .chat-msg-bubble（正文，背景透明，像文档）；' +
+  '剧情窗口 format "box"（文本框）和 "custom"（自定义）时，每条 .chat-msg-row 是 display:grid 的一整块：上面是头像 + 信息区 .cr-msg-head，下面是 .chat-msg-bubble（正文，背景透明，像文档）；头像位置是用户在美化页选的（居中 / 左右 / 左对齐，look.boxLayout），文本框还有几套自带风格（look.boxStyle：soft 柔和 / glass 毛玻璃 / paper 书页 / night 夜色 / chapter 章节），楼层字数、编辑按钮可以关（look.boxMeta / boxActs）；' +
   '同一个人连着发的几条合成一个框（后面几条往上贴、不显示头像和名字，选择器是 .chat-msg-row.ai + .chat-msg-row.ai）。文本框的底色、边框画在 .chat-msg-row 上；自定义不上颜色和边框，全靠你写（框的样子写在 #dramaMsgList .chat-msg-row:not(.cr-narr-row) 上）。' +
   '改头像：隐藏用 .chat-msg-avatar{display:none}；换大小改 width / height（同时改 min-width 防挤压）；想让头像在气泡上面，用 .chat-msg-row{flex-direction:column; align-items:flex-start} 和 .chat-msg-row.user{align-items:flex-end}。' +
   '改排版：气泡宽度改 .chat-msg-bubble 的 max-width；整条居中、左右留白改 .chat-msg-row 的 padding / margin。' +

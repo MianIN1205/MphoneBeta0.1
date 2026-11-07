@@ -253,7 +253,7 @@ function readDiaryCfgForm() {
 document.getElementById('diaryAutoOn').addEventListener('change', function() {
   document.getElementById('diaryAutoSub').classList.toggle('open', this.checked);
 });
-var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '', statusFind: '', statusRules: '' };
+var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', boxLayout: 'left', boxStyle: 'soft', boxMeta: true, boxActs: true, statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '', statusFind: '', statusRules: '' };
 
 // 表单里暂存的 USER 账号选择与各账号印象（切换账号时不丢）
 // csAccUid 为 '' 表示跟随主账号（「我的」里当前使用的账号）
@@ -407,6 +407,10 @@ function setLookForm(l) {
   // 剧情窗口的三种格式；以前的「文段」算文本框
   var dfm = l.format === 'text' ? 'box' : (['bubble', 'box', 'custom'].indexOf(l.format) >= 0 ? l.format : 'bubble');
   document.querySelectorAll('#dramaFormatRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.format === dfm); });
+  document.querySelectorAll('#dramaBoxLayoutRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.v === l.boxLayout); });
+  renderDramaBoxStyles(l.boxStyle);
+  document.getElementById('dramaBoxMeta').checked = l.boxMeta !== false;
+  document.getElementById('dramaBoxActs').checked = l.boxActs !== false;
   document.getElementById('statusOn').checked = l.statusOn;
   document.getElementById('statusFields').value = l.statusFields;
   document.getElementById('statusTpl').value = statusTplOf(l);
@@ -425,6 +429,10 @@ function readLookForm() {
     headAvatar:   document.getElementById('layoutHeadAvatar').checked,
     headAlign:    a ? a.dataset.align : 'center',
     format:       fm ? fm.dataset.format : 'bubble',
+    boxLayout:    (document.querySelector('#dramaBoxLayoutRow .pf-radio-btn.selected') || { dataset: { v: 'left' } }).dataset.v,
+    boxStyle:     (document.querySelector('#dramaBoxStyleRow .drama-box-style.selected') || { dataset: { v: 'soft' } }).dataset.v,
+    boxMeta:      document.getElementById('dramaBoxMeta').checked,
+    boxActs:      document.getElementById('dramaBoxActs').checked,
     statusOn:     document.getElementById('statusOn').checked,
     statusFields: document.getElementById('statusFields').value.trim() || DEFAULT_LOOK.statusFields,
     statusTpl:    document.getElementById('statusTpl').value.trim(),
@@ -466,8 +474,8 @@ function setLookPartForm(view) {
 // 剧情窗口：气泡（和现在一样）/ 文本框（像酒馆那样一整块带框的，框的颜色用主题颜色，样子可以用 CSS 再调）/ 自定义（整个剧情窗口都用 CSS 改）
 var DRAMA_FORMAT_HINT = {
   bubble: '和聊天窗口一样的气泡，颜色在下面的「主题」里选。',
-  box: '像酒馆那样一整块带框的文本框：顶上是头像、名字和时间，下面正文像文档一样一行行；同一个人连着发的几条合在一个框里。框的颜色用下面的「主题」，想要别的样子在最下面的「文本框样式」里写 CSS，也可以让 MianIN 帮你设计。',
-  custom: '排版和文本框一样（头像 + 名字 + 时间，连着发的合成一个框），但不加颜色和边框，整个剧情窗口都用最下面的 CSS 来改，像酒馆的美化主题一样。不会写可以跟 MianIN 说想要什么样子，祂会写好给你看效果。'
+  box: '像酒馆那样一整块带框的文本框：顶上是头像、名字、时间、楼层和字数，还有编辑、收藏、更多按钮（不用长按了），下面正文像文档一样，引号里的对话换个颜色；同一个人连着发的几条合在一个框里。头像位置和风格在下面选，想再改在最下面的「文本框样式」里写 CSS，也可以让 MianIN 帮你设计。',
+  custom: '排版和文本框一样（信息区 + 正文，连着发的合成一个框，头像位置在下面选），但不加颜色和边框，整个剧情窗口都用最下面的 CSS 来改，像酒馆的美化主题一样。不会写可以跟 MianIN 说想要什么样子，祂会写好给你看效果。'
 };
 function syncDramaFormatUi() {
   var drama = csLookView === 'drama';
@@ -479,6 +487,8 @@ function syncDramaFormatUi() {
   document.getElementById('csThemeWrap').style.display = fmt === 'custom' ? 'none' : '';
   document.getElementById('layoutAvatarRow').style.display = fmt === 'custom' ? 'none' : '';
   document.getElementById('dramaFormatHint').textContent = DRAMA_FORMAT_HINT[fmt] || '';
+  document.getElementById('dramaBoxOpts').style.display = fmt === 'box' || fmt === 'custom' ? '' : 'none';
+  document.getElementById('dramaBoxStyleWrap').style.display = fmt === 'box' ? '' : 'none';
   document.getElementById('customCssLabel').textContent = !drama ? '聊天窗口专属样式（进入该角色聊天时生效）'
     : fmt === 'box' ? '文本框样式（CSS，可选）' : fmt === 'custom' ? '整个剧情窗口的 CSS' : '剧情窗口专属样式（进入该角色剧情时生效）';
   var hint = document.getElementById('customCssHint');
@@ -487,6 +497,34 @@ function syncDramaFormatUi() {
     ? '常用：#appChatRoom .chat-msg-bubble（每个文本框）、.chat-msg-row.ai / .chat-msg-row.user（角色 / 你的）、.chat-msg-avatar（头像）、.cr-narr（开场旁白）。只在这个角色的剧情窗口生效'
     : '常用：#appChatRoom（整个窗口）、#chatRoomContent（背景）、.settings-nav（顶栏）、.chat-msg-row.ai / .user .chat-msg-bubble（消息）、.chat-msg-avatar（头像）、.cr-narr（旁白）、.chat-room-bottom（输入栏）。只在这个角色的剧情窗口生效';
 }
+// 文本框风格：一排小卡片，每张画出那套的底色、字色和对话颜色
+function renderDramaBoxStyles(cur) {
+  var box = document.getElementById('dramaBoxStyleRow');
+  if (!box || typeof DRAMA_BOX_STYLES === 'undefined') return;
+  box.innerHTML = '';
+  DRAMA_BOX_STYLES.forEach(function(st) {
+    var c = document.createElement('div');
+    c.className = 'drama-box-style' + (st.id === (cur || 'soft') ? ' selected' : '');
+    c.dataset.v = st.id;
+    c.innerHTML = '<div class="dbs-swatch"><i></i><span>“对话”</span></div><b></b>';
+    c.querySelector('.dbs-swatch').style.background = st.sw[0];
+    c.querySelector('i').style.background = st.sw[1];
+    c.querySelector('span').style.color = st.sw[2];
+    c.querySelector('b').textContent = st.name;
+    c.addEventListener('click', function() {
+      box.querySelectorAll('.drama-box-style').forEach(function(x) { x.classList.toggle('selected', x === c); });
+      document.getElementById('dramaBoxStyleHint').textContent = st.desc;
+    });
+    box.appendChild(c);
+  });
+  var sel = DRAMA_BOX_STYLES.filter(function(s) { return s.id === (cur || 'soft'); })[0];
+  document.getElementById('dramaBoxStyleHint').textContent = sel ? sel.desc : '';
+}
+document.querySelectorAll('#dramaBoxLayoutRow .pf-radio-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('#dramaBoxLayoutRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b === btn); });
+  });
+});
 document.querySelectorAll('#dramaFormatRow .pf-radio-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {
     document.querySelectorAll('#dramaFormatRow .pf-radio-btn').forEach(function(b) { b.classList.remove('selected'); });
