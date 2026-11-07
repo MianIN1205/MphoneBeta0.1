@@ -203,6 +203,12 @@ function mcpActiveTools() {
       list.push({ name: name, description: (t.title ? t.title + '：' : '') + (t.description || '') + '（来自 ' + sv.name + '）', parameters: t.inputSchema });
     });
   });
+  // 内置工具（js/core/mcp-builtin.js）：在小手机里直接跑，名字前加 mphone__
+  if (typeof mcpBuiltinTools === 'function') mcpBuiltinTools().forEach(function(x) {
+    var name = 'mphone__' + x.tool.name;
+    mcpToolMap[name] = { builtin: x.pack, tool: x.tool };
+    list.push({ name: name, description: x.tool.title + '：' + x.tool.description, parameters: x.tool.parameters });
+  });
   return list;
 }
 
@@ -230,11 +236,11 @@ document.getElementById('mcpAskNo').addEventListener('click', function() { mcpAs
 function mcpCallFromLLM(name, args) {
   var hit = mcpToolMap[name];
   if (!hit) return Promise.resolve('没有这个工具：' + name);
-  var detail = '工具：' + (hit.tool.title || hit.tool.name) + '（' + hit.server.name + '）\n参数：' + JSON.stringify(args || {}, null, 1).slice(0, 600);
+  var detail = '工具：' + (hit.tool.title || hit.tool.name) + '（' + (hit.builtin ? '内置' : hit.server.name) + '）\n参数：' + JSON.stringify(args || {}, null, 1).slice(0, 600);
   var asked = mcpCfg.confirm ? mcpAsk('角色想使用工具', detail) : Promise.resolve(true);
   return asked.then(function(ok) {
     if (!ok) return '用户没有同意这次工具调用，请不用工具直接回答。';
-    return mcpCallTool(hit.server, hit.tool.name, args);
+    return hit.builtin ? mcpBuiltinCall(hit.tool.name, args) : mcpCallTool(hit.server, hit.tool.name, args);
   });
 }
 

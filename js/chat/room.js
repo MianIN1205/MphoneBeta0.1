@@ -4,6 +4,7 @@
 backChatRoom.addEventListener('click', function() {
   closeCrPlusPanel();
   appChatRoom.classList.remove('active');
+  msgBtnChat.classList.remove('has-new'); msgBtnContacts.classList.remove('has-new');
   applyChatRoomStyle(null);
   renderChatCharList();   // 刷新列表里的最后一条消息
 });

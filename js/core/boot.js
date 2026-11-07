@@ -227,6 +227,7 @@ var MPHONE_SCRIPTS = [
   "js/settings/assist.js",
   "js/core/llm.js",
   "js/core/mcp.js",
+  "js/core/mcp-builtin.js",
   "js/desk/gallery.js",
   "js/desk/anniv.js",
   "js/desk/diary.js",

@@ -94,6 +94,7 @@ function sendPickedImage(file) {
         // 这个监听是抢先执行的（比消息列表里「打开对话」那个早），先记下现在打开的是谁，
         // 否则画消息时头像、名字、{{char}} 用的还是上一个打开的角色
         openingChatCharIdx = parseInt(this.dataset.index, 10);
+        msgBtnChat.classList.remove('has-new'); msgBtnContacts.classList.remove('has-new');   // 换了一个角色，另一边的小红点不算数了
         renderRoomLists(openingChatCharIdx);
       }, true);
     });

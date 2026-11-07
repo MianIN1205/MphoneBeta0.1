@@ -54,6 +54,9 @@
 }
 
 .msg-toggle-btn.active svg { stroke: #D05858; }
+/* 另一边（聊天 / 剧情）来了新消息的小红点 */
+.msg-toggle-btn { position: relative; }
+.msg-toggle-btn.has-new::after { content: ""; position: absolute; top: 3px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: #E05555; box-shadow: 0 0 0 1.5px #fff; }
 
 .msg-plus-btn {
   background: none; border: none;

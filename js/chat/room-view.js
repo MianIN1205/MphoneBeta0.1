@@ -37,8 +37,14 @@ function toggleCrDrawer(panel, btn) {
 
 // 每个角色上次停在聊天还是剧情：下次打开回到那边
 var crLastView = mphoneStore.load('mphone_last_view', {}) || {};
+// 停在聊天室的一边（比如剧情）时，另一边来了新回复：那边的切换按钮上冒个小红点，切过去就消失
+function crMarkOtherView(isChat) {
+  if (currentCrSubView === (isChat ? 'chat' : 'contacts')) return;
+  (isChat ? msgBtnChat : msgBtnContacts).classList.add('has-new');
+}
 function switchChatRoomSubView(view) {
   var isDrama = (view === 'contacts');
+  (isDrama ? msgBtnContacts : msgBtnChat).classList.remove('has-new');
   currentCrSubView = isDrama ? 'contacts' : 'chat';
   var vc = charList[openingChatCharIdx];
   if (vc && crLastView[vc.id] !== currentCrSubView) { crLastView[vc.id] = currentCrSubView; mphoneStore.save('mphone_last_view', crLastView); }

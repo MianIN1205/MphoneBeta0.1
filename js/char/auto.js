@@ -122,7 +122,8 @@ function autoSendMessage(idx) {
     if (ctrl.signal.aborted) return;
     text = stripQuotes(text);
     var viewing = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;
-    var showNow = viewing && currentCrSubView === 'chat';
+    var showNow = viewing;   // 聊天室开着就画进聊天列表（停在剧情那边时也画，切回来就看得到），另一边的按钮冒小红点
+    if (viewing && typeof crMarkOtherView === 'function') crMarkOtherView(true);
     if (typeof peekTakeLockTag === 'function') text = peekTakeLockTag(char, text);
     var added = commitAssistantReply(hist, text,
       showNow ? document.getElementById('chatMsgList') : null,
