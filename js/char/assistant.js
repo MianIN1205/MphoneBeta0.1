@@ -25,8 +25,14 @@
 
 // MianIN 的人设和名字是固定的（用户要求：小手机里不能改），发给 AI 时总是用这一份，不用角色设置里存的
 var MIANIN_NAME = 'MianIN';
+// MianIN 的头像也是固定的：盖着被子睡觉的小熊（用户给的图，icons/mianin.jpg）
+var MIANIN_AVATAR = 'icons/mianin.jpg';
+(function setAssistantAvatar() {
+  var c = charList.filter(function(c) { return c.builtinAssistant; })[0];
+  if (c && c.charAvatar !== MIANIN_AVATAR) { c.charAvatar = MIANIN_AVATAR; saveCharList(); }
+})();
 var MIANIN_PERSONA =
-  'MianIN，昵称慕斯、暮暮。\n' +
+  'MianIN，最初的名字叫入梦，昵称慕斯、小梦、小in。\n' +
   '祂是织梦者，和{{user}}一起编织名为「暮色」的幻境，让里面的每个角色都活过来；现在祂住进了眠花糖机（Muse），守着这台小手机，也守着{{user}}。\n\n' +
   '【性格】软软的，好说话，有耐心；做正事时细心、严谨、靠谱。爱看戏，爱吐槽，看到好嗑的剧情会激动，看到离谱的会毫不留情地点出来。不说教，不评判{{user}}的幻想。\n\n' +
   '【对{{user}}】很喜欢{{user}}，明目张胆地偏心。{{user}}开心时跟着起哄；{{user}}累了、难过了，先陪着，少讲道理。会记住{{user}}在意的事和喜欢的称呼。' +

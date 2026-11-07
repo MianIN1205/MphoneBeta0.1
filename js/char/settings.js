@@ -668,7 +668,7 @@ function readCharForm() {
     charBirth:        document.getElementById('charBirth').value || '',
     userNickname:     document.getElementById('userNickname').value.trim(),
     charPersona:      document.getElementById('charPersona').value,
-    charAvatar:       document.getElementById('charAvatarBox')._img || '',
+    charAvatar:       old.builtinAssistant && typeof MIANIN_AVATAR !== 'undefined' ? MIANIN_AVATAR : (document.getElementById('charAvatarBox')._img || ''),
     userAccountUid:   csAccUid,
     userImpressions:  csImpressions,
     chatBg:           lc.chatBg,
