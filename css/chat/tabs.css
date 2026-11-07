@@ -121,3 +121,30 @@
   stroke: rgba(170,130,130,0.65); stroke-width: 2;
   stroke-linecap: round; fill: none;
 }
+
+/* 「此刻」：圆圈下面写名字，有新东西时头像发一圈粉色的光（js/chat/moments.js）。类名都没加 !important，全局 CSS 能改 */
+.chat-avatar-row { overflow-x: auto; scrollbar-width: none; padding-left: 12px; padding-right: 12px; margin-left: -8px; margin-right: -8px; }
+.chat-avatar-row::-webkit-scrollbar { display: none; }
+.moment-item { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; cursor: pointer; width: 60px; }
+.moment-ring { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.moment-av { background-size: cover; background-position: center; transition: box-shadow 0.3s ease; }
+.moment-item.has-new .moment-av { border-color: transparent; box-shadow: 0 0 0 2px #f7a8bd, 0 0 12px 3px rgba(246,140,170,0.55); }
+.moment-item .chat-avatar-add { margin: 3px; }
+.moment-name { max-width: 60px; font-size: 11px; color: #a08890; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 14px; }
+/* 点开的卡片：半透明毛玻璃；头像在左，名字和更新时间在右，下面一行此刻、一行最新动态 */
+#momentOverlay { background: rgba(60,30,45,0.18); }
+.mine-acc-modal.moment-card {
+  background: rgba(255,255,255,0.52); backdrop-filter: blur(22px) saturate(150%); -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 10px 34px rgba(120,60,80,0.18); gap: 10px;
+}
+.moment-card-head { display: flex; align-items: center; gap: 12px; }
+.moment-card-av { width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0; background: #f3e7ea center / cover no-repeat; box-shadow: 0 0 0 2.5px rgba(255,255,255,0.9), 0 4px 12px rgba(150,90,110,0.18); }
+.moment-card-who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.moment-card-name { font-size: 16px; color: #4f3a42; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.moment-card-when { font-size: 11.5px; color: #a8909a; }
+.moment-card-line { display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; border-radius: 14px; background: rgba(255,255,255,0.45); }
+.moment-card-k { flex-shrink: 0; font-size: 11.5px; color: #d0809a; line-height: 20px; letter-spacing: 1px; }
+.moment-card-status { font-size: 14px; color: #5a4249; line-height: 20px; }
+.moment-card-post-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.moment-card-post-text { font-size: 13px; color: #5f4f55; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.moment-card-post-when { font-size: 11px; color: #b49aa4; }

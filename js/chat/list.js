@@ -21,6 +21,7 @@ function msgPreviewText(m) {
   if (m.recalled) return (m.role === 'user' || m.recalledBy === 'user') ? '你撤回了一条消息' : '对方撤回了一条消息';
   if (m.action) return '[操作] ' + (typeof actionTitle === 'function' ? actionTitle(m.action) : '');
   if (m.pat) return '[拍一拍]';
+  if (m.note) return m.note;
   if (m.cal) return '[' + m.cal.kind + '] ' + m.cal.title;
   if (m.imgSrc) return '[图片]';
   if (m.file) return '[文件] ' + (m.file.name || '');
@@ -181,6 +182,7 @@ function renderChatCharList() {
   });
   updateUnreadTotal();
   renderContactList();
+  if (typeof renderMoments === 'function') renderMoments();   // 最上面那排「此刻」圆圈
 }
 
 // 底部「消息」标签上的未读总数

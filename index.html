@@ -70,6 +70,7 @@
   <link rel="stylesheet" href="css/chat/file-send.css">
   <link rel="stylesheet" href="css/chat/peek.css">
   <link rel="stylesheet" href="css/desk/places.css">
+  <link rel="stylesheet" href="css/desk/books.css">
 </head>
 <body class="phone-fullscreen">
   <!-- 载入页：脚本全部加载完后淡出（见 js/core/boot.js） -->
@@ -1272,6 +1273,13 @@
         <div id="wgEmojiWrap">
           <input class="mine-field-input" id="wgEmoji" type="text" maxlength="8" placeholder="💝">
         </div>
+        <div id="wgSideWrap">
+          <div class="field-label">小圆图放在</div>
+          <div class="pf-radio-row" id="wgSideRow">
+            <button class="pf-radio-btn" data-side="left">左边</button>
+            <button class="pf-radio-btn" data-side="right">右边</button>
+          </div>
+        </div>
         <div id="wgTextWrap">
           <input class="mine-field-input" id="wgText1" type="text" maxlength="20">
           <input class="mine-field-input" id="wgText2" type="text" maxlength="24">
@@ -1773,7 +1781,15 @@
               </svg>
               删除笔记
             </div>
+            <div class="notes-popup-item" id="notesBtnImport">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              导入图书
+            </div>
           </div>
+          <input type="file" id="bookImportInput" accept=".txt,.md,.epub,.docx,.pdf,text/plain" style="display:none;">
         </div>
       </div>
 
@@ -2216,6 +2232,7 @@
 
       <!-- 模拟微信小功能抽屉（4×2 固定一页圆角方形按钮） -->
       <div class="cr-plus-panel" id="crPlusPanel">
+        <div class="cr-plus-pages" id="crPlusPages">
         <div class="cr-plus-grid">
           <button class="cr-plus-item" data-func="相册">
             <div class="cr-plus-box">
@@ -2300,6 +2317,19 @@
             <span class="cr-plus-label">查手机</span>
           </button>
         </div>
+        <div class="cr-plus-grid">
+          <button class="cr-plus-item" data-func="一起看">
+            <div class="cr-plus-box">
+              <svg viewBox="0 0 24 24">
+                <path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"></path>
+              </svg>
+            </div>
+            <span class="cr-plus-label">一起看</span>
+          </button>
+        </div>
+        </div>
+        <div class="cr-plus-dots" id="crPlusDots"><i class="on"></i><i></i></div>
         <input type="file" id="crFileInput" multiple style="display:none">
       </div>
 
@@ -3144,6 +3174,68 @@
         </button>
       </div>
       <div class="peek-body" id="peekBody"></div>
+    </div>
+
+    <!-- 消息列表最上面的「此刻」（js/chat/moments.js） -->
+    <div class="mine-acc-overlay" id="momentOverlay">
+      <div class="mine-acc-modal moment-card" id="momentCard">
+        <div class="moment-card-head"><span class="moment-card-av"></span><div class="moment-card-who"><b class="moment-card-name"></b><span class="moment-card-when"></span></div></div>
+        <div class="moment-card-line"><span class="moment-card-k">此刻</span><span class="moment-card-status"></span></div>
+        <div class="moment-card-line moment-card-post"><span class="moment-card-k">动态</span><span class="moment-card-post-body"><span class="moment-card-post-text"></span><span class="moment-card-post-when"></span></span></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="momentClose">关闭</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="momentChat">去聊天</button>
+        </div>
+      </div>
+    </div>
+    <div class="mine-acc-overlay" id="momentPickOverlay">
+      <div class="mine-acc-modal">
+        <div class="mine-acc-title">放哪几个人上来</div>
+        <div class="feed-visible-list" id="momentPickList"></div>
+        <div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-add" id="momentPickDone">好了</button></div>
+      </div>
+    </div>
+
+    <!-- 书架里的书：阅读器（js/desk/books.js） -->
+    <div class="app-screen" id="appReader">
+      <div class="settings-nav">
+        <button class="back-btn" id="backReader" aria-label="返回">
+          <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <span class="settings-title" id="readerTitle">书</span>
+        <button class="peek-refresh" id="readerTocBtn" aria-label="目录">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="reader-page" id="readerPage"></div>
+      <div class="reader-together" id="readerTogether" style="display:none;">
+        <span class="reader-tg-av"></span><span class="reader-tg-name"></span>
+        <button class="reader-tg-btn" id="readerTgChat">聊这一页</button>
+        <button class="reader-tg-btn ghost" id="readerTgStop">不看了</button>
+      </div>
+      <div class="reader-bar">
+        <button class="reader-btn" id="readerPrev">上一页</button>
+        <button class="reader-font" id="readerFontDown">A−</button>
+        <span class="reader-progress" id="readerProgress"></span>
+        <button class="reader-font" id="readerFontUp">A+</button>
+        <button class="reader-btn" id="readerNext">下一页</button>
+      </div>
+    </div>
+    <div class="mine-acc-overlay" id="readerTocOverlay">
+      <div class="mine-acc-modal">
+        <div class="mine-acc-title">目录</div>
+        <div class="reader-toc-list" id="readerTocList"></div>
+        <div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" id="readerTocClose">关闭</button></div>
+      </div>
+    </div>
+    <div class="mine-acc-overlay" id="togetherPickOverlay">
+      <div class="mine-acc-modal">
+        <div class="mine-acc-title">一起看哪本书</div>
+        <div class="together-list" id="togetherPickList"></div>
+        <div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" id="togetherPickCancel">取消</button></div>
+      </div>
     </div>
 
     <!-- 慢信：写信、看信（js/desk/letters.js） -->

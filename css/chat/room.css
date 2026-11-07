@@ -341,3 +341,13 @@
 .drama-empty-hint span {
   font-size: 13px; color: #ccc; letter-spacing: 0.5px;
 }
+
+/* 加号抽屉两页：左右滑，下面两个小圆点（第二页是「一起看」） */
+.cr-plus-panel { position: relative; }
+.cr-plus-pages { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+.cr-plus-pages::-webkit-scrollbar { display: none; }
+.cr-plus-pages > .cr-plus-grid { flex: 0 0 100%; scroll-snap-align: start; }
+.cr-plus-dots { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: center; gap: 5px; pointer-events: none; }
+.cr-plus-dots i { width: 5px; height: 5px; border-radius: 50%; background: rgba(200,150,150,0.3); }
+.cr-plus-dots i.on { background: rgba(208,96,110,0.7); }
+.cr-plus-panel:not(.open) .cr-plus-dots { display: none; }

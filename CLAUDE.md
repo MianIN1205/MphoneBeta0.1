@@ -48,9 +48,9 @@
 | statusbar | 时钟、电量（真实电量 `phoneBattery`，iPhone 拿不到） |
 | screens | 桌面图标打开各个界面 |
 | appearance / appearance-store | 外观设置（边框 / 全屏、状态栏、字体、字号、全局 CSS、系统顶栏颜色）；保存和启动时恢复（也恢复系统提示词） |
-| bookshelf | 书架（日记 / 相册是系统书） |
+| bookshelf / books | 书架（日记 / 相册是系统书）。books：右上 ···「导入图书」导入小说（txt（UTF-8 / GBK）、epub（`zipReadEntry` 读 opf 的 spine）、Word .docx、PDF），最多 300 万字，文字单独存 `mphone_book_<id>`、书单 `mphone_books`，书架上的书 `novel` 字段，封面中间小白签竖着印书名；占书架格子（12 本满了就不能导）；书架上删掉连文字一起删。阅读器 `#appReader`：约 700 字一页（在换行处断）、点左右三分之一 / 左右滑翻页、A− A+ 字号（`mphone_reader_font`）、目录（认「第 X 章」等标题，认不出按 10% 分段）、记住读到哪（`meta.pos`）。「一起看」：聊天加号抽屉第二页（抽屉现在两页左右滑、下面两个小圆点），选一本书 → 记 `mphone_together`[角色id]，聊天里一行小字提示（`m.note` / `m.noteAI`，和拍一拍一样居中），打开阅读器，下面一条「和 TA 一起看」小栏：「聊这一页」回到聊天、输入框上方引用这一页；「不看了」结束。一起看时聊天窗口的现实感知带这一页全文（`togetherContextLine`），要求像一起看书的人那样聊、不复述、不剧透后面 |
 | gallery / anniv / diary | 相册；纪念日与日程；日记 + 每日定时写日记并记成长期记忆 |
-| widgets | 桌面网格与小组件（编辑模式拖动）。小组件 `WIDGET_TYPES`：纪念日、照片、黑胶唱片（2×2，中间贴图、写歌名歌手，歌名显示在下面；默认慢慢转，点一下暂停 / 继续，唱臂跟着抬起放下，存 `w.playing`）、胶囊（横着的 2×1，和图标一样高：左边小圆图或 Emoji，右边一句话 + 一行小字；类型里的 `w` / `h` 定大小）；换图的弹窗有「恢复默认」。时钟卡片左边的头像框点一下换图片，弹窗里「恢复默认」换回空白（`mphone_desk_avatar`；`openImgPicker(cb, { onReset })` 多一个恢复默认按钮） |
+| widgets | 桌面网格与小组件（编辑模式拖动）。小组件 `WIDGET_TYPES`：纪念日、照片、黑胶唱片（2×2：左边方形封套，封面图自己选，黑胶从右边露出一半、中间小标签也是这张图；不转（用户要的），歌名显示在下面，点一下看大图）、胶囊（横着的 2×1，和图标一样高：小圆图或 Emoji 放左边或右边（`w.picSide`），一句话 + 一行小字；下面不写「胶囊」（留一行空的对齐）；类型里的 `w` / `h` 定大小）；换图的弹窗有「恢复默认」。时钟卡片左边的头像框点一下换图片，弹窗里「恢复默认」换回空白（`mphone_desk_avatar`；`openImgPicker(cb, { onReset })` 多一个恢复默认按钮） |
 | desk-icons | 外观「桌面图标」：每个桌面 / 程序坞图标能换图片或 emoji、改名字（`mphone_desk_icons` = { 图标id: { img, text, name } }，原样子存在 `deskIconOrig` 用来恢复默认），「显示软件名称」开关（`mphone_desk_labels`，关了 .phone 加 `hide-dock-labels`） |
 | places | 花房 / 星星瓶 / 灯塔 / 见面的打开 / 返回；灯塔、见面暂时只有空白界面（灯塔没有 emoji，图标是画的小 SVG）。样式在 css/desk/places.css（慢信、花房、星星瓶共用） |
 | letters | 慢信（桌面 App 💌）：给「未来的自己」或某个角色写信，选拆信日期（明天以后，快捷一周 / 一个月 / 半年 / 一年），到日子前封着；可以拆了的桌面图标有小红点。写给角色的信拆开时 TA 回一封（`letterAskReply`，150～400 字，存 `l.reply`）。存 `mphone_letters` = [{ id, to, content, writtenAt, openAt, opened, reply }] |
@@ -71,7 +71,7 @@
 ### chat/ 聊天
 | 文件 | 内容 |
 |---|---|
-| tabs / header / list / new-chat / contacts | Chat 底部标签、消息页顶栏和加号菜单、消息列表（会话卡片、未读、删除会话）、新建对话、通讯录 |
+| tabs / header / list / new-chat / contacts / moments | Chat 底部标签、消息页顶栏和加号菜单、消息列表（会话卡片、未读、删除会话）、新建对话、通讯录。moments：消息列表最上面那排圆圈「此刻」（以前是占位圆圈）：每个是一个角色（头像 + 名字），TA 换了签名（`char.headStatusAt`，reply.js 里签名变了才记）或发了新动态，头像发一圈粉色的光（用户不要彩虹圈）；点开半透明毛玻璃小卡片：头像在左、名字和多久前更新在右，下面一行「此刻」（签名）、一行「动态」（最新一条），「去聊天」；样式类名没加 !important，全局 CSS 能改（`.chat-avatar-row` `.moment-item` `.moment-av` `.moment-name` `.moment-card` 等）；「+」挑放哪几个（最多 8，`mphone_moment_chars`，没挑过就是最近聊过的三个），看过记 `mphone_moment_seen` |
 | room / room-view / room-lists | 聊天室：返回、齿轮、应用角色美化；聊天 / 剧情切换和底部抽屉开关；打开时画两个列表（分页）、相册发图 |
 | history | 聊天 / 剧情记录的存取（`stripMsg` 决定存哪些字段）、当前窗口用哪份记录、`getApiCfg(char)` |
 | prompt | 拼给 AI 的内容：`activityAsk(text)`（主动消息、发动态、评论、写日记等活动的要求：放最后一条、user 身份、标明是系统提示，并要求口吻和平时一致、只输出要求的内容），`MPHONE_FICTION_NOTE`（固定放在最前：虚构创作空间、角色是成年人、不为虚构情节道歉；不是破限，只是把情境说清楚；破限类内容 Claude 不写，用户自己的放在 Prompt 页的预设里），`buildMsgs`（聊天 / 剧情都按回合 + token 上限裁剪，剧情省略部分用隐藏的 `<前情>` 代替）、`chatFormatRules` 回复格式、`fillMacros`（{{char}} / {{user}}）、`realWorldContext` 现实感知（现在几点按角色时区、隔了多久没说话、真实电量、纪念日和日程，只放聊天窗口）、`lastStatusOf` 接上一次状态栏、`msgTextForAI` |

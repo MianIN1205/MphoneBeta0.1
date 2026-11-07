@@ -146,7 +146,7 @@ function renderHistMsg(m, list, empty) {
   }
   var thinkBar = m.think && m.role === 'assistant' ? renderThinkBar(m, list) : null;
   if (m.recalled && !m._flash) return renderRecallNotice(m, list, empty);
-  if (m.pat) return renderPatNotice(m, list, empty);
+  if (m.pat || m.note) return renderPatNotice(m, list, empty);
   if (m.narr) return renderNarration(m, list, empty);
   if (m.action && typeof renderActionCard === 'function') return renderActionCard(m, list, empty);
   if (m.cal && typeof renderCalCard === 'function') return renderCalCard(m, list, empty);
@@ -293,7 +293,7 @@ function renderPatNotice(m, list, empty) {
   if (empty) empty.style.display = 'none';
   var el = document.createElement('div');
   el.className = 'cr-recall-notice cr-pat-notice';
-  el.textContent = patNoticeText(m);
+  el.textContent = m.note || patNoticeText(m);
   el._msg = m;
   el._extras = [];
   list.appendChild(el);

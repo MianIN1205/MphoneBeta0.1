@@ -1,0 +1,35 @@
+/* 眠花糖机 — 书架里导入的书：阅读器、目录、一起看（js/desk/books.js） */
+#appReader { display: flex; flex-direction: column; background: #fbf7f1; }
+.reader-page {
+  flex: 1; overflow-y: auto; padding: 18px 22px 24px; color: #4a3f3a; line-height: 1.9; letter-spacing: 0.3px;
+  white-space: pre-wrap; word-break: break-word; font-size: 16px; -webkit-user-select: text; user-select: text;
+  background: linear-gradient(180deg, #fbf7f1, #f7f0e6);
+}
+.reader-bar {
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 8px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(251,247,241,0.96); border-top: 1px solid rgba(180,150,130,0.18);
+}
+.reader-btn { border: none; background: rgba(160,120,100,0.1); color: #7a625a; border-radius: 14px; padding: 7px 12px; font-family: inherit; font-size: 13px; cursor: pointer; }
+.reader-btn:disabled { opacity: 0.35; }
+.reader-font { border: none; background: none; color: #a08880; font-family: inherit; font-size: 13px; padding: 6px 4px; cursor: pointer; }
+.reader-progress { flex: 1; text-align: center; font-size: 12px; color: #a08880; }
+.reader-together {
+  flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(253,236,241,0.95);
+  border-top: 1px solid rgba(220,160,180,0.25);
+}
+.reader-tg-av { width: 26px; height: 26px; border-radius: 50%; background: #eee center / cover no-repeat; flex-shrink: 0; }
+.reader-tg-name { flex: 1; min-width: 0; font-size: 12.5px; color: #b0607a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reader-tg-btn { border: none; border-radius: 13px; padding: 6px 11px; font-family: inherit; font-size: 12.5px; background: #e8879f; color: #fff; cursor: pointer; flex-shrink: 0; }
+.reader-tg-btn.ghost { background: rgba(232,135,159,0.14); color: #c0607a; }
+.reader-toc-list { max-height: 55vh; overflow-y: auto; margin: 4px 0 10px; }
+.reader-toc-row { padding: 9px 6px; font-size: 13.5px; color: #555; border-bottom: 1px solid rgba(0,0,0,0.04); cursor: pointer; }
+.reader-toc-row.on { color: #d0607e; font-weight: 600; }
+.together-list { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin: 4px 0 10px; }
+.together-book { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: rgba(250,244,246,0.95); cursor: pointer; }
+.together-book-cover { width: 30px; height: 40px; border-radius: 3px 6px 6px 3px; flex-shrink: 0; box-shadow: inset 3px 0 0 rgba(0,0,0,0.08), 0 2px 5px rgba(0,0,0,0.1); }
+.together-book-info { display: flex; flex-direction: column; min-width: 0; }
+.together-book-info b { font-size: 13.5px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.together-book-info small { font-size: 11px; color: #aaa; }
+/* 书架上导入的书：封面中间一张小白签，竖着印书名 */
+.book-novel-title { position: absolute; left: 23px; top: 12px; max-height: 76px; width: 20px; box-sizing: border-box; padding: 5px 3px; background: rgba(255,255,255,0.85); border-radius: 3px;
+  font-size: 11px !important; line-height: 1.2; letter-spacing: 0; word-break: break-all; text-align: center; color: #6b5a5a; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); pointer-events: none; z-index: 1; }

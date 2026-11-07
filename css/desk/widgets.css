@@ -121,26 +121,24 @@
 }
 .widget-preview-wrap .widget-face { pointer-events: none; }
 
-/* 黑胶唱片：一圈圈纹路，中间贴图；转着的时候唱臂搭上去 */
+/* 黑胶唱片：左边方形封套（封面图），黑胶从右边露出一半，不转 */
 .widget-face.type-vinyl { padding: 0; background: linear-gradient(150deg, #fdf3f6, #efe6f6); border: 1px solid rgba(255,255,255,0.8); }
-.vinyl-disc {
-  position: absolute; left: 9%; top: 11%; width: 74%; height: 74%; border-radius: 50%;
-  background: repeating-radial-gradient(circle, #1d1a20 0 1.6px, #2b2730 1.6px 3.2px);
-  box-shadow: 0 6px 14px rgba(40,20,40,0.28), inset 0 0 0 2px #121014;
+.vinyl-record {
+  position: absolute; right: 7%; top: 50%; width: 62%; aspect-ratio: 1; transform: translateY(-50%); border-radius: 50%;
+  background: radial-gradient(circle, transparent 0 30%, rgba(255,255,255,0.05) 31% 33%, transparent 34% 52%, rgba(255,255,255,0.06) 53% 54%, transparent 55% 74%, rgba(255,255,255,0.05) 75% 76%, transparent 77%),
+    conic-gradient(from 20deg, #26222a, #3a3540 12%, #1d1a20 25%, #2e2a33 40%, #1b181e 55%, #38333d 70%, #211e25 85%, #26222a);
+  box-shadow: 0 5px 12px rgba(40,20,40,0.28), inset 0 0 0 1.5px #121014;
 }
-.vinyl-shine { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 30deg, transparent 0 12%, rgba(255,255,255,0.16) 16%, transparent 22% 62%, rgba(255,255,255,0.12) 66%, transparent 72%); }
-.vinyl-label {
-  position: absolute; left: 32%; top: 32%; width: 36%; height: 36%; border-radius: 50%;
-  background: linear-gradient(135deg, #f7b9c9, #c9b6ec) center / cover no-repeat; box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
+.vinyl-label { position: absolute; left: 33%; top: 33%; width: 34%; height: 34%; border-radius: 50%; background: linear-gradient(135deg, #f7b9c9, #c9b6ec) center / cover no-repeat; }
+.vinyl-hole { position: absolute; left: 47%; top: 47%; width: 6%; height: 6%; border-radius: 50%; background: #f4eef2; }
+.vinyl-sleeve {
+  position: absolute; left: 8%; top: 50%; width: 62%; aspect-ratio: 1; transform: translateY(-50%); border-radius: 7px;
+  background: linear-gradient(145deg, #f9d3dd, #d9cdf2) center / cover no-repeat; box-shadow: 0 6px 14px rgba(110,60,90,0.22), inset 0 0 0 1px rgba(255,255,255,0.5);
+  display: flex; align-items: center; justify-content: center;
 }
-.vinyl-hole { position: absolute; left: 47.5%; top: 47.5%; width: 5%; height: 5%; border-radius: 50%; background: #f4eef2; }
-.widget-face.type-vinyl.playing .vinyl-disc { animation: vinylSpin 9s linear infinite; }
-@keyframes vinylSpin { to { transform: rotate(360deg); } }
-.vinyl-arm { position: absolute; right: 9%; top: 7%; width: 34%; height: 56%; transform-origin: 82% 10%; transform: rotate(-24deg); transition: transform 0.6s ease; pointer-events: none; }
-.widget-face.type-vinyl.playing .vinyl-arm { transform: rotate(4deg); }
-.vinyl-arm::before { content: ''; position: absolute; right: 8%; top: 0; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #cfc6d4); box-shadow: 0 2px 4px rgba(0,0,0,0.18); }
-.vinyl-arm i { position: absolute; right: calc(8% + 5px); top: 9px; width: 3px; height: 82%; border-radius: 2px; background: linear-gradient(#e9e3ec, #b9b0bf); transform-origin: top; transform: rotate(12deg); }
-.vinyl-arm i::after { content: ''; position: absolute; left: -3px; bottom: -4px; width: 9px; height: 11px; border-radius: 2px; background: #d9d2de; }
+.vinyl-sleeve::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(120deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 45%); pointer-events: none; }
+.vinyl-note { font-size: 22px; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(150,90,120,0.35); }
+.vinyl-sleeve.has-img .vinyl-note { display: none; }
 
 /* 胶囊：横着占 2×1，和一个图标一样高；左边小圆图，右边一句话 */
 .desk-widget-capsule .widget-face.type-capsule {
@@ -150,6 +148,8 @@
 }
 .capsule-pic { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: #fde4ea center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 17px; box-shadow: 0 0 0 2px #fff; }
 .capsule-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.widget-face.type-capsule.pic-right { flex-direction: row-reverse !important; padding: 0 5px 0 12px !important; justify-content: space-between !important; }
+.widget-face.type-capsule.pic-right .capsule-text { text-align: left; flex: 1; }
 .capsule-text b { font-size: 12px; font-weight: 600; color: #5a4249; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .capsule-text small { font-size: 10px; color: #a08890; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #wgPreview .widget-face.type-capsule { height: 50px; border-radius: 25px; padding: 0 10px 0 5px; flex-direction: row; justify-content: flex-start; gap: 7px; background-color: #fff; }

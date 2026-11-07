@@ -66,12 +66,22 @@ function sendPickedImage(file) {
         } else if (funcName === '查手机' && typeof openPeek === 'function') {
           closeCrPlusPanel();
           openPeek(openingChatCharIdx);
+        } else if (funcName === '一起看' && typeof openTogether === 'function') {
+          closeCrPlusPanel();
+          openTogether(openingChatCharIdx);
         } else {
           showToast('「' + funcName + '」功能开发中', 'success');
         }
       });
     });
   }
+
+  // 加号抽屉两页：左右滑，下面两个小圆点
+  var plusPages = document.getElementById('crPlusPages');
+  if (plusPages) plusPages.addEventListener('scroll', function() {
+    var cur = Math.round(plusPages.scrollLeft / Math.max(1, plusPages.clientWidth));
+    document.querySelectorAll('#crPlusDots i').forEach(function(d, i) { d.classList.toggle('on', i === cur); });
+  });
 
   // 点击聊天内容区或聚焦输入框时收起底部加号面板
   if (chatRoomContent) {

@@ -207,6 +207,7 @@ function realWorldContext(char, hist) {
     lines.push('{{user}}的手机电量 ' + pct + '%' + (phoneBattery.charging ? '，正在充电' : pct <= 20 ? '，快没电了' : '') + '。');
   }
   if (typeof gardenContextLine === 'function') { var gl = gardenContextLine(char); if (gl) lines.push(gl); }
+  if (typeof togetherContextLine === 'function') { var tl = togetherContextLine(char); if (tl) lines.push(tl); }
   if (typeof calendarContextFor === 'function') {
     var cal = calendarContextFor(char);
     if (cal) lines.push(cal);
@@ -391,6 +392,7 @@ function msgTextForAI(m) {
     return '<撤回>' + (m.recalledText || '') + '</撤回>';
   }
   if (m.pat) return patTextForAI(m);
+  if (m.note) return m.noteAI || ('（' + m.note + '）');
   if (m.narr) return '【旁白 · 剧情开场】（这是中立的旁白，交代场景，不是用户说的话）\n' + (m.content || '');
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   if (m.cal && typeof calTextForAI === 'function') return calTextForAI(m.cal);

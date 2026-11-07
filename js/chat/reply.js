@@ -37,6 +37,7 @@ function commitAssistantReply(hist, raw, list, empty) {
   // 聊天窗口关了动描：新回复里 *星号* 包住的动作描写直接去掉（已经存下的消息不动）
   var rc = charOfHistory(hist);
   if (rc && headStatus && chatHistories[rc.id] === hist) {
+    if (rc.headStatus !== headStatus) rc.headStatusAt = Date.now();   // 「此刻」那排圆圈用：签名换了就亮一圈（js/chat/moments.js）
     rc.headStatus = headStatus;
     saveCharList();
     if (charList[openingChatCharIdx] === rc) paintChatSubTitle(rc);

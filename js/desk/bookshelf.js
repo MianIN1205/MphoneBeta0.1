@@ -82,6 +82,7 @@ document.getElementById('bookDelCancelBtn').addEventListener('click', function()
 
 bookDelOkBtn.addEventListener('click', function() {
   if (this.disabled) return;
+  if (pendingDelSlot && typeof bookOnShelfDelete === 'function') bookOnShelfDelete(pendingDelSlot);
   if (pendingDelSlot) { pendingDelSlot.remove(); pendingDelSlot = null; }
   clearInterval(delCountdownTimer);
   bookDelConfirmOverlay.classList.remove('open');
@@ -239,6 +240,13 @@ function createBookSlot(data) {
   book.className = 'book';
   applyBookCover(book, data.color, data.cover);
   if (Array.isArray(data.pages)) book._bvPages = data.pages;
+  if (data.novel) {   // 导入的书（js/desk/books.js）：封面上竖着印书名
+    book._novel = data.novel;
+    var nt = document.createElement('span');
+    nt.className = 'book-novel-title';
+    nt.textContent = data.name;
+    book.appendChild(nt);
+  }
   if (data.sys) {
     book._sys = data.sys;
     var emblem = document.createElement('span');
@@ -265,7 +273,8 @@ function saveShelves() {
         color: book._color || '#FFEBCD',
         cover: book._cover || '',
         pages: book._bvPages || [{}],
-        sys:   book._sys || undefined
+        sys:   book._sys || undefined,
+        novel: book._novel || undefined
       };
     });
   });
@@ -599,6 +608,7 @@ function renderBookPages() {
 function openBookViewer(book) {
   // 「日记」「相册」这类系统书：直接打开对应界面
   if (book._sys && typeof openSysBook === 'function') { openSysBook(book._sys); return; }
+  if (book._novel && typeof openReader === 'function') { openReader(book._novel); return; }   // 导入的书：打开阅读器
   currentBook = book;
   book._bvPages = book._bvPages || [{}];
   currentPageIndex = 0;

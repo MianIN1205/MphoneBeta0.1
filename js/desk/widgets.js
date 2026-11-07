@@ -10,8 +10,8 @@
 var WIDGET_TYPES = {
   anniv: { name: '纪念日', icon: '💝', desc: '显示设为外显的纪念日和日程，点开看全部' },
   photo: { name: '照片', icon: '🖼️', desc: '放一张喜欢的图片' },
-  vinyl: { name: '黑胶唱片', icon: '💿', desc: '一张会转的黑胶唱片，中间贴一张图，写上歌名；点一下暂停 / 继续转' },
-  capsule: { name: '胶囊', icon: '💊', desc: '横着的小胶囊：左边一张小圆图，右边写一句话', w: 2, h: 1 }
+  vinyl: { name: '黑胶唱片', icon: '💿', desc: '一张唱片封套，黑胶从右边露出半张；封面图自己选，写上歌名' },
+  capsule: { name: '胶囊', icon: '💊', desc: '横着的小胶囊：一张小圆图（放左边或右边）加一句话', w: 2, h: 1 }
 };
 function widgetSize(w) { var t = WIDGET_TYPES[w.type] || {}; return { w: t.w || 2, h: t.h || 2 }; }
 var DESK_COLS = 4;
@@ -52,15 +52,18 @@ function buildWidget(w) {
   var face = document.createElement('div');
   face.className = 'widget-face type-' + w.type + (w.type === 'anniv' ? ' style-' + (w.style || 'avatars') : '');
   if (w.type === 'vinyl') {
-    // 唱片：一圈圈纹路的黑胶，中间贴图（没选就是粉色标签），右上角一根唱臂；转着的时候唱臂搭在唱片上
-    face.classList.toggle('playing', w.playing !== false);
-    face.innerHTML = '<div class="vinyl-disc"><div class="vinyl-shine"></div><div class="vinyl-label"></div><div class="vinyl-hole"></div></div><div class="vinyl-arm"><i></i></div>';
-    var lbl = face.querySelector('.vinyl-label');
-    if (w.image) lbl.style.backgroundImage = 'url(' + w.image + ')';
+    // 唱片：左边一张方形封套（封面图自己选），黑胶从封套右边露出来一半，中间的小圆标签也是这张图；不转（用户要的）
+    face.innerHTML = '<div class="vinyl-record"><div class="vinyl-label"></div><div class="vinyl-hole"></div></div><div class="vinyl-sleeve"><span class="vinyl-note">♪</span></div>';
+    if (w.image) {
+      face.querySelector('.vinyl-sleeve').style.backgroundImage = 'url("' + w.image + '")';
+      face.querySelector('.vinyl-sleeve').classList.add('has-img');
+      face.querySelector('.vinyl-label').style.backgroundImage = 'url("' + w.image + '")';
+    }
     return face;
   }
   if (w.type === 'capsule') {
     face.innerHTML = '<div class="capsule-pic"></div><div class="capsule-text"><b></b><small></small></div>';
+    if (w.picSide === 'right') face.classList.add('pic-right');   // 小圆图放右边
     var pic = face.querySelector('.capsule-pic');
     if (w.image) pic.style.backgroundImage = 'url(' + w.image + ')'; else pic.textContent = w.emoji || '🌙';
     face.querySelector('b').textContent = w.text1 || '今天也要开心';
@@ -163,7 +166,8 @@ function renderWidgets() {
       el.appendChild(buildWidget(it.widget));
       var lb = document.createElement('span');
       lb.className = 'dock-label';
-      lb.textContent = (it.widget.type === 'vinyl' && it.widget.text1) || WIDGET_TYPES[it.widget.type].name;
+      // 胶囊下面不写名字（留一行空的，和图标的名字对齐）；唱片下面写歌名
+      lb.textContent = it.widget.type === 'capsule' ? ' ' : (it.widget.type === 'vinyl' && it.widget.text1) || WIDGET_TYPES[it.widget.type].name;
       if (it.widget.type === 'capsule') el.classList.add('desk-widget-capsule');
       el.appendChild(lb);
       if (deskEditing) {
@@ -178,7 +182,7 @@ function renderWidgets() {
           if (deskEditing) { openWidgetEdit(w); return; }
           if (w.type === 'anniv') openAnnivScreen();
           else if (w.type === 'photo') { var src = w.image || widgetLatestPhoto(); if (src) openImgViewer(src, { source: '桌面小组件' }); }
-          else if (w.type === 'vinyl') { w.playing = w.playing === false; saveWidgets(); var f = el.querySelector('.widget-face'); if (f) f.classList.toggle('playing', w.playing); }
+          else if (w.type === 'vinyl' && w.image) openImgViewer(w.image, { source: '桌面小组件' });
         });
       })(it.widget);
       deskGrid.appendChild(el);
@@ -353,12 +357,15 @@ function fillWidgetEdit() {
   var vinyl = w.type === 'vinyl', capsule = w.type === 'capsule';
   document.getElementById('wgImageWrap').style.display = (anniv && w.style === 'image') || w.type === 'photo' || vinyl || capsule ? '' : 'none';
   document.getElementById('wgEmojiWrap').style.display = (anniv && w.style === 'emoji') || (capsule && !w.image) ? '' : 'none';
-  document.getElementById('wgImageBtn').textContent = vinyl ? (w.image ? '换唱片中间的图' : '给唱片中间贴一张图') : capsule ? (w.image ? '换小圆图' : '选一张小圆图（不选就用 Emoji）') : (w.image ? '换一张图片' : '选择图片');
+  document.getElementById('wgImageBtn').textContent = vinyl ? (w.image ? '换封面图' : '选一张封面图') : capsule ? (w.image ? '换小圆图' : '选一张小圆图（不选就用 Emoji）') : (w.image ? '换一张图片' : '选择图片');
+  document.getElementById('wgSideWrap').style.display = capsule ? '' : 'none';
+  document.querySelectorAll('#wgSideRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.side === (w.picSide === 'right' ? 'right' : 'left')); });
   document.getElementById('wgEmoji').value = w.emoji || '';
   document.getElementById('wgTextWrap').style.display = vinyl || capsule ? '' : 'none';
   var t1 = document.getElementById('wgText1'), t2 = document.getElementById('wgText2');
   t1.placeholder = vinyl ? '歌名（显示在唱片下面）' : '一句话，比如：今天也要开心';
-  t2.placeholder = vinyl ? '歌手（可不填）' : '下面一行小字（可不填）';
+  t2.placeholder = '下面一行小字（可不填）';
+  t2.style.display = vinyl ? 'none' : '';
   if (document.activeElement !== t1) t1.value = w.text1 || '';
   if (document.activeElement !== t2) t2.value = w.text2 || '';
   document.querySelectorAll('#wgStyleRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.style === w.style); });
@@ -396,6 +403,9 @@ document.getElementById('wgEmoji').addEventListener('input', function() {
   var pv = document.getElementById('wgPreview');
   pv.innerHTML = '';
   pv.appendChild(buildWidget(wgEditing));
+});
+document.querySelectorAll('#wgSideRow .pf-radio-btn').forEach(function(b) {
+  b.addEventListener('click', function() { wgEditing.picSide = this.dataset.side; widgetChanged(); });
 });
 ['wgText1', 'wgText2'].forEach(function(id, i) {
   document.getElementById(id).addEventListener('input', function() {
