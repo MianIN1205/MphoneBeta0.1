@@ -35,8 +35,8 @@ function toggleCrDrawer(panel, btn) {
   }, 290);
 }
 
-// 每个角色上次停在聊天还是剧情：下次打开回到那边
-var crLastView = mphoneStore.load('mphone_last_view', {}) || {};
+// 每个角色上次停在聊天还是剧情：退出再进回到那边；只记在这次打开期间，重新打开小手机都从聊天开始（用户定的）
+var crLastView = {};
 // 停在聊天室的一边（比如剧情）时，另一边来了新回复：那边的切换按钮上冒个小红点，切过去就消失
 function crMarkOtherView(isChat) {
   if (currentCrSubView === (isChat ? 'chat' : 'contacts')) return;
@@ -47,7 +47,8 @@ function switchChatRoomSubView(view) {
   (isDrama ? msgBtnContacts : msgBtnChat).classList.remove('has-new');
   currentCrSubView = isDrama ? 'contacts' : 'chat';
   var vc = charList[openingChatCharIdx];
-  if (vc && crLastView[vc.id] !== currentCrSubView) { crLastView[vc.id] = currentCrSubView; mphoneStore.save('mphone_last_view', crLastView); }
+  if (vc) crLastView[vc.id] = currentCrSubView;
+  if (vc && isDrama && typeof crDramaSeen === 'function') crDramaSeen(vc);   // 看过剧情了，列表里的「[剧情]」那行就不显示了
   msgBtnChat.classList.toggle('active', !isDrama);
   msgBtnContacts.classList.toggle('active', isDrama);
   msgToggleSlider.classList.toggle('contacts', isDrama);
@@ -67,6 +68,7 @@ function switchChatRoomSubView(view) {
 }
 
 msgBtnChat.addEventListener('click', function() {
+  if (currentCrSubView === 'contacts' && typeof crDramaSeen === 'function') crDramaSeen(charList[openingChatCharIdx]);
   switchChatRoomSubView('chat');
 });
 

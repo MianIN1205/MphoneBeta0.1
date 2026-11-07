@@ -27,6 +27,7 @@
   box-shadow: 0 4px 18px rgba(0,0,0,0.07);
 }
 
+.info-card .avatar { cursor: pointer; }
 .avatar {
   width: 58px; height: 58px; flex-shrink: 0;
   border-radius: 50%;

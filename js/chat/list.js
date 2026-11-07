@@ -29,7 +29,25 @@ function msgPreviewText(m) {
   return String(m.content || '').replace(/〔译〕[\s\S]*$/, '').replace(/\s+/g, ' ');
 }
 
-// 消息列表：MianIN 固定在最上面，然后置顶的，其余按最后一条消息的时间从新到旧；左滑出现 置顶 / 标为未读 / 删除（MianIN 只有标为未读）
+// 剧情看到哪儿了：角色 id → 时间。剧情里有比这更新的角色回复，列表卡片下面多一行「[剧情]：…」（用户要的）
+// 第一次用这个版本时从现在算起，以前的剧情不算新的
+var dramaSeen = mphoneStore.load('mphone_drama_seen', null);
+if (!dramaSeen) { dramaSeen = { _since: Date.now() }; mphoneStore.save('mphone_drama_seen', dramaSeen); }
+function crDramaSeen(char) {
+  if (!char || !char.id) return;
+  dramaSeen[char.id] = Date.now();
+  mphoneStore.save('mphone_drama_seen', dramaSeen);
+}
+function dramaNewMsg(char) {
+  var d = dramaHistories[char.id] || [];
+  for (var i = d.length - 1; i >= 0; i--) {
+    if (d[i].role !== 'assistant' || d[i].action) continue;
+    return (d[i].time || 0) > (dramaSeen[char.id] || dramaSeen._since || 0) ? d[i] : null;
+  }
+  return null;
+}
+
+// 消息列表：MianIN 固定在最上面，然后置顶的，其余按最后一条消息的时间从新到旧；左滑出现 置顶 / 标为未读 / 删除（MianIN 不能左滑）
 var SESSION_SWIPE_W = 168;
 function renderChatCharList() {
   var list = document.getElementById('chatCharList');
@@ -109,10 +127,18 @@ function renderChatCharList() {
 
     var lastEl = document.createElement('div');
     lastEl.className = 'chat-char-card-last';
-    lastEl.textContent = msgPreviewText(s.last);
+    var chatHist = chatHistories[char.id] || [];
+    lastEl.textContent = msgPreviewText(chatHist[chatHist.length - 1]);   // 第一行一直是聊天的最后一条
 
     info.appendChild(head);
     info.appendChild(lastEl);
+    var dNew = dramaNewMsg(char);
+    if (dNew) {
+      var dEl = document.createElement('div');
+      dEl.className = 'chat-char-card-drama';
+      dEl.textContent = '[剧情]：' + msgPreviewText(dNew);
+      info.appendChild(dEl);
+    }
     card.appendChild(av);
     card.appendChild(info);
     if (helper) {
@@ -147,9 +173,10 @@ function renderChatCharList() {
       appChatRoom.classList.add('active');
     });
 
-    row.appendChild(acts);
+    // MianIN 固定在最上面，没有左滑（用户要的）
+    if (!helper) row.appendChild(acts);
     row.appendChild(card);
-    bindSwipeActions(row, card, acts, SESSION_SWIPE_W);
+    if (!helper) bindSwipeActions(row, card, acts, SESSION_SWIPE_W);
     list.appendChild(row);
   });
   updateUnreadTotal();

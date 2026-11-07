@@ -380,6 +380,22 @@ document.getElementById('wgDelete').addEventListener('click', function() {
   renderWidgets();
 });
 
+// 桌面时钟卡片左边的头像框：点一下换图片，长按换回空白（mphone_desk_avatar）
+var deskAvatarEl = document.querySelector('.info-card .avatar');
+var deskAvatar = mphoneStore.load('mphone_desk_avatar', '') || '';
+function paintDeskAvatar() {
+  deskAvatarEl.classList.toggle('avatar-img', !!deskAvatar);
+  deskAvatarEl.style.backgroundImage = deskAvatar ? 'url(' + deskAvatar + ')' : '';
+}
+paintDeskAvatar();
+bindPress(deskAvatarEl, function() {
+  if (deskEditing) return;
+  openImgPicker(function(src) { deskAvatar = src; mphoneStore.save('mphone_desk_avatar', deskAvatar); paintDeskAvatar(); });
+}, function() {
+  if (deskEditing || !deskAvatar) return;
+  openConfirm('把头像换回空白？', function() { deskAvatar = ''; mphoneStore.save('mphone_desk_avatar', ''); paintDeskAvatar(); });
+});
+
 // 聊天、头像、纪念日变化后，回到桌面时刷新一下小组件
 document.querySelectorAll('.back-btn').forEach(function(b) { b.addEventListener('click', function() { setTimeout(renderWidgets, 0); }); });
 // 第一次排好之前桌面格子先不显示（不然程序图标会先挤在小组件的位置上）；全部脚本加载完再排一次，万一第一次出错也能补上

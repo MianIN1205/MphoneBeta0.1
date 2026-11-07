@@ -3,6 +3,7 @@
 // 聊天对话界面 — 返回
 backChatRoom.addEventListener('click', function() {
   closeCrPlusPanel();
+  if (currentCrSubView === 'contacts' && typeof crDramaSeen === 'function') crDramaSeen(charList[openingChatCharIdx]);
   appChatRoom.classList.remove('active');
   msgBtnChat.classList.remove('has-new'); msgBtnContacts.classList.remove('has-new');
   applyChatRoomStyle(null);

@@ -246,6 +246,7 @@ function sendMsg(userText, requestOnly, onDone) {
     var showing = roomOpen();
     var list = showing ? document.getElementById(listId) : null;
     if (showing && typeof crMarkOtherView === 'function') crMarkOtherView(isChatView);
+    if (showing && !isChatView && currentCrSubView === 'contacts' && typeof crDramaSeen === 'function') crDramaSeen(replyChar);
     if (typeof peekTakeLockTag === 'function') text = peekTakeLockTag(replyChar, text);   // TA 决定改手机密码
     if (typeof starTakeTag === 'function') text = starTakeTag(replyChar, text);   // 悄悄叠的星星放进星星瓶
     var added = commitAssistantReply(hist, text, list, null);
