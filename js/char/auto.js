@@ -117,7 +117,7 @@ function autoSendMessage(idx) {
     if (gk && genStates[gk] === gen) { delete genStates[gk]; syncGenBtn(); }
     if (gen.typing) gen.typing.row.remove();
   }
-  return callApiOnce(msgs, char, ctrl.signal).then(function(text) {
+  return callApiOnce(msgs, char, ctrl.signal, true).then(function(text) {
     genDone();
     if (ctrl.signal.aborted) return;
     text = stripQuotes(text);

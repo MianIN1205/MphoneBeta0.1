@@ -423,14 +423,42 @@ feedCommentInput.addEventListener('keydown', function(e) {
 
 // ---------- AI 调用（非流式，返回完整文本） ----------
 // char：用这个角色自己的模型（便捷拓展栏选过模型预设时），和 TA 聊天用的是同一个
-function callApiOnce(messages, char, signal) {
+function callApiOnce(messages, char, signal, keepStatus) {
   // 按接口类型自动适配（见 js/core/llm.js）；signal 可以中途停掉（主动消息被 ⏹ 打断时用）
+  // 发动态、评论、写日记这些活动里，TA 有时照世界书 / 状态栏规则顺手写了状态栏（整段 HTML 代码），这里去掉；主动消息要状态栏，传 keepStatus
   return llmRequest(messages, { stream: false, cfg: char ? getApiCfg(char) : undefined, signal: signal }).then(function(text) {
     text = typeof takeThink === 'function' ? takeThink(text).text : String(text || '');
+    if (!keepStatus) text = stripStatusJunk(text, char);
     if (!text) throw new Error('未收到回复内容');
     return String(text).trim();
   });
 }
+// 去掉状态栏：<status>、这个角色状态栏规则里的那段、```html 代码块、整页 HTML（<!DOCTYPE …</html>）
+function stripStatusJunk(text, char) {
+  var t = String(text || '');
+  t = t.replace(/```[ \t]*html[\s\S]*?(```|$)/gi, '')
+       .replace(/<!DOCTYPE html[\s\S]*?(<\/html>|$)/gi, '')
+       .replace(/<html[\s>][\s\S]*?(<\/html>|$)/gi, '');
+  if (typeof takeStatus === 'function') t = takeStatus(t).text;
+  if (char && typeof statusSpec === 'function' && typeof statusRegexTake === 'function') {
+    var look = Object.assign({}, DEFAULT_LOOK, char.look || {});
+    var spec = look.statusOn ? statusSpec(look) : null;
+    if (spec) { var rt = statusRegexTake(spec, t); if (rt.status) t = rt.text; }
+  }
+  return t.replace(/\n{3,}/g, '\n\n').trim();
+}
+// 以前存下的动态和评论里已经混进去的状态栏代码：启动时清一遍
+onMphoneReady(function() {
+  var changed = false;
+  feedPosts.forEach(function(p) {
+    var ch = p.author && p.author.type === 'char' ? charList.filter(function(c) { return c.id === p.author.id; })[0] : null;
+    if (typeof p.text === 'string' && /```[ \t]*html|<!DOCTYPE|<html[\s>]|<status>/i.test(p.text)) { p.text = stripStatusJunk(p.text, ch); changed = true; }
+    (p.comments || []).forEach(function(c) {
+      if (typeof c.text === 'string' && /```[ \t]*html|<!DOCTYPE|<html[\s>]|<status>/i.test(c.text)) { c.text = stripStatusJunk(c.text, null); changed = true; }
+    });
+  });
+  if (changed) { saveFeed(); if (typeof renderFeed === 'function') renderFeed(); }
+});
 
 // 现在的时间；传角色时按 TA 所在的时区
 function nowText(char) {

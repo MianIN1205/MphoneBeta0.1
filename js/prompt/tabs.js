@@ -46,3 +46,25 @@ promptTabRow.querySelectorAll('.prompt-tab').forEach(function(tab) {
 
 // 初始化 radius
 updateFolderBodyRadius();
+
+// 条目编辑页（世界书、预设条目）盖在内容区最上面：列表滑到下面再点开时，编辑页在上面看不到（用户反馈过）。
+// 打开时记下滑到哪、滑回顶上并锁住内容区；关掉时滑回原来的位置
+(function() {
+  var body = document.getElementById('promptFolderBody');
+  if (!body || typeof MutationObserver === 'undefined') return;
+  var saved = 0;
+  body.querySelectorAll('.pf-detail-view').forEach(function(v) {
+    new MutationObserver(function() {
+      var open = v.classList.contains('open');
+      if (open && body.style.overflowY !== 'hidden') {
+        saved = body.scrollTop;
+        body.scrollTop = 0;
+        v.scrollTop = 0;
+        body.style.overflowY = 'hidden';
+      } else if (!open && !body.querySelector('.pf-detail-view.open')) {
+        body.style.overflowY = '';
+        body.scrollTop = saved;
+      }
+    }).observe(v, { attributes: true, attributeFilter: ['class'] });
+  });
+})();

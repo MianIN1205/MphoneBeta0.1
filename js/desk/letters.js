@@ -50,7 +50,7 @@ function renderLetters() {
         : ready ? '可以拆了 · ' + letterDate(l.writtenAt) + ' 写的'
         : letterDate(l.openAt) + ' 才能拆 · 还有 ' + days + ' 天';
       card.addEventListener('click', function() {
-        if (!letterCanOpen(l)) { showToast('还没到日子哦，' + letterDate(l.openAt) + ' 才能拆', 'plain'); return; }
+        if (!letterCanOpen(l)) { openLetterSealed(l); return; }
         openLetter(l);
       });
       box.appendChild(card);
@@ -122,6 +122,39 @@ document.getElementById('letterViewDel').addEventListener('click', function() {
     document.getElementById('letterViewOverlay').classList.remove('open');
     letterViewing = null;
     renderLetters();
+  });
+});
+
+// ---------- 还封着的信：日子选错了可以改，不想寄了可以扔掉（用户要的；内容还是不给看） ----------
+var letterSealed = null;
+function letterDateVal(t) { var d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function openLetterSealed(l) {
+  letterSealed = l;
+  document.getElementById('letterSealedTitle').textContent = '寄给 ' + letterToName(l);
+  document.getElementById('letterSealedTip').textContent = '还没到日子哦，' + letterDate(l.openAt) + ' 才能拆';
+  var inp = document.getElementById('letterSealedDate');
+  inp.min = letterDateVal(letterDayStart(Date.now()) + 86400000);
+  inp.value = letterDateVal(l.openAt);
+  document.getElementById('letterSealedOverlay').classList.add('open');
+}
+function closeLetterSealed() { document.getElementById('letterSealedOverlay').classList.remove('open'); letterSealed = null; }
+document.getElementById('letterSealedCancel').addEventListener('click', closeLetterSealed);
+closeOnBackdrop(document.getElementById('letterSealedOverlay'), closeLetterSealed);
+document.getElementById('letterSealedSave').addEventListener('click', function() {
+  var l = letterSealed, inp = document.getElementById('letterSealedDate');
+  if (!l) return;
+  var p = inp.value.split('-').map(Number), openAt = new Date(p[0], p[1] - 1, p[2]).getTime();
+  if (!inp.value || isNaN(openAt) || openAt <= letterDayStart(Date.now())) { shakeEl(inp); showToast('拆信的日子要选明天以后', 'error'); return; }
+  l.openAt = openAt;
+  saveLetters(); closeLetterSealed(); renderLetters();
+  showToast('✓ 改好了，' + letterDate(openAt) + ' 才能拆', 'success');
+});
+document.getElementById('letterSealedDel').addEventListener('click', function() {
+  var l = letterSealed;
+  if (!l) return;
+  openConfirm('把这封信扔掉？扔了就找不回来了', function() {
+    letters = letters.filter(function(x) { return x !== l; });
+    saveLetters(); closeLetterSealed(); renderLetters();
   });
 });
 

@@ -421,6 +421,16 @@ function removeDragGhost() {
   _dragGhost = null;
 }
 
+// 书是手指抬起时打开的，手机随后还会补一次「点击」，会落在刚打开的界面上（相册先弹出一张图）：吞掉紧跟着的那一次
+function swallowNextClick() {
+  var until = Date.now() + 600;
+  function eat(ev) {
+    document.removeEventListener('click', eat, true);
+    if (Date.now() < until) { ev.stopPropagation(); ev.preventDefault(); }
+  }
+  document.addEventListener('click', eat, true);
+  setTimeout(function() { document.removeEventListener('click', eat, true); }, 650);
+}
 function bindBookPointer(book) {
   book.addEventListener('pointerdown', function(e) {
     e.preventDefault();
@@ -505,7 +515,7 @@ function bindBookPointer(book) {
       // 短按：timer 未到期 → 打开笔记本（非删除模式）
       if (holdTimer !== null) {
         clearTimeout(holdTimer); holdTimer = null;
-        if (!isDeleteMode) openBookViewer(self);
+        if (!isDeleteMode) { swallowNextClick(); openBookViewer(self); }
         finish();
         return;
       }

@@ -5,6 +5,10 @@
    ============================================= */
 .desk-filter { margin: 6px 0 12px; }
 .desk-filter .pf-radio-btn { flex: 1; }
+/* 相册上面按角色分：横着一排能滑，不换行 */
+.gallery-filter { display: flex; gap: 8px; margin: 6px 0 12px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.gallery-filter::-webkit-scrollbar { display: none; }
+.gallery-filter .pf-radio-btn { flex: 0 0 auto; min-width: 64px; padding-left: 14px; padding-right: 14px; white-space: nowrap; }
 .desk-empty { text-align: center; padding: 30px 10px; grid-column: 1 / -1; }
 .desk-count { text-align: center; grid-column: 1 / -1; margin-top: 8px; }
 
