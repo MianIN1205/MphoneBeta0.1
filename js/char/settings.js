@@ -253,7 +253,7 @@ function readDiaryCfgForm() {
 document.getElementById('diaryAutoOn').addEventListener('change', function() {
   document.getElementById('diaryAutoSub').classList.toggle('open', this.checked);
 });
-var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', boxLayout: 'left', boxStyle: 'soft', boxMeta: true, boxActs: true, statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '', statusFind: '', statusRules: '' };
+var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', boxLayout: 'side', boxStyle: 'soft', boxMeta: true, boxActs: true, statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '', statusFind: '', statusRules: '' };
 
 // 表单里暂存的 USER 账号选择与各账号印象（切换账号时不丢）
 // csAccUid 为 '' 表示跟随主账号（「我的」里当前使用的账号）
@@ -429,7 +429,7 @@ function readLookForm() {
     headAvatar:   document.getElementById('layoutHeadAvatar').checked,
     headAlign:    a ? a.dataset.align : 'center',
     format:       fm ? fm.dataset.format : 'bubble',
-    boxLayout:    (document.querySelector('#dramaBoxLayoutRow .pf-radio-btn.selected') || { dataset: { v: 'left' } }).dataset.v,
+    boxLayout:    (document.querySelector('#dramaBoxLayoutRow .pf-radio-btn.selected') || { dataset: { v: 'side' } }).dataset.v,
     boxStyle:     (document.querySelector('#dramaBoxStyleRow .drama-box-style.selected') || { dataset: { v: 'soft' } }).dataset.v,
     boxMeta:      document.getElementById('dramaBoxMeta').checked,
     boxActs:      document.getElementById('dramaBoxActs').checked,
@@ -474,7 +474,7 @@ function setLookPartForm(view) {
 // 剧情窗口：气泡（和现在一样）/ 文本框（像酒馆那样一整块带框的，框的颜色用主题颜色，样子可以用 CSS 再调）/ 自定义（整个剧情窗口都用 CSS 改）
 var DRAMA_FORMAT_HINT = {
   bubble: '和聊天窗口一样的气泡，颜色在下面的「主题」里选。',
-  box: '像酒馆那样一整块带框的文本框：顶上是头像、名字、时间、楼层和字数，还有编辑、收藏、更多按钮（不用长按了），下面正文像文档一样，引号里的对话换个颜色；同一个人连着发的几条合在一个框里。头像位置和风格在下面选，想再改在最下面的「文本框样式」里写 CSS，也可以让 MianIN 帮你设计。',
+  box: '像酒馆那样一整块带框的文本框：顶上是头像、名字、时间、楼层和字数，还有编辑、收藏、更多按钮（不用长按了），下面正文像文档一样，引号里的对话换个颜色；同一个人连着发的几条合在一个框里。头像位置和模板在下面选，想再改在最下面的「文本框样式」里写 CSS，也可以让 MianIN 帮你设计。',
   custom: '排版和文本框一样（信息区 + 正文，连着发的合成一个框，头像位置在下面选），但不加颜色和边框，整个剧情窗口都用最下面的 CSS 来改，像酒馆的美化主题一样。不会写可以跟 MianIN 说想要什么样子，祂会写好给你看效果。'
 };
 function syncDramaFormatUi() {
@@ -514,6 +514,8 @@ function renderDramaBoxStyles(cur) {
     c.addEventListener('click', function() {
       box.querySelectorAll('.drama-box-style').forEach(function(x) { x.classList.toggle('selected', x === c); });
       document.getElementById('dramaBoxStyleHint').textContent = st.desc;
+      // 模板带着配好的头像位置，一起换上（之后还能在上面单独改）
+      document.querySelectorAll('#dramaBoxLayoutRow .pf-radio-btn').forEach(function(x) { x.classList.toggle('selected', x.dataset.v === st.lay); });
     });
     box.appendChild(c);
   });

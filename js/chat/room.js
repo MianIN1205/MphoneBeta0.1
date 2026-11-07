@@ -66,14 +66,13 @@ function dramaBoxCss(sel, look) {
   if (look.boxActs === false) css += row + ' .cr-head-acts { display: none; }\n';
   return css;
 }
-// 文本框风格（只在「文本框」格式里，look.boxStyle）：几套自带的；气泡样式不放这里（用户要放进气泡模式的预设）
-// 每套：框的底色、边框、字的颜色、名字颜色、对话（引号里的话，render.js 包成 .cr-dq）的颜色、信息区和正文之间的分隔线
+// 文本框风格 = 默认模板（只在「文本框」格式里，look.boxStyle）：用户从试做的几套里挑了这四套留下，每套带一个配好的头像位置（lay，点模板时一起换，之后还能单独改）；
+// 气泡样式不放这里（用户要放进气泡模式的预设）。每套：框的底色、边框、字色、名字颜色、对话（.cr-dq）颜色、信息区和正文之间的分隔线
 var DRAMA_BOX_STYLES = [
-  { id: 'soft', name: '柔和', desc: '框的颜色跟着下面的「主题」，白色细边，柔柔的', sw: ['#F6DCE6', '#5a4650', '#b5577a'] },
-  { id: 'glass', name: '毛玻璃', desc: '半透明毛玻璃，透出背后的背景图，适合换了剧情背景图的时候', sw: ['rgba(255,255,255,0.55)', '#3d3340', '#c2577e'] },
-  { id: 'paper', name: '书页', desc: '米色纸张、宋体字、虚线分隔，像在读一本书', sw: ['#fbf6ec', '#4a3d33', '#a65a32'] },
-  { id: 'night', name: '夜色', desc: '深色半透明，浅色字，对话是暖暖的金色，晚上看不刺眼', sw: ['#25223a', '#ebe5f3', '#f0c987'] },
-  { id: 'chapter', name: '章节', desc: '像连载小说：「作 / 名字」、日期、「章 #楼层」，配「居中」最好看', sw: ['rgba(255,252,248,0.7)', '#3d3340', '#b0803f'] }
+  { id: 'soft', name: '柔和', lay: 'side', desc: '框的颜色跟着下面的「主题」，白色细边，你在右、TA 在左', sw: ['#F6DCE6', '#5a4650', '#b5577a'] },
+  { id: 'glass', name: '毛玻璃', lay: 'side', desc: '半透明毛玻璃，透出背后的背景图，适合换了剧情背景图的时候', sw: ['rgba(255,255,255,0.55)', '#3d3340', '#c2577e'] },
+  { id: 'paper', name: '书页', lay: 'left', desc: '米色纸张、宋体字、虚线分隔，像在读一本书', sw: ['#fbf6ec', '#4a3d33', '#a65a32'] },
+  { id: 'night', name: '夜色', lay: 'center', desc: '深色半透明，浅色字，对话是暖暖的金色，头像在中间', sw: ['#25223a', '#ebe5f3', '#f0c987'] }
 ];
 function dramaBoxStyleCss(sel, look, colors, op) {
   var row = sel + ':not(.cr-narr-row)', st = look.boxStyle || 'soft';
@@ -100,17 +99,6 @@ function dramaBoxStyleCss(sel, look, colors, op) {
     row + ' { border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 4px 16px rgba(10,8,20,0.25); }\n' +
     row + '.ai { background: rgba(30,27,48,0.82); }\n' + row + '.user { background: rgba(54,46,74,0.82); }\n' +
     row + ' .cr-head-acts button:active { background: rgba(255,255,255,0.12); }\n';
-  if (st === 'chapter') return base({ fg: '#3d3340', name: '#6a5560', sub: 'rgba(61,51,64,0.6)', dq: '#b0803f', lh: '1.95' }) +
-    row + ' { padding: 16px 16px 14px; border-radius: 10px; background: rgba(255,252,248,0.62); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }\n' +
-    row + ' .cr-head-who { flex-direction: column; align-items: inherit; gap: 6px; }\n' +
-    row + ' .cr-head-name { font-weight: 500; letter-spacing: 3px; }\n' +
-    row + ' .cr-head-name::before { content: "作 / "; }\n' +
-    row + ' .cr-head-time { display: none; }\n' +
-    row + ' .cr-head-date { display: inline; letter-spacing: 2px; }\n' +
-    row + ' .cr-head-date::before { content: "- "; } ' + row + ' .cr-head-date::after { content: " -"; }\n' +
-    row + ' .cr-head-meta { width: 100%; justify-content: space-between; align-items: baseline; opacity: 1; margin-top: 6px; }\n' +
-    row + ' .cr-head-floor { font-size: 20px; font-weight: 700; color: ' + '#4a3b44' + '; }\n' +
-    row + ' .cr-head-floor::before { content: "章 "; }\n';
   // 柔和（默认）：底色用主题颜色
   return base({ fg: '#4a3b42', name: '#5a4650', sub: '#a89aa0', dq: '#b5577a', line: '1px solid rgba(150,110,130,0.14)' }) +
     row + ' { border: 1px solid rgba(255,255,255,0.75); box-shadow: 0 2px 10px rgba(120,80,100,0.08); }\n' +

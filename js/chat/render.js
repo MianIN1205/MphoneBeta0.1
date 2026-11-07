@@ -135,7 +135,7 @@ function addDramaHead(row, bubble, m) {
   var meta = document.createElement('div');
   meta.className = 'cr-head-meta';
   var hist = typeof getDramaHistory === 'function' ? getDramaHistory(openingChatCharIdx) : [];
-  var floor = hist.indexOf(m) + 1;
+  var floor = m._floor || hist.indexOf(m) + 1;   // 小梦改样式的效果图里是复制出来的消息，楼层另外带着
   if (floor > 0) { var f = document.createElement('span'); f.className = 'cr-head-floor'; f.textContent = '#' + floor; meta.appendChild(f); }
   var words = String(m.content || '').replace(/\s+/g, '').length;
   if (words) { var w = document.createElement('span'); w.className = 'cr-head-words'; w.textContent = words + ' 字'; meta.appendChild(w); }

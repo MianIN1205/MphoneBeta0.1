@@ -103,7 +103,7 @@ var ASSISTANT_GUIDE =
   '· 「+」抽屉（一页 8 个）：「相册」点开（按钮上方冒出小菜单）三选一：照片 / 拍照 / 文字图片（用一段文字描述一张照片发出去，显示成文字小卡片）；「文件」发 txt、md、json、csv、代码、Word（.docx）、PDF 给角色读（可以一次选好几个；扫描版 PDF 读不出字，老式 .doc 要另存成 .docx，Excel 还读不了），聊天里是一张文件卡片，点开看全文、能复制，发完点 ❄️ 角色才回；文件特别长时只带前面一部分。「查手机」看角色的手机（见下）。「语音通话」「位置」「红包」「礼物」「转账」还在开发中。\n' +
   '· 查手机：角色手机里有「相册」（TA 拍的照片，默认是文字图片，生图模式下画出来）、「信息」（置顶的是和用户的真实聊天，其余是 TA 和别人的聊天）、「备忘录」、「浏览器」（搜索记录、收藏，收藏点开能看内容）、「购物」（购物车、钱包、账单）。每个 App 第一次打开时按角色人设和最近的聊天自动写一份存下来，之后点右上 ↻ 才换新的（每个 App 单独刷新）。角色设置「聊天」页：「TA 会发现你查手机」打开时，用户翻得多了角色可能察觉，下次聊天回复时会提起，关着永远不会知道；「TA 的手机有密码」打开时要先解锁，密码和提示是角色按人设自己定的，猜对一次就记住，输错 3 次可以去聊天里问角色要（角色知道自己的密码），改不改密码由角色在聊天里自己决定。\n' +
   '· 表情包：输入栏左边的笑脸 = 表情包抽屉。右下「＋」用图床链接导入（每行「名字 链接」，只有链接时用文件名当名字，可填分类；也可以「从文档导入」选 txt / docx / json / md / csv），点表情包直接发出，长按表情包改名字 / 换分类 / 删除，长按分类标签改名 / 删除分类；打字时文字和表情包名字对得上，输入栏上方会联想出来；右下的设置键按当前角色设置 TA 能不能发表情包、能用哪些分类、能不能看到表情包图片（要开识图）。\n' +
-  '· 角色设置四页（右上齿轮）：角色（信息、人设、USER、关联世界书：分「聊天窗口 / 剧情窗口」两栏各自勾，便捷拓展栏里换的也只换当前窗口那栏）/ 聊天（记忆：最大记忆范围、注意力范围、上下文上限、自动总结；语言与回复；互动：拍一拍、TA 会撤回消息、偷看撤回内容、TA 会发现你查手机、TA 的手机有密码；时间与感知：知不知道现在几点、TA 所在的时区；自主活动；清空聊天 / 剧情记录；记忆备份）/ 美化（顶上分「聊天窗口 / 剧情窗口」两套：窗口颜色、主题气泡、布局、状态栏（只有聊天窗口有）、专属 CSS（CSS 框下面有「CSS 预设」：起名字存起来，点一下套用，长按删除；外观的全局样式下面也有）；最下面「导出 / 导入美化」能把聊天窗口、剧情窗口、状态栏的美化存成文件分享或导进别的角色，可以勾要哪几样；剧情窗口最上面有「显示格式」三选一：气泡（和聊天一样）/ 文本框（像酒馆那样：每块顶上头像 + 名字 + 时间，下面正文像文档；同一个人连着发的合成一个框；框的颜色用主题颜色，下面的「文本框样式」能用 CSS 再调）/ 自定义（排版和文本框一样，但不加颜色和边框，整个剧情窗口都用 CSS 改，像酒馆美化主题）；用户想要什么样子，你可以写好 CSS 用操作块提交）/ 扩展（记忆库权限：是否启用、自动想起几条、能不能自己记、能记哪些类型、短期保留几天、动态是否记入、向量记忆、关系里程碑；每日日记；其他小手机的记录：导入 uwu、ChatGPT、Claude、酒馆等的聊天记录，原文存成档案，也可以分段整理成长期记忆（整理前选每段多大：小段最细次数最多，中段默认，大段次数最少但记得粗一点、模型的最大输出长度要够）；自主活动）。角色一直能看到手机电量（iPhone 拿不到电量就不说）和桌面里的纪念日、日程（只看得到和自己、和用户、和认识的人有关的）。你（MianIN）的本名、人设和头像是固定的，用户在角色设置里改不了，也删不掉你；用户能改的只有「备注」（列表里显示的昵称）和你对 TA 的称呼。消息列表里你固定在最上面，右边有个小助手的标。\n' +
+  '· 角色设置四页（右上齿轮）：角色（信息、人设、USER、关联世界书：分「聊天窗口 / 剧情窗口」两栏各自勾，便捷拓展栏里换的也只换当前窗口那栏）/ 聊天（记忆：最大记忆范围、注意力范围、上下文上限、自动总结；语言与回复；互动：拍一拍、TA 会撤回消息、偷看撤回内容、TA 会发现你查手机、TA 的手机有密码；时间与感知：知不知道现在几点、TA 所在的时区；自主活动；清空聊天 / 剧情记录；记忆备份）/ 美化（顶上分「聊天窗口 / 剧情窗口」两套：窗口颜色、主题气泡、布局、状态栏（只有聊天窗口有）、专属 CSS（CSS 框下面有「CSS 预设」：起名字存起来，点一下套用，长按删除；外观的全局样式下面也有）；最下面「导出 / 导入美化」能把聊天窗口、剧情窗口、状态栏的美化存成文件分享或导进别的角色，可以勾要哪几样；剧情窗口最上面有「显示格式」三选一：气泡（和聊天一样）/ 文本框（像酒馆那样：每块顶上信息区——头像、名字、时间、楼层、字数和编辑 / 收藏 / ⋯ 按钮（⋯ 就是长按菜单），下面正文像文档，引号里的对话换颜色；同一个人连着发的合成一个框；下面能选头像位置（居中 / 左右 / 左对齐）和文本框模板（柔和：颜色跟主题 / 毛玻璃 / 书页 / 夜色），楼层字数和编辑按钮能关，最下面的「文本框样式」能用 CSS 再调）/ 自定义（排版和文本框一样，头像位置也能选，但不加颜色和边框，整个剧情窗口都用 CSS 改，像酒馆美化主题）；用户想要什么样子，你可以写好 CSS 用操作块提交）/ 扩展（记忆库权限：是否启用、自动想起几条、能不能自己记、能记哪些类型、短期保留几天、动态是否记入、向量记忆、关系里程碑；每日日记；其他小手机的记录：导入 uwu、ChatGPT、Claude、酒馆等的聊天记录，原文存成档案，也可以分段整理成长期记忆（整理前选每段多大：小段最细次数最多，中段默认，大段次数最少但记得粗一点、模型的最大输出长度要够）；自主活动）。角色一直能看到手机电量（iPhone 拿不到电量就不说）和桌面里的纪念日、日程（只看得到和自己、和用户、和认识的人有关的）。你（MianIN）的本名、人设和头像是固定的，用户在角色设置里改不了，也删不掉你；用户能改的只有「备注」（列表里显示的昵称）和你对 TA 的称呼。消息列表里你固定在最上面，右边有个小助手的标。\n' +
   '· 状态栏（角色设置 → 美化 → 状态栏，打开「回复附带状态栏」；点聊天顶栏的角色名查看，左右滑看最近 10 轮，卡片长的话能上下滑，每条最下面有「删除 / 收藏 / 关闭」，收藏的在「我的 → 收藏」里）：只有一种写法，和酒馆的正则状态栏一样，三样东西配合：① 生成规则（每次回复带给角色，写清楚格式、外层标签、每一项写什么）；② 匹配正则（从角色回复里认出状态栏，每个括号是一项）；③ 美化 HTML（卡片的样子，可以带 <style>、圆环、能点的小标签页，$1、$2… 填第几个括号的内容）；还有可选的卡片外框 CSS。\n' +
   '  从酒馆搬：点「导入酒馆正则」选正则 JSON，正则和美化 HTML 自动填好，再把酒馆里配套的那段状态栏规则（世界书或预设里「按以下格式生成状态栏」那段）贴进「生成规则」，点保存。卡片画不出来、显示成一行行文字时，多半是规则和正则对不上（比如规则里写「♥：」，正则要的是「符号：」；或者外层标签名不一样），让用户把规则里那几个字改成和正则一样，或者把正则改成认规则里的写法。外层标签 <状态栏> 和 [状态栏] 小手机会自动互换。\n' +
   '  自带的「默认」也是这三样；以前用 {{心情}} 占位符写的旧模板照样能用，打开设置时会自动换算成这三样，保存后就是新写法。调好后起个名字「存为预设」，聊天顶上的便捷拓展栏一点就能换。用户把正则 JSON、规则用「文件」发给你时，你可以帮 TA 检查对不对得上、改好再给 TA 复制。\n' +
@@ -133,6 +133,11 @@ var ASSISTANT_ROOM_HINT =
   '你写的气泡背景、颜色、阴影要加 !important 才盖得住。' +
   '剧情窗口 format "box"（文本框）和 "custom"（自定义）时，每条 .chat-msg-row 是 display:grid 的一整块：上面是头像 + 信息区 .cr-msg-head，下面是 .chat-msg-bubble（正文，背景透明，像文档）；头像位置是用户在美化页选的（居中 / 左右 / 左对齐，look.boxLayout），文本框还有几套自带风格（look.boxStyle：soft 柔和 / glass 毛玻璃 / paper 书页 / night 夜色 / chapter 章节），楼层字数、编辑按钮可以关（look.boxMeta / boxActs）；' +
   '同一个人连着发的几条合成一个框（后面几条往上贴、不显示头像和名字，选择器是 .chat-msg-row.ai + .chat-msg-row.ai）。文本框的底色、边框画在 .chat-msg-row 上；自定义不上颜色和边框，全靠你写（框的样子写在 #dramaMsgList .chat-msg-row:not(.cr-narr-row) 上）。' +
+  '【改剧情文本框的要点】每一块是 #dramaMsgList .chat-msg-row:not(.cr-narr-row)（.ai 角色 / .user 用户），grid 的区域名是 av（头像）、head（信息区）、text（正文）：想换上下左右的顺序就改 grid-template-columns 和 grid-template-areas（居中布局是一列 "av" "head" "text"）。' +
+  '文本框（box）模板的颜色写在 #appChatRoom .chat-msg-row:not(.cr-narr-row).ai 这种选择器上、正文颜色带 !important，所以在 box 里改框的底色、边框、字色要加 !important；custom 里没有这些，正常写就行。' +
+  '信息区里每样都有类名：.cr-head-name 名字、.cr-head-time 时间（几点几分）、.cr-head-date 完整日期（默认 display:none，要用就改成 inline 并把 .cr-head-time 藏掉）、.cr-head-floor 楼层「#12」、.cr-head-words 字数「356 字」、.cr-head-acts 三个按钮（button[data-hact="edit"/"fav"/"more"]，图标是 svg，颜色跟 color 走）；分隔线一般画在 .chat-msg-bubble 的 border-top 上。' +
+  '常用做法：引号里的对话换色加粗改 .cr-dq；给名字前后加字用 ::before / ::after（比如 .cr-head-name::before{content:"作 / "}、.cr-head-floor::before{content:"章 "}，就能做出连载小说那种章节式）；毛玻璃用 backdrop-filter:blur()；只想藏楼层或按钮也可以直接在操作块里给 boxMeta / boxActs 写 false。' +
+  '写完要照顾到：角色和用户两种块、连着发合成一个框的后几条（.chat-msg-row.ai + .chat-msg-row.ai，信息区是藏着的）、旁白 .cr-narr、深色背景时字要看得清。' +
   '改头像：隐藏用 .chat-msg-avatar{display:none}；换大小改 width / height（同时改 min-width 防挤压）；想让头像在气泡上面，用 .chat-msg-row{flex-direction:column; align-items:flex-start} 和 .chat-msg-row.user{align-items:flex-end}。' +
   '改排版：气泡宽度改 .chat-msg-bubble 的 max-width；整条居中、左右留白改 .chat-msg-row 的 padding / margin。' +
   '提交前在心里按上面的结构过一遍，确认每个选择器都选得到，写完整、不要只写半截。';
@@ -165,7 +170,7 @@ function assistantPrompt(char) {
   }
   if (cfg.css) {
     out.push('【权限 · 设计界面 CSS】用户想改界面样子时，你可以写 CSS 并提交。target 为 "global" 时作用于整个界面（替换全部全局样式，所以要在现有内容基础上改）；' +
-      'target 为角色名时写进该角色的聊天室专属样式（mode 可选 "append" 追加 或 "replace" 替换，默认追加）；再加 "view":"drama" 就是改这个角色的剧情窗口，可以同时用 "format" 把剧情窗口的显示格式换成 "bubble"（气泡）、"box"（文本框：像酒馆那样一整块带框的，CSS 用来调框的样子）或 "custom"（自定义：排版和文本框一样，但不带颜色和边框，样子全靠你写的 CSS，要把背景、顶栏、每一块的框、头像、名字时间、旁白 .cr-narr、输入栏都照顾到）。' + ASSISTANT_CSS_HINT +
+      'target 为角色名时写进该角色的聊天室专属样式（mode 可选 "append" 追加 或 "replace" 替换，默认追加）；再加 "view":"drama" 就是改这个角色的剧情窗口，可以同时用 "format" 把剧情窗口的显示格式换成 "bubble"（气泡）、"box"（文本框：像酒馆那样一整块带框的，CSS 用来调框的样子）或 "custom"（自定义：排版和文本框一样，但不带颜色和边框，样子全靠你写的 CSS，要把背景、顶栏、每一块的框、头像、名字时间、旁白 .cr-narr、输入栏都照顾到）；还可以同时带上 "boxLayout"（头像位置："center" 居中 / "side" 左右，用户在右、角色在左 / "left" 左对齐）、"boxStyle"（文本框模板，只在 box 里有："soft" 柔和，颜色跟主题 / "glass" 毛玻璃 / "paper" 书页 / "night" 夜色）、"boxMeta"（true/false，显示楼层和字数）、"boxActs"（true/false，显示编辑按钮）。用户说想要某种效果时：先想用哪个格式最省事——只想换颜色、换感觉，就选 box + 最接近的模板，再用 CSS 微调；想要模板做不到的整体样子（比如酒馆美化那种章节式、杂志式、复古信纸），就用 custom 从头写，排版先选好 boxLayout 再用 CSS 改细节。' + ASSISTANT_CSS_HINT +
       '\n' + ASSISTANT_ROOM_HINT +
       '\n当前全局样式：\n' + (globalCss ? globalCss.slice(0, 3000) : '（空）') +
       '\n各角色现在的聊天室样式（改之前先看，在这个基础上改；mode "replace" 会整段换掉）：\n' + charList.filter(function(c) { return c.customCss || c.dramaLook; }).slice(0, 6).map(function(c) {
@@ -174,7 +179,7 @@ function assistantPrompt(char) {
           '；剧情窗口格式 ' + fmt + '，剧情窗口 CSS ' + (dl.customCss ? '「' + dl.customCss.slice(0, 600) + '」' : '（空）');
       }).join('\n') + '\n卡片上会自动显示一张缩小版的效果图，用户看了满意就点「应用」，不满意会让你再改。');
     acts.push('<mphone-action>{"type":"set_css","target":"global","css":"完整的 CSS"}</mphone-action>');
-    acts.push('<mphone-action>{"type":"set_css","target":"角色名","view":"drama","format":"box","mode":"replace","css":"剧情窗口的 CSS"}</mphone-action>');
+    acts.push('<mphone-action>{"type":"set_css","target":"角色名","view":"drama","format":"box","boxLayout":"side","boxStyle":"glass","mode":"replace","css":"剧情窗口的 CSS（只换模板和头像位置时可以留空字符串）"}</mphone-action>');
   }
   if (cfg.err) {
     var api = getApiCfg();
@@ -273,7 +278,8 @@ function runAction(a) {
         var dl = c.dramaLook;
         a.result = { charId: c.id, view: 'drama', prev: dl.customCss || '', prevFormat: (dl.look || {}).format };
         dl.customCss = a.mode === 'replace' ? String(a.css || '') : ((dl.customCss ? dl.customCss + '\n' : '') + String(a.css || ''));
-        if (a.format === 'bubble' || a.format === 'box' || a.format === 'custom') dl.look = Object.assign({}, dl.look || {}, { format: a.format });
+        a.result.prevLook = JSON.parse(JSON.stringify(dl.look || {}));
+        dl.look = Object.assign({}, dl.look || {}, dramaLookPatch(a));
       } else {
         a.result = { charId: c.id, prev: c.customCss || '' };
         c.customCss = a.mode === 'replace' ? String(a.css || '') : ((c.customCss ? c.customCss + '\n' : '') + String(a.css || ''));
@@ -282,6 +288,16 @@ function runAction(a) {
       if (charList[openingChatCharIdx] === c) applyChatRoomStyle(c);
     }
   }
+}
+// 改剧情窗口时一起换的设置：显示格式、头像位置、文本框模板、楼层字数和编辑按钮开关（只收认得的值）
+function dramaLookPatch(a) {
+  var o = {};
+  if (a.format === 'bubble' || a.format === 'box' || a.format === 'custom') o.format = a.format;
+  if (a.boxLayout === 'center' || a.boxLayout === 'side' || a.boxLayout === 'left') o.boxLayout = a.boxLayout;
+  if (typeof DRAMA_BOX_STYLES !== 'undefined' && DRAMA_BOX_STYLES.some(function(s) { return s.id === a.boxStyle; })) o.boxStyle = a.boxStyle;
+  if (typeof a.boxMeta === 'boolean') o.boxMeta = a.boxMeta;
+  if (typeof a.boxActs === 'boolean') o.boxActs = a.boxActs;
+  return o;
 }
 function undoAction(a) {
   var r = a.result || {};
@@ -303,7 +319,7 @@ function undoAction(a) {
       var c = charList.filter(function(x) { return x.id === r.charId; })[0];
       if (c && r.view === 'drama' && c.dramaLook) {
         c.dramaLook.customCss = r.prev;
-        c.dramaLook.look = Object.assign({}, c.dramaLook.look || {}, { format: r.prevFormat || 'bubble' });
+        c.dramaLook.look = r.prevLook ? r.prevLook : Object.assign({}, c.dramaLook.look || {}, { format: r.prevFormat || 'bubble' });
       } else if (c) c.customCss = r.prev;
       if (c) { saveCharList(); if (charList[openingChatCharIdx] === c) applyChatRoomStyle(c); }
     } else {
@@ -356,6 +372,8 @@ function paintActionCard(card, m) {
   } else if (a.type === 'set_css' && a.target && a.target !== 'global') {
     line('方式', a.mode === 'replace' ? '替换原有样式' : '追加到原有样式后面');
     if (a.view === 'drama' && a.format) line('剧情窗口格式', { bubble: '气泡', box: '文本框', custom: '自定义' }[a.format] || a.format);
+    if (a.view === 'drama' && a.boxLayout) line('头像位置', { center: '居中', side: '左右', left: '左对齐' }[a.boxLayout] || a.boxLayout);
+    if (a.view === 'drama' && a.boxStyle) line('文本框模板', ((typeof DRAMA_BOX_STYLES !== 'undefined' ? DRAMA_BOX_STYLES : []).filter(function(s) { return s.id === a.boxStyle; })[0] || { name: a.boxStyle }).name);
   }
   var pre = document.createElement('pre');
   pre.className = 'cr-action-pre';

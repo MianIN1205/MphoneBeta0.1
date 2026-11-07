@@ -8,14 +8,14 @@ function cssPreviewPart(a, c) {
                    : { chatBg: c.chatBg, bubble: c.bubble, look: c.look, customCss: c.customCss || '' };
   var part = JSON.parse(JSON.stringify(base));
   part.customCss = a.mode === 'replace' ? String(a.css || '') : ((part.customCss ? part.customCss + '\n' : '') + String(a.css || ''));
-  if (drama && (a.format === 'bubble' || a.format === 'box' || a.format === 'custom')) part.look = Object.assign({}, part.look || {}, { format: a.format });
+  if (drama) part.look = Object.assign({}, part.look || {}, dramaLookPatch(a));
   return part;
 }
 // 拿那个角色最近的几条（太长的截短）；没有记录就用两句示意
 function cssPreviewMsgs(c, drama) {
   var hist = (drama ? dramaHistories[c.id] : chatHistories[c.id]) || [];
   var msgs = hist.filter(function(m) { return !m.recalled && !m.pat && !m.action && !m.cal && (m.content || m.imgSrc || m.textImg); }).slice(-4)
-    .map(function(m) { var x = JSON.parse(JSON.stringify(m)); if (typeof x.content === 'string' && x.content.length > 90) x.content = x.content.slice(0, 90) + '…'; delete x.status; delete x.errs; delete x.think; delete x.alts; return x; });
+    .map(function(m) { var x = JSON.parse(JSON.stringify(m)); x._floor = hist.indexOf(m) + 1; if (typeof x.content === 'string' && x.content.length > 90) x.content = x.content.slice(0, 90) + '…'; delete x.status; delete x.errs; delete x.think; delete x.alts; return x; });
   if (!msgs.length) {
     var t = Date.now();
     msgs = drama
