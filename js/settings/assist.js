@@ -77,6 +77,15 @@ function notifyFeedPost(char, post) {
     { icon: notifyIcon(char), tag: 'feed', renotify: true, data: { open: 'feed' } });
 }
 
+// 动态里角色回了你 / 评论、赞了你的动态：在小手机里弹横幅（点了去动态），在后台时发系统通知
+function notifyFeedReply(char, text) {
+  if (!char || !text) return;
+  if (document.visibilityState === 'visible') { showInAppNotice(char, [{ role: 'assistant', content: text, time: Date.now() }], 'feed'); return; }
+  if (!notifyReady()) return;
+  var tb = notifyTitleBody(char.charAlias || char.charName || '角色', text);
+  showSystemNotification(tb[0], tb[1], { icon: notifyIcon(char), tag: 'feed-' + char.id, renotify: true, data: { open: 'feed' } });
+}
+
 // 小手机里的消息横幅：在小手机里、但没在看这个对话时收到消息，从顶部弹出（头像、名字、内容），点一下进对话，4 秒后收起
 // 往上滑可以收起；滑掉以后同一个角色的这一轮回复不再弹（下一轮、别的角色照常弹）。小手机在后台时不弹（那时走系统通知）
 var inappNotice = document.getElementById('inappNotice');
@@ -88,8 +97,9 @@ function hideInAppNotice() {
   inappNotice.style.transform = '';
   inappNotice.style.opacity = '';
 }
-function showInAppNotice(char, added) {
+function showInAppNotice(char, added, open) {
   if (!char || !added || !added.length || document.visibilityState !== 'visible') return;
+  inappNotice._open = open || '';   // 'feed'：点了去动态（不是进对话）
   var round = added[0].time || 0;
   if (round && inappDismissed[char.id] === round) return;
   inappNotice._round = round;
@@ -137,8 +147,13 @@ function endInAppDrag() {
 inappNotice.addEventListener('pointerup', endInAppDrag);
 inappNotice.addEventListener('pointercancel', function() { if (inappDrag) { inappDrag.dy = 0; inappDrag = null; inappNotice.style.transition = ''; inappNotice.style.transform = ''; inappNotice.style.opacity = ''; inappTimer = setTimeout(hideInAppNotice, 4000); } });
 function openFromInAppNotice() {
-  var id = inappNotice._charId;
+  var id = inappNotice._charId, open = inappNotice._open;
   hideInAppNotice();
+  if (open === 'feed') {
+    document.querySelectorAll('.app-screen.active, .settings-screen.active').forEach(function(s) { if (s.id !== 'appChat' && s.id !== 'appChatRoom') s.classList.remove('active'); });
+    openFromNotification({ open: 'feed' });
+    return;
+  }
   // 先收起正开着的别的界面（设置、外观、角色设置…），再进对话
   document.querySelectorAll('.app-screen.active, .settings-screen.active').forEach(function(s) {
     if (s.id !== 'appChat' && s.id !== 'appChatRoom') s.classList.remove('active');

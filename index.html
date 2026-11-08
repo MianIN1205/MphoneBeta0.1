@@ -1415,6 +1415,7 @@
       <button data-act="delete">删除</button>
       <button data-act="delRound">删除本轮</button>
       <button data-act="select">多选</button>
+      <button data-act="selBelow">删除以下</button>
       <button data-act="fav">收藏</button>
       <button data-act="copy">复制</button>
     </div>
@@ -3208,7 +3209,7 @@
 
         <!-- 自主活动 -->
         <div class="section-label">自主活动</div>
-        <div class="settings-card auto-card">
+        <div class="settings-card auto-card" id="autoCard">
           <div class="auto-row">
             <span class="auto-row-label">主动发消息</span>
             <label class="st-toggle-wrap"><input type="checkbox" id="autoMsgOn"><span class="st-toggle-slider"></span></label>

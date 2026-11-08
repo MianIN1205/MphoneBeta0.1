@@ -2,7 +2,7 @@
 
 // ---------- 自主活动 ----------
 var DEFAULT_AUTO = { msgOn: false, mode: 'random', fixedMin: 60, randMin: 30, randMax: 180, postOn: false, postChance: 30, postMaxDay: 2, postGapH: 4 };
-var autoCard = document.querySelector('.auto-card');
+var autoCard = document.getElementById('autoCard');   // 以前用 .auto-card 找到的是页面里第一张同类卡片，固定 / 随机切换不起作用
 
 function setAutoForm(a) {
   a = Object.assign({}, DEFAULT_AUTO, a || {});

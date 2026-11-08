@@ -485,8 +485,9 @@ function readLookForm() {
 var csLookView = 'chat';
 var csLookParts = { chat: {}, drama: {} };
 function lookPartsOf(char) {
-  var chat = { chatBg: char.chatBg, bubble: char.bubble, look: char.look, customCss: char.customCss || '' };
-  return { chat: chat, drama: char.dramaLook ? Object.assign({}, char.dramaLook) : JSON.parse(JSON.stringify(chat)) };
+  // 两边各拷一份，互不牵连；剧情窗口没单独设置过时只借聊天窗口的背景和颜色（viewLookPart，不带聊天的 CSS 和聊天专用的气泡模板）
+  var cp = function(x) { var o = JSON.parse(JSON.stringify(x)); delete o._borrowed; o.customCss = o.customCss || ''; return o; };
+  return { chat: cp(viewLookPart(char, false)), drama: cp(viewLookPart(char, true)) };
 }
 function readLookPartForm() {
   return {
@@ -907,6 +908,7 @@ function openCharSetting(idx, draft, keepView) {
   if (idx === -1) fillCharForm(draft || {});
   else fillCharForm(charList[idx]);
   document.getElementById('charDeleteBtn').style.display = (idx === -1 || (charList[idx] && charList[idx].builtinAssistant)) ? 'none' : '';   // MianIN 删不掉
+  appCharSetting.classList.toggle('cs-assistant', !!(charList[idx] && charList[idx].builtinAssistant));   // MianIN 没有剧情窗口：美化、世界书不分聊天 / 剧情
   appCharSetting.classList.add('active');
   var v = csViewState;
   var keep = keepView && v && charList[idx] && v.id === charList[idx].id && v.session === chatRoomSession;

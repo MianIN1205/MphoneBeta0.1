@@ -43,6 +43,9 @@ function crMarkOtherView(isChat) {
   (isChat ? msgBtnChat : msgBtnContacts).classList.add('has-new');
 }
 function switchChatRoomSubView(view) {
+  var vc0 = charList[openingChatCharIdx];
+  if (vc0 && vc0.builtinAssistant) view = 'chat';   // MianIN 没有剧情窗口（用户要的），切换按钮也藏起来
+  appChatRoom.classList.toggle('no-drama', !!(vc0 && vc0.builtinAssistant));
   var isDrama = (view === 'contacts');
   (isDrama ? msgBtnContacts : msgBtnChat).classList.remove('has-new');
   currentCrSubView = isDrama ? 'contacts' : 'chat';

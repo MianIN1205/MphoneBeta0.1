@@ -41,6 +41,11 @@
   touch-action: pan-y;
 }
 .chat-char-card.pinned { background: rgba(255, 236, 240, 0.96); }
+/* MianIN 的卡片：粉紫渐变 + 内阴影 + 细白边，和背景、别的卡片分开（用户要的） */
+.chat-char-card.helper {
+  background: linear-gradient(135deg, rgba(255, 232, 240, 0.97), rgba(238, 230, 252, 0.97));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85), inset 0 2px 10px rgba(208, 122, 152, 0.16), 0 3px 12px rgba(150, 110, 170, 0.14);
+}
 .chat-char-card-head { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .chat-char-card-head .chat-char-card-name { flex: 0 1 auto; min-width: 0; }
 /* 手动置顶：粉色小爱心；MianIN：右边一个小助手的标 */

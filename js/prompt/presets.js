@@ -107,7 +107,7 @@ function makePlotPreset(opts) {
   PLOT_FIXED.forEach(function(f) { by[f.key] = e(f.key, f.name, f.pos, f.content); });
   // 顺序：放在聊天记录前面的（总要求、文风、视角、内心、对话、节奏），后面的（人称、抢话、格式、字数、结尾、不重复）
   var order = ['core', 'style', 'view', 'inner', 'ratio', 'pace', 'person', 'speak', 'format', 'len', 'ending', 'fresh'];
-  return { name: '眠花糖机 · 剧情', builtin: true, opts: o, entries: order.map(function(k) { return by[k]; }) };
+  return { name: 'Muse · 剧情', builtin: true, opts: o, entries: order.map(function(k) { return by[k]; }) };
 }
 
 
@@ -165,6 +165,8 @@ function loadStPresetsFromStorage() {
           else { stPresets.unshift(makePlotPreset()); stActivePresetIdx += 1; }
           saveStPresetsToStorage();
         }
+        // 默认预设改名了（眠花糖机 · 剧情 → Muse · 剧情）
+        stPresets.forEach(function(p) { if (p && p.builtin && p.name === '眠花糖机 · 剧情') { p.name = 'Muse · 剧情'; saveStPresetsToStorage(); } });
         return;
       }
     }

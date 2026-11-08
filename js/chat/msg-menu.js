@@ -37,7 +37,7 @@ function openMsgCtx(bubble, listId, anchor) {
   var m = ctxTarget.msg;
   var isLatest = !!m && !ctxTarget.isUser && trailingReplyGroup(histOfList(listId)).msgs.indexOf(m) >= 0;
   var narr = !!(m && m.narr);
-  var show = narr ? { edit: true, delete: true, select: true, fav: true, copy: true } : {
+  var show = narr ? { edit: true, delete: true, select: true, selBelow: true, fav: true, copy: true } : {
     quote:  !!m,
     edit:   !!m && !m.imgSrc && !m.sticker && !m.file && !m.textImg,
     recall: !!m && !m.recalled,
@@ -45,7 +45,7 @@ function openMsgCtx(bubble, listId, anchor) {
     regen:     !!m && !genHere() && isLatest,
     regenFrom: !!m && !genHere() && !ctxTarget.isUser && !isLatest,
     delRound:  !!m && !ctxTarget.isUser,
-    delete: true, select: !!m, fav: true, copy: true
+    delete: true, select: !!m, selBelow: !!m, fav: true, copy: true
   };
   msgCtxMenu.querySelectorAll('button').forEach(function(btn) { btn.classList.toggle('hide', !show[btn.dataset.act]); });
   var r = (anchor || bubble).getBoundingClientRect();
@@ -119,6 +119,9 @@ msgCtxMenu.addEventListener('click', function(e) {
     deleteRound(t.listId, t.msg);
   } else if (act === 'select') {
     enterMsgSelect(t.listId, t.row);
+  } else if (act === 'selBelow') {
+    // 删除以下：进多选，把这条和后面的全部勾上，看一眼再点「删除」（用户要的，不用一条条点）
+    selectFromHere(t.listId, t.row);
   }
 });
 

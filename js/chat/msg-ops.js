@@ -77,6 +77,16 @@ function enterMsgSelect(listId, firstEl) {
   crSelectBar.classList.add('open');
   paintSelectBar();
 }
+function selectFromHere(listId, row) {
+  enterMsgSelect(listId, null);
+  var list = msgSel.list;
+  while (row && row.parentNode !== list) row = row.parentNode;
+  var els = selectableEls(list), i = els.indexOf(row);
+  if (i < 0) { paintSelectBar(); return; }
+  els.slice(i).forEach(function(el) { togglePick(el, true); });
+  paintSelectBar();
+  showToast('已选中从这条往后的 ' + (els.length - i) + ' 条，点下面「删除」', 'plain');
+}
 function exitMsgSelect() {
   if (!msgSel) return;
   msgSel.list.classList.remove('cr-selecting');

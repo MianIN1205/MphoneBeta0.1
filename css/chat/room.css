@@ -351,3 +351,7 @@
 .cr-plus-dots i { width: 5px; height: 5px; border-radius: 50%; background: rgba(200,150,150,0.3); }
 .cr-plus-dots i.on { background: rgba(208,96,110,0.7); }
 .cr-plus-panel:not(.open) .cr-plus-dots { display: none; }
+
+/* MianIN 没有剧情窗口（用户要的）：聊天室不显示聊天 / 剧情切换，角色设置里美化、世界书也不分两栏 */
+#appChatRoom.no-drama .msg-toggle-wrap { display: none; }
+#appCharSetting.cs-assistant #csLookViewRow, #appCharSetting.cs-assistant .wb-view-row { display: none; }

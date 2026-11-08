@@ -65,12 +65,15 @@ function renderQuickBar() {
   var qbDrama = typeof currentCrSubView !== 'undefined' && currentCrSubView === 'contacts';
   var nWb = charWbOf(char, qbDrama).folders.length;
   var val = function(k, t) { crQuickBar.querySelector('[data-qb="' + k + '"] .cr-qb-val').textContent = t; };
-  val('api', api ? api.name : '跟随全局');
+  // 显示现在实际用的名字（用户要的）：跟着全局时写全局正在用的模型 / 预设，不写「跟随全局」
+  val('api', api ? api.name : (getApiCfg().model || '未选模型'));
   var drama = typeof currentCrSubView !== 'undefined' && currentCrSubView === 'contacts';
   crQuickBar.querySelector('[data-qb="preset"]').style.display = drama ? '' : 'none';
   crQuickBar.querySelector('[data-qb="status"]').style.display = drama ? 'none' : '';
-  val('preset', pre ? pre.name : '跟随全局');
-  val('wb', nWb ? nWb + ' 本' : '未选');
+  var gPre = typeof stPresets !== 'undefined' && (stPresets[stActivePresetIdx] || stPresets[0]);
+  val('preset', pre ? pre.name : (gPre ? gPre.name : '无'));
+  var wbNames = charWbOf(char, qbDrama).folders.map(function(id) { var f = (typeof wbFolders !== 'undefined' ? wbFolders : []).filter(function(x) { return x.id === id; })[0]; return f ? f.name : ''; }).filter(Boolean);
+  val('wb', !nWb ? '未选' : wbNames.length ? wbNames[0] + (nWb > 1 ? ' 等 ' + nWb + ' 本' : '') : nWb + ' 本');
   var sp = charStatusPreset(char);
   val('status', !sp ? '关' : sp === 'custom' ? '自定义' : sp.name);
   if (crQuickOpen) renderQuickPop();

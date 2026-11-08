@@ -239,10 +239,19 @@ function lookCss(part, scope) {
   return css;
 }
 // 当前子视图（聊天 / 剧情）用的那套美化
-function roomLookPart(char) {
-  if (currentCrSubView === 'contacts' && char.dramaLook) return char.dramaLook;
-  return { chatBg: char.chatBg, bubble: char.bubble, look: char.look, customCss: char.customCss };
+// 聊天窗口、剧情窗口的美化各管各的（用户要的，不能互相影响）：
+// 剧情窗口没单独设置过时，只借聊天窗口的背景和主题颜色，不带聊天窗口的 CSS、聊天专用的气泡模板和状态栏；
+// 一个窗口存着另一个窗口专用的气泡模板（比如以前复制过去的）时，这个窗口按默认画
+function viewLookPart(char, drama) {
+  if (!char) return { chatBg: null, bubble: null, look: null, customCss: '' };
+  var part = drama ? (char.dramaLook || { chatBg: char.chatBg, bubble: char.bubble, look: char.look, customCss: '', _borrowed: true })
+                   : { chatBg: char.chatBg, bubble: char.bubble, look: char.look, customCss: char.customCss };
+  var t = part.bubble && part.bubble.tpl, def = t && typeof BUBBLE_TPLS !== 'undefined' && BUBBLE_TPLS.filter(function(x) { return x.id === t; })[0];
+  if (def && (drama ? def.chat : def.drama)) part = Object.assign({}, part, { bubble: Object.assign({}, part.bubble, { tpl: 'plain' }) });
+  if (drama && part._borrowed) part = Object.assign({}, part, { look: Object.assign({}, part.look || {}, { format: 'bubble' }) });
+  return part;
 }
+function roomLookPart(char) { return viewLookPart(char, currentCrSubView === 'contacts'); }
 
 function applyChatRoomStyle(char) {
   var content = document.getElementById('chatRoomContent');

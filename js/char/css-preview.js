@@ -4,9 +4,8 @@
 // 套用这个改动后，那个角色那个窗口的美化（和 runAction 的算法一样，只是不存）
 function cssPreviewPart(a, c) {
   var drama = a.view === 'drama';
-  var base = drama ? (c.dramaLook || { chatBg: c.chatBg, bubble: c.bubble, look: c.look, customCss: c.customCss || '' })
-                   : { chatBg: c.chatBg, bubble: c.bubble, look: c.look, customCss: c.customCss || '' };
-  var part = JSON.parse(JSON.stringify(base));
+  var part = JSON.parse(JSON.stringify(viewLookPart(c, drama)));
+  delete part._borrowed;
   part.customCss = a.mode === 'replace' ? String(a.css || '') : ((part.customCss ? part.customCss + '\n' : '') + String(a.css || ''));
   if (drama) part.look = Object.assign({}, part.look || {}, dramaLookPatch(a));
   if (typeof bubblePatch === 'function') part.bubble = Object.assign({}, DEFAULT_BUBBLE, part.bubble || {}, bubblePatch(a, drama));   // 顺便换的气泡

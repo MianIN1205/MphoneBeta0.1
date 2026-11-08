@@ -715,7 +715,11 @@ function requestFeedInteraction(post, opts) {
         var toYou = said.some(function(c) { return c.replyTo && c.replyTo.type === 'user'; });
         var msg = said.length ? (toYou ? '回复了你' : mine ? '评论了你的动态' : '在动态下说了话')
           : post.likes.length > liked && mine ? '赞了你的动态' : '';
-        if (msg) { showToast('「' + me.name + '」' + msg, 'plain'); saveFeed(); renderFeed(); }
+        if (!msg) return;
+        saveFeed(); renderFeed();
+        // 和你有关的（回你、评论 / 赞你的动态）弹小横幅（用户要的），别的还是小提示
+        if ((toYou || mine) && typeof notifyFeedReply === 'function') notifyFeedReply(charList[idx], msg + (said.length ? '：' + said[said.length - 1].text : ''));
+        else showToast('「' + me.name + '」' + msg, 'plain');
       }).catch(function(err) { errors++; console.warn('[Mphone] 动态互动失败:', err); });
     });
   });
