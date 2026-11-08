@@ -1,7 +1,7 @@
 // 眠花糖机 — 角色自主活动：主动发消息、聊天后按概率发动态、定时调度
 
 // ---------- 自主活动 ----------
-var DEFAULT_AUTO = { msgOn: false, mode: 'random', fixedMin: 60, randMin: 30, randMax: 180, postOn: false, postChance: 30 };
+var DEFAULT_AUTO = { msgOn: false, mode: 'random', fixedMin: 60, randMin: 30, randMax: 180, postOn: false, postChance: 30, postMaxDay: 2, postGapH: 4 };
 var autoCard = document.querySelector('.auto-card');
 
 function setAutoForm(a) {
@@ -12,6 +12,8 @@ function setAutoForm(a) {
   document.getElementById('autoRandMin').value  = a.randMin;
   document.getElementById('autoRandMax').value  = a.randMax;
   document.getElementById('autoPostChance').value = a.postChance;
+  document.getElementById('autoPostMaxDay').value = a.postMaxDay;
+  document.getElementById('autoPostGapH').value = a.postGapH;
   document.querySelectorAll('#autoModeRow .pf-radio-btn').forEach(function(b) {
     b.classList.toggle('selected', b.dataset.mode === a.mode);
   });
@@ -33,7 +35,9 @@ function readAutoForm() {
     randMin:    Math.min(rMin, rMax),
     randMax:    Math.max(rMin, rMax),
     postOn:     document.getElementById('autoPostOn').checked,
-    postChance: num('autoPostChance', 30, 0, 100)
+    postChance: num('autoPostChance', 30, 0, 100),
+    postMaxDay: num('autoPostMaxDay', 2, 1, 20),
+    postGapH:   num('autoPostGapH', 4, 0, 168)
   };
 }
 
@@ -54,10 +58,20 @@ document.querySelectorAll('#autoModeRow .pf-radio-btn').forEach(function(btn) {
   });
 });
 
+// 发动态的频率：今天（按本地日期）发够了条数、或者离上一条还没隔够时间，就不自动发（手动点「让 TA 发」不管这个）
+function autoPostAllowed(char) {
+  var a = Object.assign({}, DEFAULT_AUTO, char.auto || {});
+  var mine = charRecentPosts(char, 30), now = Date.now();
+  if (mine[0] && now - mine[0].time < a.postGapH * 3600000) return false;
+  var day0 = new Date(); day0.setHours(0, 0, 0, 0);
+  return mine.filter(function(p) { return p.time >= day0.getTime(); }).length < a.postMaxDay;
+}
+
 // 聊天回复后按概率发动态
 function maybeAutoPostAfterChat(idx) {
   var char = charList[idx];
   if (!char || !char.auto || !char.auto.postOn) return;
+  if (!autoPostAllowed(char)) return;
   if (Math.random() * 100 >= char.auto.postChance) return;
   if (char._autoBusy) return;
   char._autoBusy = true;
@@ -177,9 +191,11 @@ function autoTick() {
     if (now < plan.at || char._autoBusy) return;
 
     // 对方有没回复的消息时，先回消息，不去发动态
-    var doPost = a.postOn && (!a.msgOn || (!unrepliedUserMsgs(getChatHistory(idx)).length && Math.random() < 0.3));
+    var doPost = a.postOn && autoPostAllowed(char) && (!a.msgOn || (!unrepliedUserMsgs(getChatHistory(idx)).length && Math.random() < 0.3));
     // 主动消息只在「后台」发（用户要的）：正看着这个聊天、TA 正在回复、或者刚聊过 / 刚离开不到 AUTO_QUIET_MS，都先等着，
     // 不重新排期，等条件过了下一次检查就发（不会在用户打字、刚发了两条还没点 ❄️ 的时候插进来）
+    // 只开了发动态、但这次频率不让发：不发消息，等下一次
+    if (!doPost && !a.msgOn) { autoNext[char.id] = { at: now + autoDelay(a), sig: sig }; changed = true; return; }
     if (!doPost) {
       var viewingThis = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;
       var recent = char._lastChatAt && now - char._lastChatAt < AUTO_QUIET_MS;

@@ -569,6 +569,16 @@
         <div class="section-label">内置工具（打开就能用，不用部署）</div>
         <div id="mcpBuiltinList"></div>
 
+        <div class="section-label">外卖（TA 帮你挑，你自己付款）</div>
+        <div class="settings-card auto-card">
+          <div class="auto-row">
+            <span class="auto-row-label">外卖总开关</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="mcpTakeoutOn"><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-hint">用的是品牌官方的 MCP：TA 帮你找店、挑好、算好价钱，下单前一定先问你，下好单你自己付款（TA 付不了钱）。令牌要你自己去官方网页登录后拿，大概一个月要换一次。关掉总开关，下面所有外卖工具都不给角色用。</div>
+        </div>
+        <div id="mcpTakeoutList"></div>
+
         <div class="section-label">服务器</div>
         <div id="mcpServerList"></div>
 
@@ -2825,6 +2835,11 @@
             <label class="st-toggle-wrap"><input type="checkbox" id="peekLock"><span class="st-toggle-slider"></span></label>
           </div>
           <div class="auto-hint">打开后，查手机要先解锁：密码和提示是 TA 按人设自己定的，猜对一次就记住；输错 3 次可以去聊天里问 TA 要。输错的次数也算进 TA 会不会发现；改不改密码由 TA 在聊天里自己决定</div>
+          <div class="auto-row">
+            <span class="auto-row-label">TA 会折星星</span>
+            <label class="st-toggle-wrap"><input type="checkbox" id="starOn" checked><span class="st-toggle-slider"></span></label>
+          </div>
+          <div class="auto-hint">打开后，TA 每天会给你叠一颗星星放进桌面的星星瓶，聊天里也偶尔悄悄叠一颗。偶尔会是匿名的：纸条上不写名字，是谁写的只有 TA 自己知道</div>
         </div>
 
         <div class="section-label">时间与感知</div>
@@ -3227,8 +3242,18 @@
               <input class="field-input auto-num" type="number" id="autoPostChance" min="0" max="100" value="30">
               <span class="auto-unit">%</span>
             </div>
+            <div class="auto-row">
+              <span class="auto-row-label">一天最多发</span>
+              <input class="field-input auto-num" type="number" id="autoPostMaxDay" min="1" max="20" value="2">
+              <span class="auto-unit">条</span>
+            </div>
+            <div class="auto-row">
+              <span class="auto-row-label">两条之间至少隔</span>
+              <input class="field-input auto-num" type="number" id="autoPostGapH" min="0" max="168" value="4">
+              <span class="auto-unit">小时</span>
+            </div>
           </div>
-          <div class="auto-hint">仅在页面打开时运行；开启主动发消息时，到点也可能改为发一条动态</div>
+          <div class="auto-hint">仅在页面打开时运行；开启主动发消息时，到点也可能改为发一条动态。发够了次数、或者离上一条还没隔够时间，就不会再发</div>
         </div>
 
       </div>

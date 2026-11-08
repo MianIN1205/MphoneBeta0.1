@@ -11,3 +11,7 @@
   font-size: 12px; color: #555; white-space: pre-wrap; word-break: break-all;
   background: rgba(0,0,0,0.04); border-radius: 10px; padding: 8px 10px; max-height: 180px; overflow-y: auto;
 }
+
+/* 外卖：总开关关着时整组变淡 */
+.mcp-takeout-off .mcp-server-card { opacity: 0.55; }
+.mcp-takeout-desc { margin: 0 0 6px; }
