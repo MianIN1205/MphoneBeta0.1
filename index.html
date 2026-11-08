@@ -172,6 +172,29 @@
           <span class="dock-label">桌宠</span>
         </div>
       </div>
+      <script>
+        // 一打开就照上次排好的样子把桌面摆出来（js/desk/widgets.js 每次排好记在 localStorage 的 mphoneDeskSnap）：
+        // 不用等一百多个脚本加载完、桌面才露出来（网慢时用户看到只有时钟和程序坞）。小组件先放一份样子，脚本加载完会换成真的
+        (function() {
+          var now = new Date(), p2 = function(n) { return (n < 10 ? '0' : '') + n; }, t = p2(now.getHours()) + ':' + p2(now.getMinutes());
+          var st = document.getElementById('statusTime'), cl = document.getElementById('clockDisplay'), dd = document.getElementById('dateDisplay');
+          if (st) st.textContent = t;
+          if (cl) cl.textContent = t;
+          if (dd) dd.textContent = now.getFullYear() + '年' + p2(now.getMonth() + 1) + '月' + p2(now.getDate()) + '日 星期' + '日一二三四五六'.charAt(now.getDay());
+          var snap = null;
+          try { snap = JSON.parse(localStorage.getItem('mphoneDeskSnap') || 'null'); } catch (e) {}
+          if (!snap || !snap.pos) return;
+          var g = document.getElementById('deskGrid');
+          g.style.setProperty('--desk-cell', (g.clientWidth / 4 || 75) + 'px');
+          (snap.w || []).forEach(function(h) { g.insertAdjacentHTML('beforeend', h); });
+          Object.keys(snap.pos).forEach(function(id) {
+            var el = document.getElementById(id), p = snap.pos[id];
+            if (el && el.parentNode === g) { el.style.gridColumn = p[0]; el.style.gridRow = p[1]; }
+          });
+          if (snap.noLabels) document.querySelector('.phone').classList.add('hide-dock-labels');
+          g.classList.add('desk-ready');
+        })();
+      </script>
       <!-- 编辑桌面 -->
       <div class="desk-edit-bar" id="deskEditBar">
         <button class="desk-edit-btn" id="deskAddWidget">＋ 添加小组件</button>

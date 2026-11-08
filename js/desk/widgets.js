@@ -201,6 +201,24 @@ function renderWidgets() {
   // 编辑时把空格子也撑出来，方便拖过去
   deskGrid.style.minHeight = deskEditing ? (Math.max(maxRow, deskRows()) * cell) + 'px' : '';
   deskGrid.classList.add('desk-ready');
+  if (!deskEditing) saveDeskSnap();
+}
+// 记一份排好的桌面（位置 + 小组件的样子），下次打开 index.html 里那段小脚本先照着摆出来，不用等脚本加载完（用户要网慢时也一下看到整个桌面）。
+// 存 localStorage（那段小脚本在脚本加载前就要读）；小组件里太大的图片（data: 开头的长串）不存，免得撑爆
+var deskSnapLast = '';
+function saveDeskSnap() {
+  try {
+    var pos = {};
+    deskGrid.querySelectorAll(':scope > .dock-item').forEach(function(el) { if (el.id) pos[el.id] = [el.style.gridColumn, el.style.gridRow]; });
+    var w = Array.prototype.map.call(deskGrid.querySelectorAll(':scope > .desk-widget'), function(el) {
+      return el.outerHTML.replace(/data:image\/[^"')\s&]{60000,}/g, '');
+    });
+    var snap = JSON.stringify({ pos: pos, w: w, noLabels: document.querySelector('.phone').classList.contains('hide-dock-labels') });
+    if (snap.length > 1500000) snap = JSON.stringify({ pos: pos, w: [] });
+    if (snap === deskSnapLast) return;
+    deskSnapLast = snap;
+    localStorage.setItem('mphoneDeskSnap', snap);
+  } catch (e) {}
 }
 function removeWidget(w) {
   openConfirm('移除这个小组件？', function() {
