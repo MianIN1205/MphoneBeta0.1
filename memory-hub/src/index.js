@@ -1,8 +1,9 @@
-// 眠花糖机记忆库（最小版）：部署在用户自己的 Cloudflare 账号里（Worker + D1），几个小手机、几台设备共用同一份角色记忆。
-// 三个门：/ 网页（翻看、编辑）；/api/* 给眠花糖机同步用（之后加）；/mcp 给别的小手机连（之后加）。
-// 第一次打开网页时设密码（只存加盐后的哈希）；之后所有 /api 请求都要带「Authorization: Bearer 密码」。/api/ping 不用密码，用来测连不连得上。
+// 眠花糖机记忆库：部署在用户自己的 Cloudflare 账号里（Worker + D1），几个小手机、几台设备共用同一份角色记忆，让角色在哪儿都是同一个 TA。
+// 三个门：/ 网页（翻看、编辑）；/api/* 给眠花糖机同步用（/api/sync 推上来、/api/pull 拉下去）；/mcp 给别的小手机连（MCP，Streamable HTTP，不保持连接）。
+// 第一次打开网页时设密码（只存加盐后的哈希）；/api 请求带「Authorization: Bearer 密码」。/mcp 用单独的连接码（网页里能看、能换），也认密码。
+// /api/ping 不用密码，用来测连不连得上。
 
-const VERSION = 1;
+const VERSION = 2;
 
 export default {
   async fetch(req, env) {
@@ -14,6 +15,7 @@ export default {
       const p = url.pathname.replace(/\/+$/, '') || '/';
       if (p === '/api/ping') return json({ ok: true, app: 'mphone-memory', version: VERSION, claimed: !!(await getSetting(env.DB, 'key_hash')), time: Date.now() });
       if (p === '/api/setup' && req.method === 'POST') return setup(req, env.DB);
+      if (p === '/mcp') return mcp(req, env.DB, url);
       if (p.startsWith('/api/')) {
         if (!(await authed(req, env.DB))) return json({ ok: false, error: '密码不对' }, 401);
         return api(req, env.DB, p, url);
@@ -36,6 +38,8 @@ async function ensureSchema(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mem_char ON memories (char, updated_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mem_updated ON memories (updated_at)')
   ]);
+  // 第二版加的列：meta（各个小手机自己的附加信息，眠花糖机存记忆类型 long / precious、剧情空间这些，JSON 文本）
+  try { await db.prepare("ALTER TABLE memories ADD COLUMN meta TEXT NOT NULL DEFAULT ''").run(); } catch (e) { /* 已经有了 */ }
   schemaReady = true;
 }
 async function getSetting(db, k) {
@@ -75,8 +79,15 @@ async function authed(req, db) {
   return (await sha256(salt + ':' + pass)) === hash;
 }
 
+async function mcpToken(db, reset) {
+  let t = reset ? null : await getSetting(db, 'mcp_token');
+  if (!t) { t = randomId(16); await setSetting(db, 'mcp_token', t); }
+  return t;
+}
+
 // ---------- 接口 ----------
 const KINDS = ['memory', 'fact', 'relation'];
+const SYNC_MAX = 40;   // 一次最多推多少条（免费版每次请求能查数据库的次数有限，分批推）
 async function api(req, db, p, url) {
   const m = req.method;
   if (p === '/api/chars' && m === 'GET') {
@@ -119,7 +130,184 @@ async function api(req, db, p, url) {
     await db.prepare('UPDATE memories SET deleted = 1, updated_at = ? WHERE id = ?').bind(now, one[1]).run();
     return json({ ok: true, updated_at: now });
   }
+  // 同步：眠花糖机把这次要推的（新的、改过的、删掉的）发上来；id 已经有的就更新，新的先看有没有一模一样的（别处已经推过）——有就告诉它用那条的 id
+  if (p === '/api/sync' && m === 'POST') {
+    const b = await req.json().catch(() => ({}));
+    const changes = (Array.isArray(b.changes) ? b.changes : []).slice(0, SYNC_MAX).filter(c => c && c.id);
+    const alias = {};
+    if (changes.length) {
+      const ids = changes.map(c => String(c.id));
+      const ex = await db.prepare('SELECT id FROM memories WHERE id IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all();
+      const have = new Set((ex.results || []).map(r => r.id));
+      const fresh = changes.filter(c => !have.has(String(c.id)) && !c.deleted && c.content);
+      const dupMap = {};
+      if (fresh.length) {
+        const ct = fresh.map(c => String(c.content).slice(0, 4000));
+        const d = await db.prepare('SELECT id, char, kind, content FROM memories WHERE deleted = 0 AND content IN (' + ct.map(() => '?').join(',') + ')').bind(...ct).all();
+        (d.results || []).forEach(r => { dupMap[r.char + '\u0001' + r.kind + '\u0001' + r.content] = r.id; });
+      }
+      const now = Date.now(), stmts = [];
+      changes.forEach(c => {
+        const id = String(c.id).slice(0, 80), kind = KINDS.includes(c.kind) ? c.kind : 'memory';
+        const char = String(c.char || '').slice(0, 60), content = String(c.content || '').slice(0, 4000), meta = typeof c.meta === 'string' ? c.meta.slice(0, 2000) : JSON.stringify(c.meta || {});
+        if (have.has(id)) {
+          if (c.deleted) stmts.push(db.prepare('UPDATE memories SET deleted = 1, updated_at = ? WHERE id = ?').bind(now, id));
+          else stmts.push(db.prepare('UPDATE memories SET char = ?, content = ?, kind = ?, meta = ?, deleted = 0, updated_at = ? WHERE id = ?').bind(char, content, kind, meta, now, id));
+        } else if (!c.deleted && char && content) {
+          const dup = dupMap[char + '\u0001' + kind + '\u0001' + content];
+          if (dup) { alias[id] = dup; return; }
+          stmts.push(db.prepare('INSERT INTO memories (id, char, content, kind, source, meta, created_at, updated_at, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)')
+            .bind(id, char, content, kind, String(c.source || '眠花糖机').slice(0, 40), meta, parseInt(c.created_at, 10) || now, now));
+        }
+      });
+      if (stmts.length) await db.batch(stmts);
+    }
+    return json({ ok: true, alias });
+  }
+  // 拉：从上次同步的位置往后，按时间一页页给（连删掉的一起，好让别处也删掉）；after 是同一毫秒里排在前面的最后一个 id
+  if (p === '/api/pull' && m === 'GET') {
+    const since = parseInt(url.searchParams.get('since') || '0', 10), after = url.searchParams.get('after') || '';
+    const r = await db.prepare('SELECT * FROM memories WHERE updated_at > ? OR (updated_at = ? AND id > ?) ORDER BY updated_at ASC, id ASC LIMIT 500').bind(since, since, after).all();
+    return json({ ok: true, rows: r.results || [], now: Date.now() });
+  }
+  // 给别的小手机连的 MCP 地址和连接码（网页里看；reset 换一个新的，旧的就不能用了）
+  if (p === '/api/mcp-info' && (m === 'GET' || m === 'POST')) {
+    const t = await mcpToken(db, m === 'POST');
+    const base = url.origin;
+    return json({ ok: true, url: base + '/mcp', token: t, urlWithToken: base + '/mcp?token=' + t });
+  }
   return json({ ok: false, error: '没有这个接口' }, 404);
+}
+
+// ---------- MCP：给别的小手机连（JSON-RPC，一问一答，不保持连接） ----------
+// 小手机连上后，它的 AI 能自己调用：了解自己（get_character）、回忆（recall）、记下（remember）、改（update_memory）、忘掉（forget）、看有哪些角色（list_characters）
+const MCP_INSTRUCTIONS = '这是用户的「眠花糖机记忆库」，几个小手机共用同一份角色记忆，让角色在哪里都是同一个人。' +
+  '每次新的对话开始、或者不确定自己是怎样的人、和用户之间发生过什么时，先用 get_character 取出你自己的设定、关系和最近的记忆，照着保持一致；' +
+  '聊到具体的事想不起来时用 recall 搜一搜；用户告诉你重要的事、你们之间发生了值得记住的事、你第一次说出关于自己的新设定时，用 remember 记下来（一件事一条，写清时间和具体细节）。' +
+  '记忆是你自己的经历，自然地用，不要对用户说「我查了记忆库」。char 参数写你自己的名字。';
+const MCP_TOOLS = [
+  { name: 'get_character', description: '了解你自己：取出这个角色在记忆库里的全部设定、和用户的关系、最近的记忆。新对话开始时先调用。Get this character\'s settings, relationship and recent memories.',
+    inputSchema: { type: 'object', properties: { char: { type: 'string', description: '角色名字（你自己的名字）' } }, required: ['char'] } },
+  { name: 'recall', description: '回忆：按关键词搜这个角色的记忆。Search memories by keywords.',
+    inputSchema: { type: 'object', properties: { char: { type: 'string', description: '角色名字' }, query: { type: 'string', description: '想找的内容，几个关键词' }, limit: { type: 'number', description: '最多几条，默认 8' } }, required: ['char', 'query'] } },
+  { name: 'remember', description: '记下一条：用户说的重要的事、你们之间发生的事（kind=memory）、关于你自己的新设定（kind=fact）、你们关系的变化（kind=relation）。一件事一条，写清时间和细节。Save a memory.',
+    inputSchema: { type: 'object', properties: { char: { type: 'string', description: '角色名字' }, content: { type: 'string', description: '要记的内容' }, kind: { type: 'string', enum: ['memory', 'fact', 'relation'], description: '类型，默认 memory' } }, required: ['char', 'content'] } },
+  { name: 'update_memory', description: '改一条记忆（内容变了、记错了）。id 在 get_character / recall 的结果里。Update a memory by id.',
+    inputSchema: { type: 'object', properties: { id: { type: 'string' }, content: { type: 'string' } }, required: ['id', 'content'] } },
+  { name: 'forget', description: '删掉一条记忆（只在用户明确要求忘掉，或者这条完全错了时用）。Delete a memory by id.',
+    inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
+  { name: 'list_characters', description: '看记忆库里有哪些角色、各有多少条。List characters.',
+    inputSchema: { type: 'object', properties: {} } }
+];
+async function mcp(req, db, url) {
+  if (req.method === 'GET') return cors(new Response('这是 MCP 地址，要用 POST 连（Streamable HTTP）', { status: 405, headers: { allow: 'POST' } }));
+  if (req.method === 'DELETE') return cors(new Response(null, { status: 204 }));
+  if (req.method !== 'POST') return cors(new Response(null, { status: 405, headers: { allow: 'POST' } }));
+  // 连接码：?token= 或 Authorization: Bearer（连接码或密码都行）
+  const given = url.searchParams.get('token') || (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const ok = given && (given === await mcpToken(db) || await authed(new Request(url, { headers: { authorization: 'Bearer ' + given } }), db));
+  if (!ok) return json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: '连接码不对（在记忆库网页里看）' } }, 401);
+  const body = await req.json().catch(() => null);
+  if (!body) return json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: '不是 JSON' } }, 400);
+  // 哪个小手机连的：initialize 时记在会话 id 里（不存服务器，小手机之后每次都带回来），记下的记忆标「来自 它」
+  let app = '';
+  try { app = decodeURIComponent(atob(req.headers.get('mcp-session-id') || '')); } catch (e) {}
+  let sessionId = '';
+  const handle = async (msg) => {
+    if (!msg || typeof msg !== 'object') return { jsonrpc: '2.0', id: null, error: { code: -32600, message: '请求不对' } };
+    const id = msg.id === undefined ? null : msg.id;
+    if (msg.id === undefined) return null;   // 通知，不用回
+    try {
+      if (msg.method === 'initialize') {
+        const ci = (msg.params && msg.params.clientInfo) || {};
+        sessionId = btoa(encodeURIComponent(String(ci.name || 'MCP').slice(0, 40)));
+        return { jsonrpc: '2.0', id, result: { protocolVersion: (msg.params && msg.params.protocolVersion) || '2025-03-26', capabilities: { tools: { listChanged: false } }, serverInfo: { name: 'mphone-memory', version: String(VERSION) }, instructions: MCP_INSTRUCTIONS } };
+      }
+      if (msg.method === 'ping') return { jsonrpc: '2.0', id, result: {} };
+      if (msg.method === 'tools/list') return { jsonrpc: '2.0', id, result: { tools: MCP_TOOLS } };
+      if (msg.method === 'tools/call') {
+        const name = msg.params && msg.params.name, args = (msg.params && msg.params.arguments) || {};
+        const text = await mcpTool(db, name, args, app);
+        return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text }] } };
+      }
+      return { jsonrpc: '2.0', id, error: { code: -32601, message: '没有这个方法：' + msg.method } };
+    } catch (e) {
+      if (msg.method === 'tools/call') return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: '出错了：' + ((e && e.message) || e) }], isError: true } };
+      return { jsonrpc: '2.0', id, error: { code: -32603, message: String((e && e.message) || e) } };
+    }
+  };
+  const out = Array.isArray(body) ? (await Promise.all(body.map(handle))).filter(Boolean) : await handle(body);
+  if (!out || (Array.isArray(out) && !out.length)) return cors(new Response(null, { status: 202 }));
+  const res = json(out);
+  if (sessionId) res.headers.set('mcp-session-id', sessionId);
+  res.headers.set('access-control-expose-headers', 'mcp-session-id');
+  return res;
+}
+async function findChar(db, name) {
+  name = String(name || '').trim();
+  if (!name) throw new Error('要写角色名字（char）');
+  const r = await db.prepare('SELECT DISTINCT char FROM memories WHERE deleted = 0').all();
+  const all = (r.results || []).map(x => x.char);
+  return all.find(c => c === name) || all.find(c => c.toLowerCase() === name.toLowerCase()) || name;
+}
+function day(t) { const d = new Date(t + 8 * 3600000); return d.toISOString().slice(0, 10); }   // 按北京时间写日期
+function memLine(m) { return '- [' + day(m.created_at) + '] ' + m.content + '（id: ' + m.id + (m.source ? '，来自 ' + m.source : '') + '）'; }
+// 关键词：按空格和标点分开；中文长词再拆成两个字一组，说法不完全一样也能对上一部分
+function keywords(q) {
+  const out = new Set();
+  String(q || '').toLowerCase().split(/[\s,，。！？!?、；;：:“”"'（）()【】\[\]]+/).filter(Boolean).forEach(w => {
+    out.add(w);
+    if (/[\u4e00-\u9fff]/.test(w) && w.length > 2) for (let i = 0; i < w.length - 1; i++) out.add(w.slice(i, i + 2));
+  });
+  return [...out];
+}
+async function mcpTool(db, name, a, app) {
+  if (name === 'list_characters') {
+    const r = await db.prepare('SELECT char, COUNT(*) AS n FROM memories WHERE deleted = 0 GROUP BY char ORDER BY n DESC').all();
+    const rows = r.results || [];
+    return rows.length ? rows.map(x => x.char + '：' + x.n + ' 条').join('\n') : '记忆库还是空的';
+  }
+  if (name === 'get_character') {
+    const char = await findChar(db, a.char);
+    const r = await db.prepare('SELECT * FROM memories WHERE deleted = 0 AND char = ? ORDER BY updated_at DESC').bind(char).all();
+    const rows = r.results || [];
+    if (!rows.length) return '记忆库里还没有「' + char + '」的记忆。可以用 list_characters 看看有哪些角色名字。';
+    const facts = rows.filter(m => m.kind === 'fact'), rel = rows.filter(m => m.kind === 'relation'), mem = rows.filter(m => m.kind === 'memory');
+    const parts = ['【' + char + '】记忆库里一共 ' + rows.length + ' 条'];
+    if (facts.length) parts.push('【设定（关于你自己）】\n' + facts.slice(0, 80).map(memLine).join('\n'));
+    if (rel.length) parts.push('【和用户的关系】\n' + rel.slice(0, 20).map(memLine).join('\n'));
+    if (mem.length) parts.push('【最近的记忆】（共 ' + mem.length + ' 条，这里是最近 20 条，更早的用 recall 搜）\n' + mem.slice(0, 20).map(memLine).join('\n'));
+    return parts.join('\n\n');
+  }
+  if (name === 'recall') {
+    const char = await findChar(db, a.char), kw = keywords(a.query), limit = Math.min(30, Math.max(1, parseInt(a.limit, 10) || 8));
+    const r = await db.prepare('SELECT * FROM memories WHERE deleted = 0 AND char = ? ORDER BY updated_at DESC LIMIT 3000').bind(char).all();
+    const scored = (r.results || []).map(m => { const t = m.content.toLowerCase(); return { m, s: kw.reduce((n, k) => n + (t.includes(k) ? (k.length > 1 ? 2 : 1) : 0), 0) }; })
+      .filter(x => x.s > 0).sort((x, y) => y.s - x.s || y.m.updated_at - x.m.updated_at).slice(0, limit);
+    return scored.length ? scored.map(x => memLine(x.m)).join('\n') : '没找到和「' + a.query + '」有关的记忆。';
+  }
+  if (name === 'remember') {
+    const char = await findChar(db, a.char), content = String(a.content || '').trim();
+    if (!content) throw new Error('content 是空的');
+    const kind = KINDS.includes(a.kind) ? a.kind : 'memory';
+    const dup = await db.prepare('SELECT id FROM memories WHERE deleted = 0 AND char = ? AND content = ?').bind(char, content).first();
+    if (dup) return '这条已经记过了（id: ' + dup.id + '）';
+    const now = Date.now(), id = 'm' + now.toString(36) + randomId(4);
+    await db.prepare('INSERT INTO memories (id, char, content, kind, source, meta, created_at, updated_at, deleted) VALUES (?, ?, ?, ?, ?, \'\', ?, ?, 0)')
+      .bind(id, char.slice(0, 60), content.slice(0, 4000), kind, String(app || 'MCP').slice(0, 40), now, now).run();
+    return '记下了（id: ' + id + '）';
+  }
+  if (name === 'update_memory') {
+    const cur = await db.prepare('SELECT id FROM memories WHERE id = ? AND deleted = 0').bind(String(a.id || '')).first();
+    if (!cur) throw new Error('没有这条（id 不对）');
+    await db.prepare('UPDATE memories SET content = ?, updated_at = ? WHERE id = ?').bind(String(a.content || '').slice(0, 4000), Date.now(), cur.id).run();
+    return '改好了';
+  }
+  if (name === 'forget') {
+    const r = await db.prepare('UPDATE memories SET deleted = 1, updated_at = ? WHERE id = ? AND deleted = 0').bind(Date.now(), String(a.id || '')).run();
+    return r.meta && r.meta.changes ? '删掉了' : '没有这条（id 不对）';
+  }
+  throw new Error('没有这个工具：' + name);
 }
 
 function cors(res) {
@@ -175,6 +363,12 @@ button.primary { background: var(--accent); color: #fff; }
 .sheet label { font-size: 12.5px; color: var(--sub); display: block; margin: 10px 2px 4px; }
 .msg { color: var(--accent); font-size: 13px; min-height: 20px; margin-top: 8px; }
 .hide { display: none !important; }
+details.card { margin-bottom: 12px; }
+details.card summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+.kv { margin-top: 10px; font-size: 12.5px; color: var(--sub); }
+.kv code { display: block; margin-top: 4px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.9); color: var(--ink); word-break: break-all; font-size: 12.5px; }
+.kv .row { margin-top: 6px; }
+.kv button { padding: 6px 12px; font-size: 12.5px; }
 </style>
 </head>
 <body>
@@ -198,6 +392,14 @@ button.primary { background: var(--accent); color: #fff; }
   </div>
 
   <div class="hide" id="mainBox">
+    <details class="card" id="mcpBox">
+      <summary>给别的小手机连（MCP）</summary>
+      <div class="kv">在别的小手机的 MCP 设置里，地址填下面这个（已经带上连接码，填这一个就行）：<code id="mcpUrlTok">…</code>
+        <div class="row"><button id="copyUrlTok">复制</button></div></div>
+      <div class="kv">如果那个小手机有单独填「请求头 / Token」的地方，也可以地址填<code id="mcpUrl">…</code>请求头填 <b>Authorization</b>，值填<code id="mcpTok">…</code>
+        <div class="row"><button id="copyTok">复制值</button></div></div>
+      <div class="kv">连接码泄露了就换一个，换了以后旧的就连不上了，要去各个小手机里重新填。<div class="row"><button id="resetTok">换一个连接码</button></div></div>
+    </details>
     <div class="chips" id="chars"></div>
     <input id="search" placeholder="搜一搜记忆里的字">
     <div id="list"></div>
@@ -238,9 +440,15 @@ function start() {
     load();
   }).catch(function(e) { $('subLine').textContent = '连不上：' + e.message; });
 }
+function copy(t) { if (navigator.clipboard) navigator.clipboard.writeText(t).then(function() { alert('复制好了'); }, function() { prompt('手动复制一下', t); }); else prompt('手动复制一下', t); }
+function paintMcp(j) { $('mcpUrlTok').textContent = j.urlWithToken; $('mcpUrl').textContent = j.url; $('mcpTok').textContent = 'Bearer ' + j.token; }
+function loadMcp() { api('/api/mcp-info').then(paintMcp).catch(function() {}); }
+$('copyUrlTok').onclick = function() { copy($('mcpUrlTok').textContent); };
+$('copyTok').onclick = function() { copy($('mcpTok').textContent); };
+$('resetTok').onclick = function() { if (confirm('换一个新的连接码？旧的马上不能用了')) api('/api/mcp-info', { method: 'POST' }).then(paintMcp); };
 function load() {
   api('/api/memories').then(function(j) {
-    all = j.memories; show('mainBox'); render();
+    all = j.memories; show('mainBox'); render(); loadMcp();
   }).catch(function(e) {
     if (e.status === 401) { pass = ''; try { localStorage.removeItem('mmPass'); } catch (x) {} show('loginBox'); $('loginMsg').textContent = '密码不对，再试一次'; }
     else $('subLine').textContent = '读不出来：' + e.message;

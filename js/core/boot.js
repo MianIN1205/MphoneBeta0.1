@@ -238,6 +238,7 @@ var MPHONE_SCRIPTS = [
   "js/desk/widgets.js",
   "js/char/memory.js",
   "js/desk/memory-lib.js",
+  "js/desk/memory-hub.js",
   "js/char/archive.js",
   "js/char/migrate.js",
   "js/prompt/wb-import.js",

@@ -11,11 +11,12 @@ var memStore = mphoneStore.load('mphone_memories', {});   // { 角色id: [{ id, 
 var memEmbedModel = mphoneStore.load('mphone_mem_embed_model', '');
 var MEM_TYPE_NAME = { short: '短期', long: '长期', precious: '珍贵' };
 var MEM_TYPE_RANK = { short: 0, long: 1, precious: 2 };
-var MEM_SOURCE_NAME = { chat: '聊天', feed: '动态', self: 'TA 自己记的', user: '你加的', diary: '日记', import: '其他小手机' };
+var MEM_SOURCE_NAME = { chat: '聊天', feed: '动态', self: 'TA 自己记的', user: '你加的', diary: '日记', import: '其他小手机', hub: '记忆库' };
 // 从别的小手机导入的记忆（m.from = 来自哪里，比如「uwu 小手机」，见 js/char/archive.js）
-function memSourceText(m) { return m.source === 'import' && m.from ? '来自 ' + m.from : (MEM_SOURCE_NAME[m.source] || ''); }
+// 从连通的记忆库拉下来的（source = hub，js/desk/memory-hub.js），别的小手机记的带着 m.from
+function memSourceText(m) { return (m.source === 'import' || m.source === 'hub') && m.from ? '来自 ' + m.from : (MEM_SOURCE_NAME[m.source] || ''); }
 function memWhereText(m) {
-  return (m.scene === 'drama' ? '发生在剧情空间' : '') + (m.source === 'import' && m.from ? (m.scene === 'drama' ? '，' : '') + '在' + m.from + '里' : '');
+  return (m.scene === 'drama' ? '发生在剧情空间' : '') + (m.from && (m.source === 'import' || m.source === 'hub') ? (m.scene === 'drama' ? '，' : '') + '在' + m.from + '里' : '');
 }
 var MEM_DAY = 86400000;
 

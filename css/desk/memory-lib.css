@@ -42,3 +42,7 @@
   width: 100%; box-sizing: border-box; border: 1px solid rgba(220,190,198,0.5); border-radius: 10px;
   background: rgba(255,250,251,0.9); padding: 7px 9px; font: inherit; font-size: 12.5px; line-height: 1.7; color: #5a4650; resize: vertical;
 }
+
+/* 连通记忆库的设置弹窗 */
+.hub-modal { max-height: 86%; overflow-y: auto; }
+.hub-mcp-url { padding: 8px 10px; border-radius: 10px; background: rgba(250,240,244,0.9); font-size: 12px; line-height: 1.5; color: #6a5560; word-break: break-all; user-select: text; -webkit-user-select: text; }

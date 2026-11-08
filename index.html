@@ -1427,6 +1427,17 @@
           <div class="mem-char-grid" id="memCharGrid"></div>
           <button class="action-btn btn-apply mem-export-all" id="memExportAll">导出全部角色的记忆（Word）</button>
 
+          <!-- 连通记忆库：部署在自己 Cloudflare 上的「眠花糖机记忆库」，几个小手机、几台设备共用同一份记忆（js/desk/memory-hub.js） -->
+          <div class="section-label">连通记忆库</div>
+          <div class="settings-card">
+            <div class="auto-hint" id="hubStatus" style="margin:0 0 10px;">还没连。连上以后，几个小手机、几台设备上的角色共用同一份记忆。</div>
+            <div class="api-test-row">
+              <button class="action-btn btn-apply" id="hubOpenSet">连接设置</button>
+              <button class="action-btn btn-apply" id="hubSyncNow">立即同步</button>
+              <button class="action-btn btn-apply" id="hubOpenWeb">打开网页</button>
+            </div>
+          </div>
+
           <div class="section-label">向量记忆</div>
           <div class="settings-card">
             <div class="field-label">向量模型（embeddings）</div>
@@ -1588,6 +1599,36 @@
           <button class="mine-acc-btn mine-acc-btn-close" id="styleEditDel">删除</button>
           <button class="mine-acc-btn mine-acc-btn-close" id="styleEditCancel">取消</button>
           <button class="mine-acc-btn mine-acc-btn-add" id="styleEditSave">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 连通记忆库的设置（js/desk/memory-hub.js） -->
+    <div class="mine-acc-overlay" id="hubOverlay">
+      <div class="mine-acc-modal hub-modal">
+        <div class="mine-acc-title">连通记忆库</div>
+        <div class="auto-hint" style="margin:0 2px 10px;">记忆库部署在你自己的 Cloudflare 账号里，数据只在你那儿。还没有的话先点下面「一键部署」，部署好打开它的网址设个密码，再回来填这里。</div>
+        <button class="action-btn btn-preset" id="hubDeploy" style="width:100%;padding:11px 0;">一键部署（去 Cloudflare）</button>
+        <div class="field-label" style="margin-top:12px;">记忆库网址</div>
+        <input class="field-input" id="hubUrl" type="url" placeholder="https://mphone-memory.你的名字.workers.dev" autocomplete="off" spellcheck="false">
+        <div class="field-label">密码</div>
+        <input class="field-input" id="hubPass" type="password" placeholder="在记忆库网页里设的密码" autocomplete="off">
+        <div class="auto-row" style="margin-top:8px;">
+          <span class="auto-row-label">自动同步</span>
+          <label class="st-toggle-wrap"><input type="checkbox" id="hubAuto" checked><span class="st-toggle-slider"></span></label>
+        </div>
+        <div class="auto-hint" style="margin:2px 2px 8px;">开着时：打开小手机、记忆有变化、每隔十分钟会自己同步。连不上（比如没开梯子）也照样能聊，手机里有一份，等连上再同步。</div>
+        <div id="hubMcpWrap" style="display:none;">
+          <div class="field-label">给别的小手机连（MCP 地址）</div>
+          <div class="hub-mcp-url" id="hubMcpUrl"></div>
+          <button class="action-btn btn-preset" id="hubMcpCopy" style="width:100%;padding:9px 0;margin-top:6px;">复制 MCP 地址</button>
+          <div class="auto-hint" style="margin:6px 2px 0;">在别的小手机的 MCP 设置里填这个地址（已经带上连接码）。角色名字要和这里一样，记忆才对得上。</div>
+        </div>
+        <div class="auto-hint" id="hubMsg" style="margin:8px 2px 0;color:#c25a7e;"></div>
+        <div class="mine-acc-actions">
+          <button class="mine-acc-btn mine-acc-btn-close" id="hubUnlink">断开</button>
+          <button class="mine-acc-btn mine-acc-btn-close" id="hubTest">测试连接</button>
+          <button class="mine-acc-btn mine-acc-btn-add" id="hubSave">保存</button>
         </div>
       </div>
     </div>
