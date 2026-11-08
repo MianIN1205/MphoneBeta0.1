@@ -95,35 +95,56 @@ function hexDarken(hex, k) {
   var f = function(v) { return Math.max(0, Math.round(v * (1 - k))); };
   return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')';
 }
-// 仿siya 没换背景图时的底色：纯色灰（用户要的，不要渐变）；换了图就用图
+// 仿siya 没换背景图时的底色：纯色灰（用户要的，不要渐变）；换了图就用图。返回空 = 这个窗口没用仿siya
 var SIYA_BG = '#46444d';
 function tplBgColor(part) {
   var t = part && part.bubble && part.bubble.tpl, look = (part && part.look) || {};
   return (t === 'siya' || t === 'siyad') && look.format !== 'box' && look.format !== 'custom' && look.format !== 'text' ? SIYA_BG : '';
 }
-// 仿siya 两套共用的：不显示头像，小时间、时间条、顶栏、输入栏换成深色
-function siyaChrome(sel) {
-  var sc = sel.replace(/ \.chat-msg-row$/, '');
-  return sel + ' .chat-msg-avatar { display: none; }\n' +
+// 仿siya 两套共用的界面（照用户给的截图）：背景图铺满整个聊天室（applyChatRoomStyle 把背景挪到 #appChatRoom 上），
+// 顶栏不写字、透明、顶上一层往下渐淡的阴影；角色名（大白字）和签名（前面一个小面具）挪到输入栏上方左边，下面也一层渐淡阴影托着；
+// 不显示头像；输入栏深色；手机状态栏白字。颜色都是 #appChatRoom 上的变量（--siya-ai 等），不写死：自己的 CSS 或小梦改这些变量就能换
+var SIYA_MASK = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 14'%3E%3Cpath d='M2 3.5Q12-.5 22 3.5Q22.5 12 16 12Q13 12 12 9.2Q11 12 8 12Q1.5 12 2 3.5Z' fill='none' stroke='white' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cellipse cx='7.6' cy='6.4' rx='2.4' ry='1.6' fill='none' stroke='white' stroke-width='1.3'/%3E%3Cellipse cx='16.4' cy='6.4' rx='2.4' ry='1.6' fill='none' stroke='white' stroke-width='1.3'/%3E%3C/svg%3E\") center / contain no-repeat";
+function siyaChrome(sel, op) {
+  var sc = sel.replace(/ \.chat-msg-row$/, ''), a = Math.max(0.9, op);
+  var css = sc + ' { --siya-ai: rgba(76,58,148,' + a + '); --siya-user: rgba(72,66,88,' + a + '); --siya-ink: #fff; --siya-soft: #cfc3ee; --siya-bar: #26242e; --siya-field: #3e3b48; --siya-fade: rgba(10,8,18,0.5); }\n' +
+    sel + ' .chat-msg-avatar { display: none; }\n' +
     sc + ' .cr-msg-stamp { color: rgba(255,255,255,0.7); text-shadow: 0 1px 2px rgba(0,0,0,0.3); }\n' +
     sc + ' .cr-msg-stamp.user { margin-right: 6px; } ' + sc + ' .cr-msg-stamp.ai { margin-left: 6px; }\n' +
     sc + ' .cr-time-sep { background: rgba(40,36,52,0.55); color: rgba(255,255,255,0.88); padding: 3px 12px; border-radius: 10px; }\n' +
-    sc + ' .cr-action-note { color: #e6defa; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }\n' +
-    sc + ' .settings-nav { background: rgba(30,28,38,0.94) !important; border-bottom: none !important; box-shadow: none !important; }\n' +
-    sc + ' .settings-nav .chat-room-main-title, ' + sc + ' .settings-nav .chat-room-sub-title { color: #fff !important; text-shadow: 0 1px 3px rgba(0,0,0,0.35); }\n' +
-    sc + ' .settings-nav svg { stroke: #fff !important; }\n' +
-    sc + ' .settings-nav .msg-toggle-wrap { background: rgba(255,255,255,0.18) !important; }\n' +
-    sc + ' .chat-room-bottom { background: rgba(26,24,34,0.94) !important; border-top: none !important; box-shadow: none !important; }\n' +
-    sc + ' .cr-input { background: rgba(66,62,78,0.95) !important; color: #f2eef8 !important; }\n' +
+    sc + ' .cr-action-note { color: #e6defa; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }\n';
+  if (sc !== '#appChatRoom') return css;   // 美化页的小卡片只要气泡那部分
+  var on = '.phone:has(#appChatRoom.active):not(:has(.app-screen.active:not(#appChatRoom)))';
+  return css +
+    // 顶栏：不写字、透明，顶上渐淡的阴影；名字挪走以后它就不再是定位的参照
+    sc + ' .settings-nav { position: static; background: linear-gradient(to bottom, var(--siya-fade), rgba(0,0,0,0)); border-bottom: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }\n' +
+    sc + ' .settings-nav svg { stroke: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35)); }\n' +
+    sc + ' .settings-nav .msg-toggle-wrap { background: rgba(255,255,255,0.18); }\n' +
+    sc + ' .chat-room-head-av { display: none !important; }\n' +
+    // 角色名和签名：输入栏上方左边（--cr-bottom-h 是输入栏现在的高度，抽屉打开、剧情多一排符号都会跟着变）
+    sc + ' .chat-room-title-wrap { position: absolute; left: 22px; right: 22px; bottom: calc(var(--cr-bottom-h, 64px) + 12px); top: auto; transform: none; max-width: none; z-index: 6; pointer-events: none; }\n' +
+    sc + ' .chat-room-title-text { align-items: flex-start; max-width: 100%; }\n' +
+    sc + ' .chat-room-main-title { font-size: 24px; font-weight: 800; color: var(--siya-ink); letter-spacing: 2px; text-shadow: 0 2px 6px rgba(0,0,0,0.4); }\n' +
+    sc + ' .chat-room-sub-title { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--siya-ink); opacity: 0.92; letter-spacing: 2px; text-shadow: 0 1px 4px rgba(0,0,0,0.45); }\n' +
+    sc + ' .chat-room-sub-title::before { content: ""; flex: 0 0 auto; width: 20px; height: 12px; background: ' + SIYA_MASK + '; opacity: 0.85; }\n' +
+    // 消息别被名字盖住；下面一层渐淡阴影托着名字
+    sc + ' .chat-msg-list { padding-bottom: 84px; }\n' +
+    sc + ' #chatRoomContent { background: transparent !important; box-shadow: inset 0 -130px 90px -60px var(--siya-fade); }\n' +
+    // 输入栏：深色一条，输入框是深色圆角
+    sc + ' .chat-room-bottom { background: var(--siya-bar); border-top: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }\n' +
+    sc + ' .cr-input { background: var(--siya-field); color: #f2eef8; }\n' +
     sc + ' .cr-input::placeholder { color: rgba(242,238,248,0.5); }\n' +
-    sc + ' .cr-icon-btn { background: rgba(255,255,255,0.12) !important; color: #f2eef8 !important; }\n' +
-    sc + ' .cr-icon-btn svg { stroke: #f2eef8 !important; }\n' +
-    sc + ' .cr-symbol-bar button { background: rgba(255,255,255,0.12) !important; color: #f2eef8 !important; border-color: transparent !important; }\n' +
-    // 手机最上面的时间、信号、电量：顶栏深了就用白色（只在聊天室是最上面那一层时）
-    (sc === '#appChatRoom' ? (function() {
-      var on = '.phone:has(#appChatRoom.active):not(:has(.app-screen.active:not(#appChatRoom)))';
-      return on + ' .status-time { color: #fff; }\n' + on + ' .signal-bars span, ' + on + ' .battery-fill, ' + on + ' .battery-cap { background: #fff; }\n' + on + ' .battery-body { border-color: #fff; }\n';
-    })() : '');
+    sc + ' .cr-icon-btn { background: rgba(255,255,255,0.1); color: #f2eef8; }\n' +
+    sc + ' .cr-icon-btn svg { stroke: #f2eef8; }\n' +
+    sc + ' .cr-symbol-bar button { background: rgba(255,255,255,0.1); color: #f2eef8; border-color: transparent; }\n' +
+    sc + ' .cr-qb { background: rgba(20,18,28,0.35); }\n' +
+    // 加号 / 表情抽屉也换成深色
+    sc + ' .cr-plus-panel { background: var(--siya-bar); border-top-color: rgba(255,255,255,0.06); }\n' +
+    sc + ' .cr-plus-box { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.1); box-shadow: none; }\n' +
+    sc + ' .cr-plus-box svg { stroke: #e9e3f5; }\n' +
+    sc + ' .cr-plus-label { color: rgba(242,238,248,0.8); }\n' +
+    // 手机最上面的时间、信号、电量：白色（只在聊天室是最上面那一层时）
+    on + ' .status-time { color: #fff; }\n' + on + ' .signal-bars span, ' + on + ' .battery-fill, ' + on + ' .battery-cap { background: #fff; }\n' + on + ' .battery-body { border-color: #fff; }\n';
 }
 function bubbleTplCss(sel, tpl, colors, op) {
   var T = ' .chat-msg-bubble:not(.error):not(.img-bubble):not(.sticker-bubble):not(.cr-narr):not(.cr-action-only)';
@@ -143,15 +164,15 @@ function bubbleTplCss(sel, tpl, colors, op) {
     A + ' { background: linear-gradient(' + hexToRgba(colors[0], 0.3) + ', ' + hexToRgba(colors[0], 0.3) + '), rgba(255,255,255,0.35); }\n' +
     U + ' { background: linear-gradient(' + hexToRgba(colors[1], 0.3) + ', ' + hexToRgba(colors[1], 0.3) + '), rgba(255,255,255,0.35); }\n';
   if (tpl === 'sticker') return both + ' { border-radius: 14px; border: 2.5px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.05), 0 4px 10px rgba(80,60,80,0.14); }\n';
-  if (tpl === 'siya') return siyaChrome(sel) + both + ' { max-width: 84%; padding: 14px 18px; border-radius: 16px; color: #fff; font-weight: 600; letter-spacing: 1px; line-height: 1.65; box-shadow: 0 4px 14px rgba(20,14,40,0.22); }\n' +
-    A + ' { background: rgba(76,58,148,' + Math.max(0.9, op) + '); border-bottom-left-radius: 6px; }\n' +
-    U + ' { background: rgba(72,66,88,' + Math.max(0.9, op) + '); border-bottom-right-radius: 6px; }\n' +
-    sel + ' .cr-act { color: #cfc3ee; font-weight: 400; }\n';
-  if (tpl === 'siyad') return siyaChrome(sel) + both + ' { max-width: 92%; padding: 18px 20px; border-radius: 18px; letter-spacing: 1px; line-height: 1.95; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 6px 20px rgba(20,14,40,0.28); }\n' +
-    A + ' { background: linear-gradient(160deg, rgba(58,42,118,' + Math.max(0.9, op) + '), rgba(88,64,156,' + Math.max(0.9, op) + ')); color: #d9cff2 !important; font-weight: 400; border-top-left-radius: 6px; }\n' +
-    U + ' { background: rgba(56,52,70,' + Math.max(0.9, op) + '); color: #f2eef8 !important; font-weight: 500; max-width: 80%; border-top-right-radius: 6px; }\n' +
-    sel + ' .cr-dq { color: #fff; font-weight: 700; }\n' +
-    sel + ' .cr-act { color: #b9ace2; font-style: italic; }\n';
+  if (tpl === 'siya') return siyaChrome(sel, op) + both + ' { max-width: 84%; padding: 14px 18px; border-radius: 14px; color: var(--siya-ink); font-size: 15px; font-weight: 600; letter-spacing: 1.5px; line-height: 1.65; box-shadow: 0 4px 14px rgba(20,14,40,0.22); }\n' +
+    A + ' { background: var(--siya-ai); border-bottom-left-radius: 4px; }\n' +
+    U + ' { background: var(--siya-user); border-bottom-right-radius: 4px; }\n' +
+    sel + ' .cr-act { color: var(--siya-soft); font-weight: 400; }\n';
+  if (tpl === 'siyad') return siyaChrome(sel, op) + both + ' { max-width: 92%; padding: 18px 20px; border-radius: 18px; font-size: 15px; letter-spacing: 1.5px; line-height: 1.95; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 6px 20px rgba(20,14,40,0.28); }\n' +
+    A + ' { background: linear-gradient(160deg, rgba(0,0,0,0.12), rgba(255,255,255,0.06)), var(--siya-ai); color: var(--siya-soft); font-weight: 400; border-top-left-radius: 4px; }\n' +
+    U + ' { background: var(--siya-user); color: var(--siya-ink); font-weight: 500; max-width: 80%; border-top-right-radius: 4px; }\n' +
+    sel + ' .cr-dq { color: var(--siya-ink); font-weight: 700; }\n' +
+    sel + ' .cr-act { color: var(--siya-soft); opacity: 0.85; font-style: italic; }\n';
   if (tpl === 'night') return both + ' { color: #eee8f6; }\n' +
     A + ' { background: rgba(40,36,62,' + Math.max(0.75, op) + '); }\n' + U + ' { background: rgba(64,54,92,' + Math.max(0.75, op) + '); }\n';
   return '';
@@ -227,6 +248,7 @@ function applyChatRoomStyle(char) {
   var content = document.getElementById('chatRoomContent');
   content.style.background = '';
   appChatRoom.classList.remove('cr-no-avatar', 'cr-head-avatar', 'cr-head-left');
+  appChatRoom.style.background = '';
   if (!char) { crCharStyleEl.textContent = ''; return; }
 
   var part = roomLookPart(char);
@@ -238,11 +260,10 @@ function applyChatRoomStyle(char) {
   if (typeof paintChatSubTitle === 'function') paintChatSubTitle(char);
 
   var bg = part.chatBg || DEFAULT_CHAT_BG;
-  if (bg.image) {
-    content.style.background = 'url(' + bg.image + ') center / cover no-repeat';
-  } else if (tplBgColor(part) || bg.color) {
-    content.style.background = tplBgColor(part) || bg.color;
-  }
+  var bgCss = bg.image ? 'url(' + bg.image + ') center / cover no-repeat' : (tplBgColor(part) || bg.color || '');
+  // 仿siya：背景铺满整个聊天室（顶栏透明，背景要一直到最上面）
+  if (tplBgColor(part)) appChatRoom.style.background = bgCss;
+  else if (bgCss) content.style.background = bgCss;
 
   // 状态栏样式只属于聊天窗口
   var chatLook = Object.assign({}, DEFAULT_LOOK, char.look || {});
@@ -252,3 +273,17 @@ function applyChatRoomStyle(char) {
   if (typeof renderQuickBar === 'function') renderQuickBar();
   if (typeof refreshStatusPanel === 'function') refreshStatusPanel();
 }
+
+// 输入栏现在多高（抽屉打开、剧情窗口多一排符号都会变）：仿siya 把角色名摆在它上方要用
+(function() {
+  var bar = document.getElementById('crBottomBar');
+  if (!bar || typeof ResizeObserver === 'undefined') return;
+  // 从输入栏顶上到聊天室底边的距离（输入栏 + 下面打开的抽屉）
+  var measure = function() {
+    var top = 0, el = bar;
+    while (el && el !== appChatRoom) { top += el.offsetTop; el = el.offsetParent; }
+    appChatRoom.style.setProperty('--cr-bottom-h', Math.max(0, appChatRoom.offsetHeight - top) + 'px');
+  };
+  var ro = new ResizeObserver(measure);
+  [bar, document.getElementById('crPlusPanel'), document.getElementById('crEmojiPanel')].forEach(function(el) { if (el) ro.observe(el); });
+})();
