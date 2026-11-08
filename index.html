@@ -2000,7 +2000,6 @@
               <button class="action-btn btn-preset" id="sysPromptReset" style="flex:1;padding:12px 0;">恢复默认</button>
               <button class="action-btn btn-apply" id="sysPromptSave" style="flex:1;padding:12px 0;">保存</button>
             </div>
-            <button class="action-btn btn-preset" id="promptPreviewBtn" style="width:100%;margin-top:8px;padding:11px 0;">看看这次会发给 TA 什么</button>
             <div class="auto-hint" style="margin:6px 2px 0;">角色是谁、说话的语气、怎么和你互动、聊天窗口和剧情窗口各自怎么写、发动态写日记这些，都在这一份里，可以分类改。改完点「保存」才会记住；「恢复默认」回到眠花糖机自带的那版。提示词、人设、预设、世界书、开场白里都可以用 {{char}} 指角色、{{user}} 指你，发送时自动换成名字。</div>
           </div>
 
@@ -3609,6 +3608,7 @@
         <div class="book-del-confirm-desc" id="confirmDesc">删除后无法恢复</div>
         <div class="book-del-confirm-btns">
           <button class="book-del-confirm-btn book-del-cancel-btn" id="confirmCancel">取消</button>
+          <button class="book-del-confirm-btn book-del-cancel-btn" id="confirmAlt" style="display:none;"></button>
           <button class="book-del-confirm-btn book-del-ok-btn" id="confirmOk">确认删除</button>
         </div>
       </div>

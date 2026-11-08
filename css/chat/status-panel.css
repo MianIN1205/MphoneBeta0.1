@@ -23,13 +23,16 @@
   flex: 0 0 100%; box-sizing: border-box; padding: 0 14px;
   scroll-snap-align: start; scroll-snap-stop: always;
   display: flex; flex-direction: column; gap: 3px;
-  /* 每一条自己上下滑：高度到输入栏上面为止（--sp-max 在 openStatusPanel 里算） */
-  max-height: calc(var(--sp-max, 420px) - 40px); overflow-y: auto; overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  /* 每一条最高到输入栏上面（--sp-max 在 openStatusPanel 里算）；卡片在 .cr-sp-scroll 里自己上下滑，按钮固定在下面 */
+  max-height: calc(var(--sp-max, 420px) - 40px); overflow: hidden;
 }
-.cr-sp-item::-webkit-scrollbar { display: none; }
-/* 最下面：留白，正中间 删除 / 收藏 / 关闭 */
-.cr-sp-acts { display: flex; justify-content: center; gap: 10px; padding: 14px 0 18px; flex-shrink: 0; }
+.cr-sp-scroll {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none; border-radius: 10px;
+}
+.cr-sp-scroll::-webkit-scrollbar { display: none; }
+/* 最下面固定：正中间 删除 / 收藏 / 关闭 */
+.cr-sp-acts { display: flex; justify-content: center; gap: 10px; padding: 10px 0 6px; flex-shrink: 0; }
 .cr-sp-act { padding: 6px 16px; border-radius: 14px; border: 1px solid rgba(220, 180, 190, 0.5); background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #8a6a76; font-size: 12.5px; font-family: inherit; cursor: pointer; }
 .cr-sp-act:active { background: #fff; }

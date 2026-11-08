@@ -150,8 +150,11 @@ function renderStatusPanel() {
     var cardHtml = '<style>:host{display:block}' + (look.statusCss || '') + '</style>' + body;
     root.innerHTML = cardHtml;
     item.appendChild(time);
-    item.appendChild(card);
-    // 每一条自己能上下滑（卡片长也看得全）；最下面留白，正中间放 删除 / 收藏 / 关闭（用户要的）
+    // 卡片放在自己的框里上下滑；下面的 删除 / 收藏 / 关闭 固定不动（用户要的：状态栏太长时也看得到按钮）
+    var scroll = document.createElement('div');
+    scroll.className = 'cr-sp-scroll';
+    scroll.appendChild(card);
+    item.appendChild(scroll);
     var acts = document.createElement('div');
     acts.className = 'cr-sp-acts';
     [['del', '删除'], ['fav', '收藏'], ['close', '关闭']].forEach(function(a) {

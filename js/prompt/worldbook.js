@@ -88,15 +88,8 @@ function renderWbList() {
       var delBtn = document.createElement('button');
       delBtn.className = 'wb-folder-act';
       delBtn.textContent = '删除';
-      delBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        openConfirm('删除文件夹「' + g.name + '」？里面的条目会移到未分类', function() {
-          wbFolders = wbFolders.filter(function(f) { return f.id !== g.id; });
-          wbEntries.forEach(function(en) { if (en.folderId === g.id) en.folderId = WB_NONE; });
-          saveWbEntries();
-          renderWbList();
-        });
-      });
+      delBtn.addEventListener('click', function(e) { e.stopPropagation(); askDelWbFolder(g); });
+      wbLongPress(head, function() { askDelWbFolder(g); });   // 长按文件夹那一行也能删（用户要的）
       head.appendChild(renBtn);
       head.appendChild(delBtn);
     }
@@ -134,12 +127,51 @@ function renderWbList() {
       card.appendChild(tl);
       card.insertAdjacentHTML('beforeend', '<svg class="pf-entry-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>');
       card.addEventListener('click', function() { openWbDetail(entry.id); });
+      // 长按条目直接删，不用点进去（用户要的）；按在开关上不算
+      wbLongPress(card, function() {
+        openConfirm('删除条目「' + (entry.name || '未命名') + '」？', function() {
+          wbEntries = wbEntries.filter(function(x) { return x.id !== entry.id; });
+          saveWbEntries();
+          renderWbList();
+        });
+      });
       body.appendChild(card);
     });
     if (!g.entries.length) body.innerHTML = '<div class="auto-hint" style="margin:0 0 6px;">空文件夹</div>';
     folder.appendChild(body);
     wrap.appendChild(folder);
   });
+}
+
+// 长按半秒（按在开关上、手指挪动了都不算），长按后松手的那次点击不再打开 / 收起
+function wbLongPress(el, onLong) {
+  var timer = null, sx = 0, sy = 0, fired = false;
+  el.addEventListener('pointerdown', function(e) {
+    fired = false;
+    if (e.target.closest('.st-toggle-wrap, .wb-folder-act')) return;
+    sx = e.clientX; sy = e.clientY;
+    clearTimeout(timer);
+    timer = setTimeout(function() { timer = null; fired = true; if (navigator.vibrate) navigator.vibrate(15); onLong(); }, 500);
+  });
+  el.addEventListener('pointermove', function(e) {
+    if (timer && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) { clearTimeout(timer); timer = null; }
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function(ev) { el.addEventListener(ev, function() { clearTimeout(timer); timer = null; }); });
+  el.addEventListener('click', function(e) { if (fired) { fired = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  el.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+}
+// 删文件夹：里面有条目时问一下——条目移到未分类，还是连条目一起删（用户要的）
+function askDelWbFolder(g) {
+  var drop = function(alsoEntries) {
+    wbFolders = wbFolders.filter(function(f) { return f.id !== g.id; });
+    if (alsoEntries) wbEntries = wbEntries.filter(function(en) { return en.folderId !== g.id; });
+    else wbEntries.forEach(function(en) { if (en.folderId === g.id) en.folderId = WB_NONE; });
+    saveWbEntries();
+    renderWbList();
+  };
+  if (!g.entries.length) { openConfirm('删除文件夹「' + g.name + '」？', function() { drop(false); }); return; }
+  openConfirm('删除文件夹「' + g.name + '」？', function() { drop(true); },
+    { desc: '里面有 ' + g.entries.length + ' 条，可以先移到未分类', okText: '全部删除', alt: '移到未分类', onAlt: function() { drop(false); } });
 }
 
 // 文件夹命名：复用「备注名称」弹窗

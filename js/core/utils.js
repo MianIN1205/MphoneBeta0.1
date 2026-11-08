@@ -27,16 +27,30 @@ function shakeEl(el) {
 var confirmOverlay = document.getElementById('confirmOverlay');
 var confirmCallback = null;
 // 通用确认框：标题里说的是删除 / 清空 / 移除 / 扔掉这类，按钮写「确认删除」、下面一行「删除后无法恢复」；别的事（种下、发送、恢复默认……）按钮写「确定」，不显示那行
-function openConfirm(title, onOk) {
+// opts（可选）：{ desc: 下面那行小字, okText: 确认按钮的字, alt: 第三个按钮的字, onAlt: 点第三个按钮 }（世界书删文件夹时「移到未分类 / 全部删除」用）
+var confirmAltCallback = null;
+function openConfirm(title, onOk, opts) {
+  opts = opts || {};
   title = title || '删除此条目？';
   var del = /删|清空|移除|扔掉|拿出来|不要了/.test(title);
   document.getElementById('confirmTitle').textContent = title;
-  document.getElementById('confirmDesc').style.display = del ? '' : 'none';
-  document.getElementById('confirmOk').textContent = del ? '确认删除' : '确定';
+  var desc = document.getElementById('confirmDesc');
+  desc.textContent = opts.desc || '删除后无法恢复';
+  desc.style.display = del || opts.desc ? '' : 'none';
+  document.getElementById('confirmOk').textContent = opts.okText || (del ? '确认删除' : '确定');
+  var alt = document.getElementById('confirmAlt');
+  alt.style.display = opts.alt ? '' : 'none';
+  alt.textContent = opts.alt || '';
+  confirmAltCallback = opts.alt ? opts.onAlt : null;
   confirmCallback = onOk;
   confirmOverlay.classList.add('open');
 }
-function closeConfirm() { confirmOverlay.classList.remove('open'); confirmCallback = null; }
+function closeConfirm() { confirmOverlay.classList.remove('open'); confirmCallback = null; confirmAltCallback = null; }
+document.getElementById('confirmAlt').addEventListener('click', function() {
+  var fn = confirmAltCallback;
+  closeConfirm();
+  if (fn) fn();
+});
 document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
 document.getElementById('confirmOk').addEventListener('click', function() {
   var fn = confirmCallback;

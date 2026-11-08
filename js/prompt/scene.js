@@ -164,7 +164,7 @@ function renderPromptPreview() {
   sum.textContent = '一共 ' + msgs.length + ' 段，约 ' + total + ' token（估算）。' + (ppState.compact ? '点一行看那一段的全文' : '点一段展开看全文');
   if (ppState.open >= 0) { var o = list.querySelectorAll('.prompt-preview-item')[ppState.open]; if (o) setTimeout(function() { o.scrollIntoView({ block: 'start' }); }, 30); }
 }
-document.getElementById('promptPreviewBtn').addEventListener('click', function() { openPromptPreview(); });
+// Prompt 页系统提示词下面原来也有个「看看这次会发给 TA 什么」按钮，用户让去掉了，只留聊天加号抽屉里的「提示词」
 document.querySelectorAll('#promptPreviewMode .pf-radio-btn').forEach(function(b) {
   b.addEventListener('click', function() { ppState.compact = this.dataset.mode === 'compact'; ppState.open = -1; renderPromptPreview(); });
 });

@@ -17,6 +17,8 @@
 .app-screen.active {
   transform: scale(1); opacity: 1; pointer-events: all;
 }
+/* 没打开的界面是透明的：里面的东西也一律不接点击（桌宠小窝里的宠物自己写了 pointer-events: auto，曾经挡住消息页「此刻」第一个圆圈） */
+.app-screen:not(.active) * { pointer-events: none !important; }
 
 /* 各 App 展开原点（对应 dock 图标位置） */
 #appAppearance { transform-origin: 39% 92%; }
