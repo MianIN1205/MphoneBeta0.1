@@ -297,3 +297,4 @@
 
 /* 剧情窗口每条的「名字 + 时间」：只有文本框、自定义格式显示（js/chat/room.js 的 dramaBoxCss） */
 .cr-msg-head { display: none; }
+/* 隔了一个小时以上：这一行写「距离上次聊天 多久」（.cr-time-sep.cr-time-gap），不写时间 */

@@ -122,7 +122,8 @@ function autoSendMessage(idx) {
     : '请你以「' + charAuthor(char).name + '」的身份主动给对方发一条消息，' +
       '可以是分享日常、想念、追问之前的话题等，自然简短，符合人设与当前关系。只输出消息内容本身。';
   // 这段要求放在最后、用「用户」身份但标明不是对方说的：有的接口（比如 Claude）最后一条是角色自己的话时，会当成要接着写那条，像卡住了重说一遍
-  var msgs = charContextMsgs(idx).concat(chatFormatRules(char)).concat([activityAsk('【主动消息】现在是 ' + nowText(char) + '。' + gap + ask)]);
+  var msgs = charContextMsgs(idx).concat(chatFormatRules(char)).concat([activityAsk('【主动消息】现在是 ' + nowText(char) + '。' + gap + ask +
+    '不要写 (1h)、(read)、（已读）这类标时间或已读的记号，隔了多久小手机自己会显示。')]);
   // TA 正在写的时候算这个聊天窗口「正在回复」：点开能看到正在输入、❄️ 变 ⏹（点了就打断），不会再叫一次回复撞在一起
   var gk = typeof genKey === 'function' ? genKey(char, true) : '', ctrl = new AbortController();
   var gen = { ctrl: ctrl, char: char, auto: true, typing: null, previews: function() { return []; } };

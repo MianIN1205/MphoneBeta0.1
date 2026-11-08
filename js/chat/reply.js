@@ -95,7 +95,13 @@ function chatSplitLines(parts) {
   var out = [];
   parts.forEach(function(p) {
     if (typeof p !== 'string' || msgHtmlLike(p)) { out.push(p); return; }   // 带 HTML 的整条不拆，免得拆坏
+    // *动作* 中间换了行的先接回一行，不然拆成两条，星号一边一个（用户遇到过）
+    p = p.replace(/\*[^*]+\*/g, function(a) { return a.replace(/\s*\n+\s*/g, ' '); });
     var lines = p.split(/\n+/).map(function(l) { return l.trim(); }).filter(Boolean);
+    // 只有 (1h)、(read)、（已读）这种记号的行不要：角色偶尔学着标时间 / 已读，小手机自己会显示隔了多久
+    lines = lines.filter(function(l) { return !CHAT_MARK_RE.test(l); }).map(function(l) {
+      return (l.match(/\*/g) || []).length % 2 ? l + '*' : l;   // 星号只写了一半（忘了收尾）的补上
+    });
     var pending = '';
     lines.forEach(function(l) {
       if (/^〔译〕/.test(l) && out.length && typeof out[out.length - 1] === 'string') { out[out.length - 1] += '\n' + l; return; }
@@ -118,15 +124,18 @@ function chatSplitLines(parts) {
 // 一条太长（超过 CHAT_BUBBLE_MAX 字）就拆开：先按句号、问号、感叹号断句，还长就按逗号、顿号、分号断，
 // 再把太碎的小段拼回去，每条尽量不超过 CHAT_BUBBLE_MAX 字。引号、括号里面不断开；有链接、表情包、翻译的不动
 var CHAT_BUBBLE_MAX = 16;   // 手机上一个气泡一行大约 14～16 个字
+var CHAT_MARK_RE = /^(?:[(（\[【]\s*(?:read|已读|未读|\d+\s*(?:h|hr|hrs|hours?|min|mins|m|s|d|天|小时|分钟|分|秒)(?:\s*later)?)\s*[)）\]】]\s*)+$/i;
 function chatSplitLong(p) {
   var m = p.match(/^((?:\*[^*]+\*\s*)*)([\s\S]*)$/), lead = m[1], body = m[2].trim();
   if (body.length <= CHAT_BUBBLE_MAX || !/[\u4e00-\u9fff]/.test(body) || /https?:|\[表情包|〔译〕|<\/?[a-z撤日]/i.test(body)) return [p];
   // 切成小段：在句末标点后、或者（引号外的）逗号顿号分号后断开，标点留在前一段
-  var pieces = [], buf = '', depth = 0;
+  var pieces = [], buf = '', depth = 0, star = false;
   var OPEN = '「『“‘（(【《', CLOSE = '」』”’）)】》';
   for (var i = 0; i < body.length; i++) {
     var ch = body[i];
     buf += ch;
+    if (ch === '*') { star = !star; continue; }   // *动作* 里面不断开
+    if (star) continue;
     if (OPEN.indexOf(ch) >= 0) depth++;
     else if (CLOSE.indexOf(ch) >= 0) depth = Math.max(0, depth - 1);
     var next = body[i + 1] || '';

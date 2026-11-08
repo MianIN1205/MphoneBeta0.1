@@ -177,12 +177,14 @@ function renderHistMsg(m, list, empty) {
     if (st.status && !m.status) m.status = st.status;
     if (typeof saveHistories === 'function') setTimeout(saveHistories, 0);
   }
-  // 和上一条相隔 5 分钟以上（或是这一屏第一条）时，先插一条居中的时间
+  // 和上一条相隔 5 分钟以上（或是这一屏第一条）时，先插一条居中的时间；隔了一个小时以上改成一行「距离上次聊天 多久」
   if (m.time) {
     if (!list._lastTime || m.time - list._lastTime >= 5 * 60000) {
       var sep = document.createElement('div');
       sep.className = 'cr-time-sep';
-      sep.textContent = fmtMsgTime(m.time);
+      // 隔了一个小时以上只写这一行，不再写时间（用户要的）
+      if (list._lastTime && m.time - list._lastTime >= 3600000) { sep.classList.add('cr-time-gap'); sep.textContent = '距离上次聊天 ' + durText(m.time - list._lastTime); }
+      else sep.textContent = fmtMsgTime(m.time);
       list.appendChild(sep);
     }
     list._lastTime = m.time;
