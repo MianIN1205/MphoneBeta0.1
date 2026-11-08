@@ -1,0 +1,9 @@
+{
+  // 眠花糖机记忆库：部署到你自己的 Cloudflare 账号（Workers + D1 数据库），数据只在你的账号里
+  "name": "mphone-memory",
+  "main": "src/index.js",
+  "compatibility_date": "2025-06-01",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "mphone-memory" }
+  ]
+}

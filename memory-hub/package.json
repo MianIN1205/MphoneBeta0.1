@@ -1,0 +1,13 @@
+{
+  "name": "mphone-memory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "眠花糖机记忆库：部署到自己的 Cloudflare 账号，几个小手机共用同一份角色记忆",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
