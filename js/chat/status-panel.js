@@ -115,6 +115,15 @@ function fillStatusTpl(tpl, vals, char) {
 
 function statusPanelOpen() { return crStatusPanel.classList.contains('open'); }
 
+// 状态栏的字体：默认跟着小手机（外观里设的字体），用户要的。模板（尤其酒馆来的）常写「Microsoft YaHei, Segoe UI, Arial」这类电脑上的通用字体，
+// 手机上没有就退回系统字、和小手机不一样：这种只写了通用字体的 font-family 当没写；写了特别的字体（自己引入的手写体之类）就照它的
+var STATUS_GENERIC_FONTS = /^(microsoft yahei( ui)?|微软雅黑|microsoft jhenghei|pingfang( sc| tc| hk)?|hiragino sans( gb)?|heiti( sc| tc)?|黑体|simhei|simsun|宋体|nsimsun|noto sans( sc| cjk sc| cjk)?|source han sans( sc| cn)?|思源黑体|segoe ui|arial|helvetica( neue)?|sans-serif|system-ui|-apple-system|blinkmacsystemfont|roboto|tahoma|verdana|ui-sans-serif|inherit|initial|unset|\s*)$/i;
+function statusFontFollow(html) {
+  return String(html || '').replace(/font-family\s*:\s*([^;}"<]*(?:"[^"]*"[^;}"<]*)*)(;?)/gi, function(all, list) {
+    var fonts = list.replace(/!important/i, '').split(',').map(function(f) { return f.trim().replace(/^['"]|['"]$/g, '').trim(); }).filter(Boolean);
+    return fonts.length && fonts.every(function(f) { return STATUS_GENERIC_FONTS.test(f); }) ? '' : all;
+  });
+}
 function renderStatusPanel() {
   var char = charList[openingChatCharIdx];
   crStatusPanel.innerHTML = '';
@@ -147,7 +156,7 @@ function renderStatusPanel() {
     var card = document.createElement('div');
     card.className = 'cr-status-card' + (lined ? ' cr-status-lined' : '');
     var root = card.attachShadow({ mode: 'open' });
-    var cardHtml = '<style>:host{display:block}' + (look.statusCss || '') + '</style>' + body;
+    var cardHtml = statusFontFollow('<style>:host{display:block}' + (look.statusCss || '') + '</style>' + body);
     root.innerHTML = cardHtml;
     item.appendChild(time);
     // 卡片放在自己的框里上下滑；下面的 删除 / 收藏 / 关闭 固定不动（用户要的：状态栏太长时也看得到按钮）

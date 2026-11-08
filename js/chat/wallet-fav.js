@@ -154,7 +154,7 @@ function renderFavs() {
     if (f.html) {   // 收藏的状态栏：和面板里一样画在 Shadow DOM 里
       var sc = document.createElement('div');
       sc.className = 'fav-item-status cr-status-card' + (f.lined ? ' cr-status-lined' : '');
-      sc.attachShadow({ mode: 'open' }).innerHTML = f.html;
+      sc.attachShadow({ mode: 'open' }).innerHTML = typeof statusFontFollow === 'function' ? statusFontFollow(f.html) : f.html;   // 字体跟着小手机
       el.appendChild(sc);
     }
     if (f.images && f.images.length) {
