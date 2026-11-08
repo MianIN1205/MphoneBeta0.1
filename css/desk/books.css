@@ -21,6 +21,27 @@
 .reader-tg-name { flex: 1; min-width: 0; font-size: 12.5px; color: #b0607a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reader-tg-btn { border: none; border-radius: 13px; padding: 6px 11px; font-family: inherit; font-size: 12.5px; background: #e8879f; color: #fff; cursor: pointer; flex-shrink: 0; }
 .reader-tg-btn.ghost { background: rgba(232,135,159,0.14); color: #c0607a; }
+/* 边看边聊：小栏「聊天」展开，书页在上面照样能看、能翻 */
+.reader-chat { display: none; flex-shrink: 0; height: 30%; min-height: 170px; flex-direction: column; background: rgba(253,246,248,0.98); border-top: 1px solid rgba(220,160,180,0.25); }
+#appReader.chat-open .reader-chat { display: flex; }
+.reader-chat-list { flex: 1; overflow-y: auto; padding: 10px 12px 6px; display: flex; flex-direction: column; gap: 6px; }
+.reader-chat-msg { max-width: 78%; padding: 7px 11px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; }
+.reader-chat-msg.ta { align-self: flex-start; background: #fff; color: #4a3f3a; box-shadow: 0 1px 3px rgba(150,110,120,0.12); }
+.reader-chat-msg.me { align-self: flex-end; background: #f6c9d5; color: #5a3a44; }
+.reader-chat-typing { color: #b9a0a8; font-size: 12px; }
+.reader-chat-act { align-self: flex-start; font-size: 11.5px; color: #a8989c; font-style: italic; margin: -2px 0 0 6px; }
+.reader-chat-note { align-self: center; font-size: 11px; color: #b8a4aa; }
+.reader-chat-q { display: block; font-size: 10.5px; color: #a0707e; margin-bottom: 2px; }
+.reader-chat-input { flex-shrink: 0; display: flex; align-items: flex-end; gap: 6px; padding: 6px 10px 8px; }
+.reader-chat-input textarea { flex: 1; min-width: 0; resize: none; border: none; outline: none; border-radius: 16px; padding: 8px 12px; font-family: inherit; font-size: 14px; line-height: 1.4; background: #fff; color: #4a3f3a; max-height: 72px; -webkit-user-select: text; user-select: text; }
+.reader-chat-page, .reader-chat-ask { flex-shrink: 0; width: 34px; height: 34px; border: none; border-radius: 50%; background: rgba(232,135,159,0.12); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.reader-chat-page.on { background: #e8879f; box-shadow: 0 0 0 2px rgba(232,135,159,0.3); }
+#readerTitle { max-width: 56%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#readerEditBtn { margin-left: auto; }
+#readerEditBtn + .reader-toc-btn { margin-left: 0; }
+.book-edit-list { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 12px; }
+.book-edit-row { border: none; border-radius: 12px; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; color: #5a4a50; background: rgba(250,240,244,0.95); cursor: pointer; }
+.reader-bar .reader-btn { padding: 8px 16px; }
 .reader-toc-list { max-height: 55vh; overflow-y: auto; margin: 4px 0 10px; }
 .reader-toc-row { padding: 9px 6px; font-size: 13.5px; color: #555; border-bottom: 1px solid rgba(0,0,0,0.04); cursor: pointer; }
 .reader-toc-row.on { color: #d0607e; font-weight: 600; }
@@ -46,3 +67,10 @@
 .shelf-name { position: absolute; top: 8px; left: 12px; z-index: 2; font-size: 11px; color: rgba(110,75,55,0.78); background: rgba(255,255,255,0.55); padding: 1px 9px; border-radius: 9px; cursor: pointer; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shelf-name.empty { color: rgba(140,105,85,0.45); background: rgba(255,255,255,0.28); }
 .shelf-name-input { position: absolute; top: 6px; left: 10px; z-index: 3; width: 120px; font-size: 12px; padding: 3px 8px; border-radius: 9px; border: 1px solid rgba(190,150,120,0.5); background: #fffaf5; font-family: inherit; outline: none; }
+/* 一起看时聊的：聊天窗口里一段虚线框圈起来，左上角一行小字（js/desk/books.js 的 readerTgPaint） */
+#chatMsgList { position: relative; }
+#chatMsgList .cr-tg-start { margin-top: 18px; }
+#chatMsgList .cr-tg-end { margin-bottom: 6px; }
+.cr-tg-layer { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; }
+.cr-tg-box { position: absolute; left: 6px; right: 6px; border: 1.5px dashed rgba(214, 130, 160, 0.55); border-radius: 16px; }
+.cr-tg-label { position: absolute; top: 3px; left: 10px; font-size: 10.5px; color: rgba(190, 110, 140, 0.85); max-width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

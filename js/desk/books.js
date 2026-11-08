@@ -186,7 +186,7 @@ function readerGo(d) {
 }
 document.getElementById('readerPrev').addEventListener('click', function() { readerGo(-1); });
 document.getElementById('readerNext').addEventListener('click', function() { readerGo(1); });
-document.getElementById('backReader').addEventListener('click', function() { appReader.classList.remove('active'); });
+document.getElementById('backReader').addEventListener('click', function() { appReader.classList.remove('active'); if (typeof setReaderChat === 'function') setReaderChat(false); });
 // 点页面左边三分之一上一页、右边三分之一下一页；左右滑也能翻
 (function() {
   var page = document.getElementById('readerPage'), sx = 0, sy = 0, moved = false;
@@ -196,8 +196,9 @@ document.getElementById('backReader').addEventListener('click', function() { app
     var dx = e.clientX - sx, dy = e.clientY - sy;
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { readerGo(dx < 0 ? 1 : -1); return; }
     if (moved) return;
+    // 点左边三分之一上一页，其余都是下一页（单手拇指够得着，用户要的）
     var r = page.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
-    if (x < 0.3) readerGo(-1); else if (x > 0.7) readerGo(1);
+    if (x < 0.33) readerGo(-1); else readerGo(1);
   });
 })();
 [['readerFontDown', -1], ['readerFontUp', 1]].forEach(function(b) {
@@ -272,13 +273,104 @@ function openTogether(idx) {
 }
 closeOnBackdrop(document.getElementById('togetherPickOverlay'));
 document.getElementById('togetherPickCancel').addEventListener('click', function() { document.getElementById('togetherPickOverlay').classList.remove('open'); });
-// 「聊这一页」：回到聊天，输入框上面引用这一页，写完发出去，再点 ❄️ 和 TA 聊
-document.getElementById('readerTgChat').addEventListener('click', function() {
-  var meta = bookMeta(readerState.id), c = readerTogetherChar();
-  if (!meta || !c) return;
-  appReader.classList.remove('active');
-  var t = bookPageText(meta.id, readerState.page).replace(/\s+/g, ' ');
-  if (typeof setQuote === 'function') setQuote({ author: '《' + meta.title + '》第 ' + (readerState.page + 1) + ' 页', text: t.length > 60 ? t.slice(0, 60) + '…' : t });
+// ---------- 边看边聊（用户要的：以前要退出去发消息、再点一起看回来，很别扭） ----------
+// 下面小栏点「聊天」展开一个小聊天面板：最近的聊天记录、输入框（回车发出去，和聊天窗口一样不叫 TA）、❄️ 请 TA 回（生成中变 ⏹）、📖 带上这一页。
+// 发的就是聊天窗口里的消息：走聊天室那一套（appendUserMsg / sendMsg），面板只是照着聊天记录画一份；聊天窗口那边有变化（新消息、正在输入的预览）就跟着重画
+var readerChatOpen = false, readerChatQuote = false, readerChatTimer = null;
+function readerChatChar() { return readerTogetherChar(); }
+// 确保聊天室停在这个角色的聊天窗口（一起看是从聊天里点进来的，一般已经是了）
+function readerChatEnsureRoom(c) {
+  var idx = findCharIdx(c.id);
+  if (idx < 0) return false;
+  if (!(appChatRoom.classList.contains('active') && openingChatCharIdx === idx)) {
+    openingChatCharIdx = idx;
+    renderRoomLists(idx);
+    appChatRoom.classList.add('active');
+  }
+  if (currentCrSubView !== 'chat') switchChatRoomSubView('chat');
+  return true;
+}
+function readerChatRender() {
+  var box = document.getElementById('readerChatList'), c = readerChatChar();
+  if (!readerChatOpen || !c) return;
+  var idx = findCharIdx(c.id), hist = idx < 0 ? [] : getChatHistory(idx);
+  box.innerHTML = '';
+  hist.slice(-30).forEach(function(m) {
+    if (m.recalled) return;
+    if (m.note || m.pat) { var n = document.createElement('div'); n.className = 'reader-chat-note'; n.textContent = m.note || '拍了拍'; box.appendChild(n); return; }
+    var mine = m.role === 'user', text = typeof msgPreviewText === 'function' ? msgPreviewText(m) : String(m.content || '');
+    if (!mine) text = fillMacros(text, c);
+    // 角色的 *动作* 拿出来变成小灰字，和聊天窗口一样
+    var acts = [];
+    if (!mine) text = text.replace(/\*([^*\n]+)\*/g, function(_, t) { acts.push(t.trim()); return ''; }).replace(/〔译〕[\s\S]*$/, '').trim();
+    if (text) {
+      var row = document.createElement('div');
+      row.className = 'reader-chat-msg ' + (mine ? 'me' : 'ta');
+      if (m.quote && mine) { var q = document.createElement('span'); q.className = 'reader-chat-q'; q.textContent = m.quote.author; row.appendChild(q); }
+      row.appendChild(document.createTextNode(text));
+      box.appendChild(row);
+    }
+    acts.forEach(function(t) { var a = document.createElement('div'); a.className = 'reader-chat-act'; a.textContent = t; box.appendChild(a); });
+  });
+  // 正在回：聊天窗口里冒出来的预览气泡照抄过来，最后放「正在输入」
+  var g = typeof genStates !== 'undefined' && genStates[genKey(c, true)];
+  if (g) {
+    Array.prototype.forEach.call(document.querySelectorAll('#chatMsgList .cr-stream-preview .chat-msg-bubble'), function(b) {
+      var t = b.textContent.trim();
+      if (!t) return;
+      var row = document.createElement('div'); row.className = 'reader-chat-msg ta'; row.textContent = t; box.appendChild(row);
+    });
+    var dots = document.createElement('div'); dots.className = 'reader-chat-msg ta reader-chat-typing'; dots.textContent = '正在输入…'; box.appendChild(dots);
+  }
+  box.scrollTop = box.scrollHeight;
+  var ask = document.getElementById('readerChatAsk');
+  ask.textContent = g ? '⏹' : '❄️';
+  ask.setAttribute('aria-label', g ? '停止' : '请求回复');
+}
+function readerChatSoon() { clearTimeout(readerChatTimer); readerChatTimer = setTimeout(readerChatRender, 60); }
+new MutationObserver(function() { readerTgTag(); if (readerChatOpen && appReader.classList.contains('active')) readerChatSoon(); })
+  .observe(document.getElementById('chatMsgList'), { childList: true, subtree: true, characterData: true });
+if (typeof syncGenBtn === 'function') { var _readerSyncGen = syncGenBtn; syncGenBtn = function() { _readerSyncGen(); readerChatSoon(); }; }
+function setReaderChat(on) {
+  readerChatOpen = !!on && !!readerChatChar();
+  appReader.classList.toggle('chat-open', readerChatOpen);
+  document.getElementById('readerTgChat').textContent = readerChatOpen ? '收起' : '聊天';
+  if (readerChatOpen) { readerChatRender(); }
+}
+document.getElementById('readerTgChat').addEventListener('click', function() { setReaderChat(!readerChatOpen); });
+document.getElementById('readerChatPage').addEventListener('click', function() {
+  readerChatQuote = !readerChatQuote;
+  this.classList.toggle('on', readerChatQuote);
+  showToast(readerChatQuote ? '下一条会带上这一页' : '不带这一页了', 'plain');
+});
+function readerChatSend() {
+  var inp = document.getElementById('readerChatInput'), text = inp.value.trim(), c = readerChatChar(), meta = bookMeta(readerState.id);
+  if (!text || !c || !meta || !readerChatEnsureRoom(c)) return;
+  if (readerChatQuote) {
+    var t = bookPageText(meta.id, readerState.page).replace(/\s+/g, ' ');
+    setQuote({ author: '《' + meta.title + '》第 ' + (readerState.page + 1) + ' 页', text: t.length > 60 ? t.slice(0, 60) + '…' : t });
+    readerChatQuote = false;
+    document.getElementById('readerChatPage').classList.remove('on');
+  }
+  appendUserMsg(text);
+  var hist = getChatHistory(findCharIdx(c.id)), last = hist[hist.length - 1];
+  if (last && last.role === 'user') { last.tg = meta.id; saveHistories(); readerTgPaintSoon(); }   // 一起看时聊的：回到聊天窗口用虚线框圈起来
+  if (typeof markChatActive === 'function') markChatActive();
+  inp.value = ''; inp.style.height = '';
+  readerChatRender();
+}
+document.getElementById('readerChatInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); readerChatSend(); }
+});
+document.getElementById('readerChatInput').addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 72) + 'px'; });
+document.getElementById('readerChatAsk').addEventListener('click', function() {
+  var c = readerChatChar();
+  if (!c || !readerChatEnsureRoom(c)) return;
+  if (document.getElementById('readerChatInput').value.trim()) readerChatSend();   // 打了字没按回车，先发出去
+  if (genHere()) { stopGenerating(); return; }
+  readerTgPending = { charId: c.id, book: readerState.id, from: Date.now() };   // 这次 TA 回的也算一起看时聊的
+  sendMsg('', true);
+  readerChatRender();
 });
 document.getElementById('readerTgStop').addEventListener('click', function() {
   var meta = bookMeta(readerState.id), c = readerTogetherChar();
@@ -287,6 +379,7 @@ document.getElementById('readerTgStop').addEventListener('click', function() {
     delete bookTogether[c.id];
     saveBookTogether();
     togetherNote(c, '你们不一起看《' + meta.title + '》了', '（你们暂时不一起看《' + meta.title + '》了）');
+    setReaderChat(false);
     renderReader();
   });
 });
@@ -304,7 +397,7 @@ function togetherContextLine(char) {
 document.getElementById('readerCoverBtn').addEventListener('click', function() {
   var meta = bookMeta(readerState.id);
   if (!meta) return;
-  document.getElementById('readerTocOverlay').classList.remove('open');
+  document.getElementById('bookEditOverlay').classList.remove('open');
   var book = Array.from(document.querySelectorAll('.notes-shelf-area .book')).filter(function(b) { return b._novel === meta.id; })[0];
   openImgPicker(function(src) {
     meta.cover = src; saveBookMetas();
@@ -319,3 +412,97 @@ document.getElementById('readerCoverBtn').addEventListener('click', function() {
     if (book) { book.style.backgroundImage = ''; applyBookCover(book, book._color, ''); var t = book.querySelector('.book-title'); if (t) t.classList.remove('on-img'); syncShelves(); }
   } } : null);
 });
+
+// 改书名（用户要的：导入的文件名有时候很长）：阅读器右上角 ✎ →「改书名」；书架上那本跟着改
+function openBookRename() {
+  var meta = bookMeta(readerState.id);
+  if (!meta) return;
+  document.getElementById('bookEditOverlay').classList.remove('open');
+  var inp = document.getElementById('bookRenameInput');
+  inp.value = meta.title;
+  document.getElementById('bookRenameOverlay').classList.add('open');
+  setTimeout(function() { inp.focus(); inp.select(); }, 50);
+}
+function doBookRename() {
+  var meta = bookMeta(readerState.id), n = document.getElementById('bookRenameInput').value.trim().slice(0, 40);
+  if (!meta) return;
+  if (!n) { shakeEl(document.getElementById('bookRenameInput')); return; }
+  meta.title = n; saveBookMetas();
+  Array.prototype.forEach.call(document.querySelectorAll('.notes-shelf-area .book'), function(b) {
+    if (b._novel !== meta.id) return;
+    var t = b.querySelector('.book-title'); if (t) t.textContent = n;
+    var l = b.parentNode && b.parentNode.querySelector('.book-label'); if (l) l.textContent = n;
+  });
+  if (typeof saveShelves === 'function') saveShelves();
+  document.getElementById('bookRenameOverlay').classList.remove('open');
+  renderReader();
+  showToast('✓ 改好了', 'success');
+}
+document.getElementById('readerRenameBtn').addEventListener('click', openBookRename);
+document.getElementById('readerEditBtn').addEventListener('click', function() { document.getElementById('bookEditOverlay').classList.add('open'); });
+document.getElementById('bookEditClose').addEventListener('click', function() { document.getElementById('bookEditOverlay').classList.remove('open'); });
+closeOnBackdrop(document.getElementById('bookEditOverlay'));
+document.getElementById('bookRenameOk').addEventListener('click', doBookRename);
+document.getElementById('bookRenameInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doBookRename(); } });
+document.getElementById('bookRenameCancel').addEventListener('click', function() { document.getElementById('bookRenameOverlay').classList.remove('open'); });
+closeOnBackdrop(document.getElementById('bookRenameOverlay'));
+
+// ---------- 一起看时聊的，回到聊天窗口用虚线框圈起来（用户要的） ----------
+// 在阅读器里发的消息、在阅读器里点 ❄️ 回的消息记 m.tg = 书的 id；聊天列表里连着的这几条外面画一个虚线框，左上角写「一起看《书名》时聊的」
+var readerTgPending = null;   // { charId, book, from }：这次请 TA 回的，回来的消息都记上
+function readerTgTag() {
+  var p = readerTgPending;
+  if (!p) return;
+  var idx = findCharIdx(p.charId);
+  if (idx < 0) { readerTgPending = null; return; }
+  var changed = false;
+  getChatHistory(idx).forEach(function(m) { if (m.role === 'assistant' && !m.tg && m.time >= p.from) { m.tg = p.book; changed = true; } });
+  if (changed) { saveHistories(); readerTgPaintSoon(); }
+  if (!genStates[genKey(charList[idx], true)]) readerTgPending = null;   // 回完了
+}
+var readerTgRaf = 0;
+function readerTgPaintSoon() { if (!readerTgRaf) readerTgRaf = requestAnimationFrame(function() { readerTgRaf = 0; readerTgPaint(); }); }
+function readerTgPaint() {
+  var list = document.getElementById('chatMsgList');
+  if (!list) return;
+  var layer = list.querySelector(':scope > .cr-tg-layer');
+  list.querySelectorAll('.cr-tg-start, .cr-tg-end').forEach(function(el) { el.classList.remove('cr-tg-start', 'cr-tg-end'); });
+  var groups = [], g = null;
+  Array.prototype.forEach.call(list.children, function(el) {
+    if (el === layer) return;
+    var m = el._msg;
+    if (m) {
+      if (m.tg && g && g.book === m.tg) { g.last = el; return; }
+      g = m.tg ? { book: m.tg, first: el, last: el } : null;
+      if (g) groups.push(g);
+      return;
+    }
+    if (g && el.matches('.cr-action-note, .cr-msg-stamp')) g.last = el;   // 跟在后面的动作小字、小时间也框进去
+  });
+  if (!groups.length) { if (layer) layer.remove(); return; }
+  if (!layer) { layer = document.createElement('div'); layer.className = 'cr-tg-layer'; list.appendChild(layer); }
+  groups.forEach(function(gr) { gr.first.classList.add('cr-tg-start'); gr.last.classList.add('cr-tg-end'); });
+  layer.innerHTML = '';
+  groups.forEach(function(gr) {
+    var top = gr.first.offsetTop - 22, bottom = gr.last.offsetTop + gr.last.offsetHeight + 8;
+    var box = document.createElement('div');
+    box.className = 'cr-tg-box';
+    box.style.top = top + 'px';
+    box.style.height = Math.max(20, bottom - top) + 'px';
+    var meta = bookMeta(gr.book), lab = document.createElement('span');
+    lab.className = 'cr-tg-label';
+    lab.textContent = '📖 一起看' + (meta ? '《' + meta.title + '》' : '') + '时聊的';
+    box.appendChild(lab);
+    layer.appendChild(box);
+  });
+}
+(function() {
+  var list = document.getElementById('chatMsgList');
+  new MutationObserver(function(ms) {
+    if (ms.some(function(m) { return m.removedNodes.length || Array.prototype.some.call(m.addedNodes, function(n) { return !(n.classList && n.classList.contains('cr-tg-layer')); }); })) readerTgPaintSoon();
+  }).observe(list, { childList: true });
+  window.addEventListener('resize', readerTgPaintSoon);
+  list.addEventListener('load', readerTgPaintSoon, true);   // 图片加载完高度变了
+  // 从阅读器回到聊天窗口时重新量一下（藏着的时候量不出位置）
+  new MutationObserver(function() { if (!appReader.classList.contains('active')) readerTgPaintSoon(); }).observe(appReader, { attributes: true, attributeFilter: ['class'] });
+})();
