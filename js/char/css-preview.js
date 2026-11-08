@@ -55,7 +55,7 @@ function cssPreviewRoomHtml(a, c) {
   if (other) other.innerHTML = '';
   var part = cssPreviewPart(a, c), bg = part.chatBg || DEFAULT_CHAT_BG;
   var content = room.querySelector('#chatRoomContent');
-  if (content) content.style.background = bg.image ? 'url(' + bg.image + ') center / cover no-repeat' : (bg.color || '');
+  if (content) content.style.background = bg.image ? 'url(' + bg.image + ') center / cover no-repeat' : (tplBgColor(part) || bg.color || '');
   return { html: room.outerHTML, css: lookCss(part, '#appChatRoom') + '\n' + (part.customCss || ''), global: globalCss };
 }
 // 全局样式：桌面（时钟、图标、程序坞）

@@ -58,7 +58,7 @@ function commitAssistantReply(hist, raw, list, empty) {
   // 聊天窗口：角色发的照片 <照片>画面</照片> 拆成单独一条（js/chat/img-use.js）
   if (rc && chatHistories[rc.id] === hist && typeof photoSplitParts === 'function') parts = photoSplitParts(parts, hist);
   // 聊天窗口：像微信那样一句一个气泡（每次回复条数设成 1 的角色除外）
-  if (rc && chatHistories[rc.id] === hist && Object.assign({}, DEFAULT_CHAT_CFG, rc.chatCfg || {}).replyMax > 1) parts = chatSplitLines(parts);
+  if (rc && chatHistories[rc.id] === hist && Object.assign({}, DEFAULT_CHAT_CFG, rc.chatCfg || {}).replyMax > 1 && !(typeof charBigBubble === 'function' && charBigBubble(rc))) parts = chatSplitLines(parts);   // 仿siya：一整个大气泡，不拆
   // 聊天窗口：<撤回>…</撤回> 拆成单独一条，先显示两秒再变成撤回提示
   if (rc && chatHistories[rc.id] === hist) parts = splitRecallParts(parts);
   // 聊天窗口：回复里的「[表情包：名字]」拆成单独的表情包消息（见 js/chat/stickers.js）
@@ -272,7 +272,7 @@ function sendMsg(userText, requestOnly, onDone) {
   // 聊天窗口边生成边出气泡：写完一行（或 |||）就先冒出一个气泡，正在写的那句只显示「正在输入」的小点
   // 这些气泡只是预览，回复完整收到后换成正式的消息（拆法和 commitAssistantReply 一样，看起来不会跳）
   var rcCfg = Object.assign({}, DEFAULT_CHAT_CFG, (replyChar && replyChar.chatCfg) || {});
-  var bubbleStream = isChatView && rcCfg.replyMax > 1;
+  var bubbleStream = isChatView && rcCfg.replyMax > 1 && !(typeof charBigBubble === 'function' && charBigBubble(replyChar));   // 仿siya 不一句句冒出来
   var previewRows = [], previewParts = [];
   function clearPreview() {
     previewRows.forEach(function(r) { (r._actionNotes || []).forEach(function(x) { x.remove(); }); r.remove(); });

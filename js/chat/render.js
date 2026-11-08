@@ -55,12 +55,13 @@ function setBubbleText(bubble, content, isAi, isChat) {
   bubble.classList.remove('cr-html-bubble');
   var i = isAi ? content.indexOf('〔译〕') : -1;
   var main = i < 0 ? content : content.slice(0, i).trim();
-  var parts = (isAi && isChat) ? splitActions(main) : { before: [], text: main, after: [] };
+  var big = isAi && isChat && typeof charBigBubble === 'function' && charBigBubble(charList[openingChatCharIdx]);   // 仿siya：动作留在气泡里
+  var parts = (isAi && isChat && !big) ? splitActions(main) : { before: [], text: main, after: [] };
   // 只有动作、没有说话：这条就只是一行动作小字
   var onlyAction = i < 0 && !parts.text && (parts.before.length + parts.after.length) > 0;
   bubble.classList.toggle('cr-action-only', onlyAction);
   if (onlyAction) parts = { before: [], text: parts.before.concat(parts.after).join(' '), after: [] };
-  if (!isChat && !onlyAction && DRAMA_DQ_RE.test(parts.text)) fillDramaText(bubble, parts.text);
+  if ((!isChat || big) && !onlyAction && DRAMA_DQ_RE.test(parts.text)) fillDramaText(bubble, parts.text);
   else bubble.textContent = parts.text;
   bubble._actions = parts;
   if (i >= 0) {
@@ -153,13 +154,14 @@ function addDramaHead(row, bubble, m) {
   head.appendChild(acts);
   row.insertBefore(head, bubble);
 }
-// 剧情窗口里引号中的对话包成 .cr-dq：文本框风格给它换颜色（像酒馆美化那样一眼分出说话和叙述），气泡格式不加颜色
-var DRAMA_DQ_RE = /(“[^”\n]*”|「[^」\n]*」|"[^"\n]*")/;
+// 剧情窗口里引号中的对话包成 .cr-dq：文本框风格给它换颜色（像酒馆美化那样一眼分出说话和叙述），气泡格式不加颜色；
+// *动作* 包成 .cr-act（星号留着），仿siya 给它浅紫色。聊天窗口用了仿siya 时也这样包（动作留在气泡里）
+var DRAMA_DQ_RE = /(“[^”\n]*”|「[^」\n]*」|"[^"\n]*"|\*[^*\n]+\*)/;
 function fillDramaText(el, text) {
   el.textContent = '';
   String(text).split(DRAMA_DQ_RE).forEach(function(part, i) {
     if (!part) return;
-    if (i % 2) { var sp = document.createElement('span'); sp.className = 'cr-dq'; sp.textContent = part; el.appendChild(sp); }
+    if (i % 2) { var sp = document.createElement('span'); sp.className = part.charAt(0) === '*' ? 'cr-act' : 'cr-dq'; sp.textContent = part; el.appendChild(sp); }
     else el.appendChild(document.createTextNode(part));
   });
 }

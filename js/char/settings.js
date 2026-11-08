@@ -132,7 +132,10 @@ function renderBubbleTpls() {
   var base = { preset: p ? parseInt(p.dataset.preset, 10) : 0, opacity: parseInt(bubbleOpacitySlider.value, 10), effect: 'none' };
   var css = '';
   row.innerHTML = '';
-  BUBBLE_TPLS.forEach(function(t) {
+  var drama = typeof csLookView !== 'undefined' && csLookView === 'drama';
+  var tpls = BUBBLE_TPLS.filter(function(t) { return drama ? !t.chat : !t.drama; });   // 聊天窗口、剧情窗口各有各的（剧情窗口是默认和剧情版仿siya）
+  if (!tpls.some(function(t) { return t.id === bubbleTplCur; })) bubbleTplCur = 'plain';
+  tpls.forEach(function(t) {
     var c = document.createElement('div');
     c.className = 'bubble-tpl' + (t.id === bubbleTplCur ? ' selected' : '');
     c.id = 'btpl-' + t.id;
@@ -585,7 +588,7 @@ function paintLookPreview() {
   var p = csLookParts[csLookView];
   var box = document.getElementById('csLookPreview');
   var bg = p.chatBg || DEFAULT_CHAT_BG;
-  box.style.background = bg.image ? 'url(' + bg.image + ') center / cover no-repeat' : (bg.color || DEFAULT_CHAT_BG.color);
+  box.style.background = bg.image ? 'url(' + bg.image + ') center / cover no-repeat' : ((typeof tplBgColor === 'function' && tplBgColor(p)) || bg.color || DEFAULT_CHAT_BG.color);
   csLookPreviewStyle.textContent = (typeof lookCss === 'function') ? lookCss(p, '#csLookPreview') : '';
   renderBubbleTpls();   // 换了主题色、透明度，模板小卡片跟着变
 }

@@ -75,19 +75,55 @@ var DRAMA_BOX_STYLES = [
   { id: 'night', name: '夜色', lay: 'center', desc: '深色半透明，浅色字，对话是暖暖的金色，头像在中间', sw: ['#25223a', '#ebe5f3', '#f0c987'] }
 ];
 // 气泡模板（聊天窗口、剧情窗口的气泡格式，bubble.tpl）：换的是气泡的样子（形状、边框、质感），颜色还用「主题」里选的那一对和透明度（用户要的「气泡模式的预设」）
+// chat: true 的只给聊天窗口（用户说这几种适合聊天窗口），drama: true 的只给剧情窗口；
+// 仿siya 照用户给的截图仿的，聊天和剧情各一套、不一样（用户要的）：聊天 = 深紫大气泡、白色粗字、动作浅紫字留在气泡里；剧情 = 更宽的深紫渐变长框、叙述浅紫细字、对话白色粗字、行距大，像在读剧情。两套都不显示头像，顶栏输入栏深色
 var BUBBLE_TPLS = [
   { id: 'plain', name: '默认', desc: '圆圆的气泡，靠头像那一角收尖一点' },
-  { id: 'tail', name: '小尾巴', desc: '方一点的气泡，朝头像那边伸出一个小尖角' },
-  { id: 'jelly', name: '果冻', desc: '胖胖的胶囊形，上面一层亮光，像果冻' },
-  { id: 'line', name: '线框', desc: '浅浅的底，主题色描一圈细边，清爽' },
-  { id: 'glass', name: '毛玻璃', desc: '半透明，透出背景图，带一点主题色' },
-  { id: 'sticker', name: '贴纸', desc: '一圈白边加投影，像贴在屏幕上的小贴纸' },
-  { id: 'night', name: '夜色', desc: '深色气泡、浅色字，晚上看不刺眼' }
+  { id: 'tail', name: '小尾巴', chat: true, desc: '方一点的气泡，朝头像那边伸出一个小尖角' },
+  { id: 'jelly', name: '果冻', chat: true, desc: '胖胖的胶囊形，上面一层亮光，像果冻' },
+  { id: 'line', name: '线框', chat: true, desc: '浅浅的底，主题色描一圈细边，清爽' },
+  { id: 'glass', name: '毛玻璃', chat: true, desc: '半透明，透出背景图，带一点主题色' },
+  { id: 'sticker', name: '贴纸', chat: true, desc: '一圈白边加投影，像贴在屏幕上的小贴纸' },
+  { id: 'night', name: '夜色', chat: true, desc: '深色气泡、浅色字，晚上看不刺眼' },
+  { id: 'siya', name: '仿siya', chat: true, desc: '深紫色的大气泡、白色粗字，动作描写是浅紫色、留在气泡里；TA 的一次回复是一整个大气泡（不拆成一句一条）；不显示头像，顶栏和输入栏变深色。颜色是固定的，不跟主题色，换个好看的背景图更像' },
+  { id: 'siyad', name: '仿siya', drama: true, desc: '剧情版：更宽的深紫渐变长框，叙述是浅紫细字、对话是白色粗字，行距大，像在读剧情；你的是深灰紫框；不显示头像，顶栏和输入栏变深色。颜色固定，不跟主题色' }
 ];
+// 聊天窗口用了仿siya：TA 的一次回复不拆成一句一条、动作描写留在气泡里（reply.js、render.js 用）
+function charBigBubble(char) { return !!(char && char.bubble && char.bubble.tpl === 'siya'); }
 function hexDarken(hex, k) {
   var n = parseInt(String(hex).slice(1), 16);
   var f = function(v) { return Math.max(0, Math.round(v * (1 - k))); };
   return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')';
+}
+// 仿siya 没换背景图时的底色：纯色灰（用户要的，不要渐变）；换了图就用图
+var SIYA_BG = '#46444d';
+function tplBgColor(part) {
+  var t = part && part.bubble && part.bubble.tpl, look = (part && part.look) || {};
+  return (t === 'siya' || t === 'siyad') && look.format !== 'box' && look.format !== 'custom' && look.format !== 'text' ? SIYA_BG : '';
+}
+// 仿siya 两套共用的：不显示头像，小时间、时间条、顶栏、输入栏换成深色
+function siyaChrome(sel) {
+  var sc = sel.replace(/ \.chat-msg-row$/, '');
+  return sel + ' .chat-msg-avatar { display: none; }\n' +
+    sc + ' .cr-msg-stamp { color: rgba(255,255,255,0.7); text-shadow: 0 1px 2px rgba(0,0,0,0.3); }\n' +
+    sc + ' .cr-msg-stamp.user { margin-right: 6px; } ' + sc + ' .cr-msg-stamp.ai { margin-left: 6px; }\n' +
+    sc + ' .cr-time-sep { background: rgba(40,36,52,0.55); color: rgba(255,255,255,0.88); padding: 3px 12px; border-radius: 10px; }\n' +
+    sc + ' .cr-action-note { color: #e6defa; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }\n' +
+    sc + ' .settings-nav { background: rgba(30,28,38,0.94) !important; border-bottom: none !important; box-shadow: none !important; }\n' +
+    sc + ' .settings-nav .chat-room-main-title, ' + sc + ' .settings-nav .chat-room-sub-title { color: #fff !important; text-shadow: 0 1px 3px rgba(0,0,0,0.35); }\n' +
+    sc + ' .settings-nav svg { stroke: #fff !important; }\n' +
+    sc + ' .settings-nav .msg-toggle-wrap { background: rgba(255,255,255,0.18) !important; }\n' +
+    sc + ' .chat-room-bottom { background: rgba(26,24,34,0.94) !important; border-top: none !important; box-shadow: none !important; }\n' +
+    sc + ' .cr-input { background: rgba(66,62,78,0.95) !important; color: #f2eef8 !important; }\n' +
+    sc + ' .cr-input::placeholder { color: rgba(242,238,248,0.5); }\n' +
+    sc + ' .cr-icon-btn { background: rgba(255,255,255,0.12) !important; color: #f2eef8 !important; }\n' +
+    sc + ' .cr-icon-btn svg { stroke: #f2eef8 !important; }\n' +
+    sc + ' .cr-symbol-bar button { background: rgba(255,255,255,0.12) !important; color: #f2eef8 !important; border-color: transparent !important; }\n' +
+    // 手机最上面的时间、信号、电量：顶栏深了就用白色（只在聊天室是最上面那一层时）
+    (sc === '#appChatRoom' ? (function() {
+      var on = '.phone:has(#appChatRoom.active):not(:has(.app-screen.active:not(#appChatRoom)))';
+      return on + ' .status-time { color: #fff; }\n' + on + ' .signal-bars span, ' + on + ' .battery-fill, ' + on + ' .battery-cap { background: #fff; }\n' + on + ' .battery-body { border-color: #fff; }\n';
+    })() : '');
 }
 function bubbleTplCss(sel, tpl, colors, op) {
   var T = ' .chat-msg-bubble:not(.error):not(.img-bubble):not(.sticker-bubble):not(.cr-narr):not(.cr-action-only)';
@@ -107,6 +143,15 @@ function bubbleTplCss(sel, tpl, colors, op) {
     A + ' { background: linear-gradient(' + hexToRgba(colors[0], 0.3) + ', ' + hexToRgba(colors[0], 0.3) + '), rgba(255,255,255,0.35); }\n' +
     U + ' { background: linear-gradient(' + hexToRgba(colors[1], 0.3) + ', ' + hexToRgba(colors[1], 0.3) + '), rgba(255,255,255,0.35); }\n';
   if (tpl === 'sticker') return both + ' { border-radius: 14px; border: 2.5px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.05), 0 4px 10px rgba(80,60,80,0.14); }\n';
+  if (tpl === 'siya') return siyaChrome(sel) + both + ' { max-width: 84%; padding: 14px 18px; border-radius: 16px; color: #fff; font-weight: 600; letter-spacing: 1px; line-height: 1.65; box-shadow: 0 4px 14px rgba(20,14,40,0.22); }\n' +
+    A + ' { background: rgba(76,58,148,' + Math.max(0.9, op) + '); border-bottom-left-radius: 6px; }\n' +
+    U + ' { background: rgba(72,66,88,' + Math.max(0.9, op) + '); border-bottom-right-radius: 6px; }\n' +
+    sel + ' .cr-act { color: #cfc3ee; font-weight: 400; }\n';
+  if (tpl === 'siyad') return siyaChrome(sel) + both + ' { max-width: 92%; padding: 18px 20px; border-radius: 18px; letter-spacing: 1px; line-height: 1.95; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 6px 20px rgba(20,14,40,0.28); }\n' +
+    A + ' { background: linear-gradient(160deg, rgba(58,42,118,' + Math.max(0.9, op) + '), rgba(88,64,156,' + Math.max(0.9, op) + ')); color: #d9cff2 !important; font-weight: 400; border-top-left-radius: 6px; }\n' +
+    U + ' { background: rgba(56,52,70,' + Math.max(0.9, op) + '); color: #f2eef8 !important; font-weight: 500; max-width: 80%; border-top-right-radius: 6px; }\n' +
+    sel + ' .cr-dq { color: #fff; font-weight: 700; }\n' +
+    sel + ' .cr-act { color: #b9ace2; font-style: italic; }\n';
   if (tpl === 'night') return both + ' { color: #eee8f6; }\n' +
     A + ' { background: rgba(40,36,62,' + Math.max(0.75, op) + '); }\n' + U + ' { background: rgba(64,54,92,' + Math.max(0.75, op) + '); }\n';
   return '';
@@ -195,8 +240,8 @@ function applyChatRoomStyle(char) {
   var bg = part.chatBg || DEFAULT_CHAT_BG;
   if (bg.image) {
     content.style.background = 'url(' + bg.image + ') center / cover no-repeat';
-  } else if (bg.color) {
-    content.style.background = bg.color;
+  } else if (tplBgColor(part) || bg.color) {
+    content.style.background = tplBgColor(part) || bg.color;
   }
 
   // 状态栏样式只属于聊天窗口
