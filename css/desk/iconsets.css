@@ -1,0 +1,48 @@
+/* 眠花糖机 — 桌面图标风格（外观「桌面图标 → 图标风格」，js/desk/desk-icons.js）：自带的整套图标，没有方块底，可加描边 / 阴影 / 发光 */
+/* .phone 上的 iconset-<名字> 选哪套、icon-fx-<效果> 选效果；单个图标自己换过图片 / emoji 的（.dock-own）照它自己的 */
+.phone[class*="iconset-"] .dock-item[id] > .dock-icon:not(.dock-own) {
+  background: transparent center / contain no-repeat; border: none; box-shadow: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 0; font-size: 0; color: transparent;
+  width: 54px; height: 54px; margin: -2px auto;
+}
+.phone[class*="iconset-"] .dock-item[id] > .dock-icon:not(.dock-own) > * { display: none; }
+.phone[class*="iconset-"] .dock-item:active > .dock-icon:not(.dock-own) { box-shadow: none; }
+/* 效果 */
+.phone.icon-fx-stroke[class*="iconset-"] .dock-item[id] > .dock-icon:not(.dock-own) { filter: drop-shadow(1.2px 0 0 #fff) drop-shadow(-1.2px 0 0 #fff) drop-shadow(0 1.2px 0 #fff) drop-shadow(0 -1.2px 0 #fff) drop-shadow(0 2px 4px rgba(120, 90, 120, 0.18)); }
+.phone.icon-fx-shadow[class*="iconset-"] .dock-item[id] > .dock-icon:not(.dock-own) { filter: drop-shadow(0 4px 6px rgba(110, 80, 110, 0.28)) drop-shadow(0 1px 2px rgba(110, 80, 110, 0.18)); }
+.phone.icon-fx-glow[class*="iconset-"] .dock-item[id] > .dock-icon:not(.dock-own) { filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 9px rgba(255, 236, 246, 0.9)); }
+/* 外观设置里的小预览也用同一套 */
+.desk-icon-prev.iconset-img { background: transparent center / contain no-repeat; box-shadow: none; border: none; }
+/* 外观里的图标格子：铺一块像桌面的浅粉底，小图带上选的效果，看得到放到桌面上的样子 */
+.desk-icon-list { background: linear-gradient(160deg, #fdeef2, #f9e1e8); border-radius: 16px; padding: 12px 6px; }
+.desk-icon-list.icon-fx-stroke .desk-icon-prev.iconset-img { filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 2px 3px rgba(120, 90, 120, 0.18)); }
+.desk-icon-list.icon-fx-shadow .desk-icon-prev.iconset-img { filter: drop-shadow(0 3px 5px rgba(110, 80, 110, 0.28)) drop-shadow(0 1px 2px rgba(110, 80, 110, 0.18)); }
+.desk-icon-list.icon-fx-glow .desk-icon-prev.iconset-img { filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 8px rgba(255, 236, 246, 0.9)); }
+#deskIconPresetChips .feed-visible-chip { cursor: pointer; }
+.desk-icon-preset-reset { display: block; margin: 8px 0 0; padding: 6px 14px; font-size: 12.5px; }
+/* 纸片 */
+.phone.iconset-paper #dockNotes > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/notes.png); }
+.phone.iconset-paper #dockMemory > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/memory.png); }
+.phone.iconset-paper #dockGreenhouse > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/greenhouse.png); }
+.phone.iconset-paper #dockStarJar > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/starjar.png); }
+.phone.iconset-paper #dockLighthouse > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/lighthouse.png); }
+.phone.iconset-paper #dockMeet > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/meet.png); }
+.phone.iconset-paper #dockPet > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/pet.png); }
+.phone.iconset-paper #dockLetters > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/letters.png); }
+.phone.iconset-paper #dockSettings > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/settings.png); }
+.phone.iconset-paper #dockAppearance > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/appearance.png); }
+.phone.iconset-paper #dockChat > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/chat.png); }
+.phone.iconset-paper #dockPrompt > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/paper/prompt.png); }
+/* 软萌 */
+.phone.iconset-soft #dockNotes > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/notes.png); }
+.phone.iconset-soft #dockMemory > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/memory.png); }
+.phone.iconset-soft #dockGreenhouse > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/greenhouse.png); }
+.phone.iconset-soft #dockStarJar > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/starjar.png); }
+.phone.iconset-soft #dockLighthouse > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/lighthouse.png); }
+.phone.iconset-soft #dockMeet > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/meet.png); }
+.phone.iconset-soft #dockPet > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/pet.png); }
+.phone.iconset-soft #dockLetters > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/letters.png); }
+.phone.iconset-soft #dockSettings > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/settings.png); }
+.phone.iconset-soft #dockAppearance > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/appearance.png); }
+.phone.iconset-soft #dockChat > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/chat.png); }
+.phone.iconset-soft #dockPrompt > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/prompt.png); }

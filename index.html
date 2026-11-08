@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="css/core/image-picker.css">
   <link rel="stylesheet" href="css/desk/statusbar.css">
   <link rel="stylesheet" href="css/desk/desktop.css">
+  <link rel="stylesheet" href="css/desk/iconsets.css">
   <link rel="stylesheet" href="css/desk/widgets.css">
   <link rel="stylesheet" href="css/desk/appearance.css">
   <link rel="stylesheet" href="css/desk/bookshelf.css">
@@ -184,6 +185,8 @@
           if (dd) dd.textContent = now.getFullYear() + '年' + p2(now.getMonth() + 1) + '月' + p2(now.getDate()) + '日 星期' + '日一二三四五六'.charAt(now.getDay());
           var snap = null;
           try { snap = JSON.parse(localStorage.getItem('mphoneDeskSnap') || 'null'); } catch (e) {}
+          // 图标风格（js/desk/desk-icons.js）也先套上，不然先闪一下 emoji
+          try { var ics = JSON.parse(localStorage.getItem('mphoneIconSet') || 'null'); if (ics && ics.id) { var ph = document.querySelector('.phone'); ph.classList.add('iconset-' + ics.id); if (ics.fx) ph.classList.add('icon-fx-' + ics.fx); } } catch (e) {}
           if (!snap || !snap.pos) return;
           var g = document.getElementById('deskGrid');
           g.style.setProperty('--desk-cell', (g.clientWidth / 4 || 75) + 'px');
@@ -789,7 +792,18 @@
               <span class="toggle-slider"></span>
             </label>
           </div>
-          <div class="sb-custom-label">点一个图标换样子</div>
+          <div class="sb-row">
+            <span class="sb-row-label">图标效果</span>
+            <div class="pf-radio-row" id="deskIconFxRow"></div>
+          </div>
+          <div class="sb-custom-label" style="margin-top:6px;">没有方块底的图标（纸片、软萌这类）才有效果</div>
+          <div class="sb-custom-label" style="margin-top:12px;font-weight:600;">图标预设</div>
+          <div class="sb-custom-label" style="margin-top:2px;">点一下换上；自带的删不掉，改过可以恢复默认；自己存的长按删除</div>
+          <div class="feed-visible-list desk-icon-presets" id="deskIconPresetChips"></div>
+          <button class="mine-acc-btn desk-icon-preset-reset" id="deskIconPresetReset">恢复默认</button>
+          <div class="auto-row" style="margin-top:8px;"><input class="field-input" id="deskIconPresetName" type="text" maxlength="12" placeholder="给现在的图标起个名字" autocomplete="off">
+            <button class="mine-acc-btn mine-acc-btn-add" id="deskIconPresetSave" style="flex:none;padding:8px 14px;">存为预设</button></div>
+          <div class="sb-custom-label" style="margin-top:12px;">点一个图标换样子（改的是现在用的这个预设）</div>
           <div class="desk-icon-list" id="deskIconList"></div>
         </div>
 

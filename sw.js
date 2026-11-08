@@ -3,9 +3,9 @@
 // 只处理本站文件，AI / 语音 / 生图等外部接口请求完全不经过这里。
 
 // 文件拆分后 css/、js/ 也要预先缓存；改动这个列表时把版本号加一
-const CACHE = 'mphone-v44';
+const CACHE = 'mphone-v45';
 const CSS = ['core/base', 'core/app-screen', 'core/controls', 'core/avatar', 'core/image-picker',
-             'desk/statusbar', 'desk/desktop', 'desk/widgets', 'desk/appearance', 'desk/bookshelf',
+             'desk/statusbar', 'desk/desktop', 'desk/iconsets', 'desk/widgets', 'desk/appearance', 'desk/bookshelf',
              'settings/settings', 'settings/mcp', 'desk/desk-apps', 'desk/memory-lib', 'core/dialogs',
              'chat/tabs', 'chat/header', 'chat/contacts', 'chat/list', 'chat/new-chat',
              'chat/feed', 'char/settings', 'chat/mine', 'chat/room', 'chat/messages',
@@ -28,7 +28,11 @@ const JS = ['core/boot', 'core/utils', 'desk/statusbar', 'settings/api', 'core/a
   .map(function (n) { return './js/' + n + '.js'; });
 const CORE = ['./', './index.html', './manifest.webmanifest',
               './icons/icon.png', './icons/logo.png', './icons/badge.png', './icons/mianin.jpg']
-  .concat(CSS, JS);
+  .concat(CSS, JS)
+  .concat(['paper', 'soft'].reduce(function (a, s) {   // 桌面图标风格（css/desk/iconsets.css）
+    return a.concat(['notes', 'memory', 'greenhouse', 'starjar', 'lighthouse', 'meet', 'pet', 'letters', 'settings', 'appearance', 'chat', 'prompt']
+      .map(function (n) { return './icons/desk/' + s + '/' + n + '.png'; }));
+  }, []));
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
