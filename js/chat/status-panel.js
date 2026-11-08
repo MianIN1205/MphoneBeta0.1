@@ -124,6 +124,26 @@ function statusFontFollow(html) {
     return fonts.length && fonts.every(function(f) { return STATUS_GENERIC_FONTS.test(f); }) ? '' : all;
   });
 }
+// 小梦改状态栏的确认卡片上的效果图：拿这个角色最近一条状态栏，照改完的写法画一张（和面板里一样放进 Shadow DOM）；没有状态栏就不画
+function statusPreviewEl(a) {
+  var char = typeof findCharByName === 'function' ? findCharByName(a.target) : null;
+  if (!char) return null;
+  var hist = chatHistories[char.id] || [], last = null;
+  for (var i = hist.length - 1; i >= 0; i--) if (hist[i] && hist[i].status) { last = hist[i]; break; }
+  if (!last) return null;
+  var look = Object.assign({}, DEFAULT_LOOK, char.look || {}, typeof statusLookPatch === 'function' ? statusLookPatch(a) : {});
+  var spec = statusSpec(look), rx = spec ? statusRegexRender(spec, last.status) : null, body, lined = false;
+  if (rx) body = statusSafeHtml(fillMacros(rx, char));
+  else if (statusIsHtml(last.status)) body = statusSafeHtml(fillMacros(last.status, char));
+  else { body = statusTextHtml(fillMacros(last.status, char).replace(/\n+/g, '|')); lined = true; }
+  var wrap = document.createElement('div');
+  wrap.className = 'cr-action-status-preview';
+  var card = document.createElement('div');
+  card.className = 'cr-status-card' + (lined ? ' cr-status-lined' : '');
+  card.attachShadow({ mode: 'open' }).innerHTML = statusFontFollow('<style>:host{display:block}' + (look.statusCss || '') + '</style>' + body);
+  wrap.appendChild(card);
+  return wrap;
+}
 function renderStatusPanel() {
   var char = charList[openingChatCharIdx];
   crStatusPanel.innerHTML = '';
@@ -199,6 +219,18 @@ function renderStatusPanel() {
     count.textContent = (i + 1) + ' / ' + all.length;
   };
   track.addEventListener('scroll', syncCount, { passive: true });
+  // 保底：手指横着划（或者电脑上拖）但浏览器没自己滚的时候（卡片里的模板自己拦了手势之类），按方向翻到上一条 / 下一条
+  var sx = 0, sy = 0, sl = 0, down = false;
+  track.addEventListener('pointerdown', function(e) { down = true; sx = e.clientX; sy = e.clientY; sl = track.scrollLeft; });
+  track.addEventListener('pointerup', function(e) {
+    if (!down) return;
+    down = false;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5 || Math.abs(track.scrollLeft - sl) > 8) return;   // 不是横划，或者浏览器已经滚过了
+    var w = Math.max(1, track.clientWidth), i = Math.round(track.scrollLeft / w) + (dx < 0 ? 1 : -1);
+    track.scrollTo({ left: Math.max(0, Math.min(all.length - 1, i)) * w, behavior: 'smooth' });
+  });
+  track.addEventListener('pointercancel', function() { down = false; });
   track.scrollLeft = track.scrollWidth;
   syncCount();
 }

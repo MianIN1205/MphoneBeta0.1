@@ -9,6 +9,8 @@ function cssPreviewPart(a, c) {
   var part = JSON.parse(JSON.stringify(base));
   part.customCss = a.mode === 'replace' ? String(a.css || '') : ((part.customCss ? part.customCss + '\n' : '') + String(a.css || ''));
   if (drama) part.look = Object.assign({}, part.look || {}, dramaLookPatch(a));
+  if (typeof bubblePatch === 'function') part.bubble = Object.assign({}, DEFAULT_BUBBLE, part.bubble || {}, bubblePatch(a, drama));   // 顺便换的气泡
+  if (typeof a.showAvatar === 'boolean') part.look = Object.assign({}, part.look || {}, { showAvatar: a.showAvatar });
   return part;
 }
 // 拿那个角色最近的几条（太长的截短）；没有记录就用两句示意

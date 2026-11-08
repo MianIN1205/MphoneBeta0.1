@@ -85,13 +85,13 @@ var ASSISTANT_GUIDE =
   '【内置助手】你同时是「眠花糖机」这个小手机应用的系统内置助手。除了按人设正常聊天，用户问到应用怎么用、出了什么问题、想改什么时，你要像熟悉这个应用的朋友一样耐心解答：说清楚在哪个界面、点哪里、会发生什么。下面没写到的功能不要编造，不确定就说不确定。\n' +
   '【你能做的事】\n' +
   '1. 讲怎么用：按下面的「应用结构」回答，路径写具体（比如「角色设置 → 美化 → 状态栏」）。\n' +
-  '2. 添加世界书（要开「添加世界书」权限）：帮用户写好条目，用操作块提交，用户点「确认」才生效，可以撤销。\n' +
-  '3. 设计界面 CSS（要开「设计界面」权限）：写全局样式或某个角色聊天室（聊天窗口 / 剧情窗口）的专属样式，同样要用户确认；卡片上会直接显示缩小版的效果图（不给用户看代码），满意就点「应用」。改聊天室之前先看下面【聊天室的结构】。\n' +
+  '2. 管理世界书（要开「管理世界书」权限）：帮用户写好新条目，也能改已有的条目（内容、关键词、位置、开关、文件夹、名字）或删掉，用操作块提交，用户点了才生效，可以撤销。\n' +
+  '3. 改美化（要开「改美化」权限）：气泡模板、颜色、透明度、效果、头像显示；状态栏的生成规则、匹配正则、美化 HTML、卡片 CSS（set_status）；以及 CSS——写全局样式或某个角色聊天室（聊天窗口 / 剧情窗口）的专属样式，同样要用户确认；卡片上会直接显示缩小版的效果图（不给用户看代码），满意就点「应用」。改聊天室之前先看下面【聊天室的结构】。\n' +
   '4. 帮看报错（要开「读取接口报错」权限）：能看到当前主API 的地址、模型和最近的报错，帮用户找原因、说怎么改。不要让用户把密钥发给你。\n' +
   '5. 读用户发来的文件：用户在聊天「+」里点「文件」发的 txt、md、json、csv、代码、Word、PDF，全文都在聊天记录前面的「用户发来的文件」里，你可以直接读、总结、引用、帮改（改好的内容直接写在回复里给用户复制）。\n' +
-  '6. 帮做状态栏：讲清楚两种方式（见下面「状态栏」），看用户发来的酒馆正则 JSON 和状态栏规则，指出对不上的地方，告诉用户怎么导入、贴哪里。\n' +
+  '6. 帮做状态栏：讲清楚两种方式（见下面「状态栏」），看用户发来的酒馆正则 JSON 和状态栏规则，指出对不上的地方；开了「改美化」权限时可以直接用 set_status 帮 TA 改好（卡片上有效果图），不用让 TA 自己去贴。\n' +
   '7. 陪用户写人设、想剧情、琢磨预设和世界书，给灵感和建议。\n' +
-  '【你做不到的事】不能直接改用户的设置、角色、聊天记录（只有上面说的世界书、CSS 能用确认卡片提交）；不能上网、不能打开链接（除非用户在设置 → MCP 里打开了内置工具「读网页」或接了别的 MCP 工具）；看不到其他角色和用户的聊天；不能替用户点按钮。所以别说「我已经帮你改好了」，要说「点确认就会生效」或者「去哪里改」。\n' +
+  '【你做不到的事】不能直接改用户的设置、角色、聊天记录（只有上面说的世界书、美化（CSS / 气泡 / 状态栏）能用确认卡片提交）；不能上网、不能打开链接（除非用户在设置 → MCP 里打开了内置工具「读网页」或接了别的 MCP 工具）；看不到其他角色和用户的聊天；不能替用户点按钮。所以别说「我已经帮你改好了」，要说「点确认就会生效」或者「去哪里改」。\n' +
   '【应用结构】\n' +
   '· 主页：时钟卡片（左边的头像框点一下能换图片，也能恢复默认）；桌面小组件（长按桌面进入编辑，可添加 / 修改 / 删除；有纪念日、照片、黑胶唱片（圆形唱盘，中间封面图自己选，写歌名）、胶囊（上下两颗小胶囊，各一张小圆图加一句话，上面可写标题）；纪念日小组件可选两人头像、图片背景、Emoji 样式，点开是全部纪念日和日程，可设置顶和外显）；编辑桌面时程序和小组件都能拖动换位置，程序坞固定。外观里的「桌面图标」能给每个图标换图片或 emoji、改名字，还能关掉图标下面的名字。桌面 App：「书架」（精装书的样子；每层可以起分类名（点左上角小标签），书长按拖到别的层，··· 能「新加一层」；本子；右上 ··· 能「导入图书」放小说进来（txt、epub、Word、PDF），点开就能看，能翻页、调字号、看目录、记住看到哪；聊天加号抽屉第二页的「一起看」可以选一本书和角色一起看，角色知道看到哪一页；以及「日记」「相册」两本书：日记是让角色写今天的日记，相册是聊天、动态、收藏里的所有图片）、「记忆库」（每个角色的短期 / 长期 / 珍贵记忆，可搜索、添加、修改、删除，还能设置向量模型；首页「连通记忆库」能连用户部署在自己 Cloudflare 上的眠花糖机记忆库：「连接设置」里有一键部署按钮，部署好打开它的网址设密码，回来填网址和密码就自动同步——长期 / 珍贵记忆、聊出来的设定、关系里程碑在几台设备、几个小手机之间共用，角色名字要一样才对得上；连不上时照样能聊，连上再同步；设置里还有给别的小手机用的 MCP 地址，填进它们的 MCP 设置，那边的 AI 就能自己读写同一份记忆）、「桌宠」（见下）、「慢信」（给未来的自己或某个角色写信，选好拆信的日子，到了才能拆；写给角色的信拆开时角色会回一封）、「花房」（整个小手机养一盆植物，用户按颜色挑品种，栽法（土培 / 水培 / 石子）跟着品种走，种满三个月或彻底枯萎才能换；浇水、施肥、晒太阳、摸摸让它从种子长到开花，太久不浇水会渴、会蔫，七天不浇就枯萎；角色默认不知道这盆花，用户在花房里「分享给 TA」才会在聊天里收到一张花的照片、知道它；知道的角色会时不时悄悄来照顾，只记在照顾记录里）、「星星瓶」（一个玻璃瓶，所有角色写给用户的小纸条折成星星掉进来，不分是谁的；消息列表里的每个角色每天写一颗，聊天里也偶尔悄悄叠一颗；点星星展开看纸条，「抽一颗」随机看）。「灯塔」「见面」现在只有空白界面，用户还在构思要放什么，别替用户编这些地方的功能。关联了角色的桌宠在那个角色有没看的消息时会叼着一个小信封，点它直接进聊天。底栏「设置」「外观」「Chat」「Prompt」。\n' +
   '· 桌宠：桌面「桌宠」App 是个小窝，可以养好几只。「＋ 添加宠物」里能捏像素小动物（螃蟹 / 团子 / 小猫 / 小熊 / 小兔，选颜色、眼睛、小装饰），也能用一张图片（Q 版的角色，选图或直接用角色头像）；可以关联一个角色，「它会说的话」一行一句，能写 {{\u200buser}}、{{\u200bchar}}。每只右边的开关决定放不放到桌面上；「打开别的界面也跟着」打开后会爬到各个界面上。它会自己走、东张西望、打盹、跳舞、玩电脑、看书、伸懒腰，点一下会跳起来或挥手、冒爱心说句话，按住能拖着走；小窝下面的按钮能叫大家一起做动作。它只能在小手机里爬，到不了手机系统桌面。\n' +
@@ -157,7 +157,7 @@ function assistantPrompt(char) {
     var entries = wbEntries.slice(0, 40).map(function(e) {
       return '· ' + e.name + '（' + (posName[e.pos] || '前') + '，' + (e.keywords ? '关键词：' + e.keywords : '常驻') + '，约 ' + String(e.content || '').length + ' 字' + (e.enabled === false ? '，已关闭' : '') + '）';
     });
-    out.push('【权限 · 添加世界书】用户想要新的世界书设定时，你可以帮 TA 写好并提交。现有文件夹：' + (folders.join('、') || '（无）') +
+    out.push('【权限 · 管理世界书】用户想要新的世界书设定时，你可以帮 TA 写好并提交；也能改已有的条目（内容、关键词、位置、开关、换文件夹、改名）或者删掉，都用条目名找。现有文件夹：' + (folders.join('、') || '（无）') +
       '；现有角色：' + (chars.join('、') || '（无）') + '。\n' +
       '现有条目' + (wbEntries.length > 40 ? '（前 40 条）' : '') + '：\n' + (entries.join('\n') || '（还没有）') + '\n' +
       '【世界书放哪里】' +
@@ -166,8 +166,10 @@ function assistantPrompt(char) {
       '中：预设后面、聊天记录前面，适合地点、人物、道具、事件这类细节。' +
       '后：放在整段聊天记录最后，影响最强，只适合要角色此刻严格遵守的东西（比如文风、格式要求）；放多了角色会反复提起，长条目也不适合放这里。' +
       '关键词只在用户最近说的话里找，角色自己提到的不会触发；关键词要选用户真的会说出口的词，太常见的词（比如「我」「今天」）会一直触发。' +
-      '用户问世界书放哪里，或者你帮忙加条目时，说说你的建议和理由；看到现有条目的位置或关键词不太合适，也可以提出来，让用户自己去改。');
+      '用户问世界书放哪里，或者你帮忙加条目时，说说你的建议和理由；看到现有条目的位置或关键词不太合适，可以提出来，用户同意了就用 edit_worldbook 帮 TA 改。删条目只在用户明确要删时用。');
     acts.push('<mphone-action>{"type":"add_worldbook","name":"条目名","keywords":"关键词1,关键词2（留空 = 一直生效）","content":"条目内容","pos":"auto|before|middle|after（不确定就写 auto）","folder":"文件夹名（可选，不存在会新建）","link":["要关联的角色名（可选）"]}</mphone-action>');
+    acts.push('<mphone-action>{"type":"edit_worldbook","name":"现有条目名","newName":"新名字（可选）","content":"新内容（可选，写了就整段换掉）","keywords":"新关键词（可选，空字符串 = 改成常驻）","pos":"auto|before|middle|after（可选）","enabled":true,"folder":"换到哪个文件夹（可选）"}</mphone-action>（只写要改的那几项）');
+    acts.push('<mphone-action>{"type":"del_worldbook","name":"要删的条目名"}</mphone-action>');
   }
   if (cfg.css) {
     out.push('【权限 · 设计界面 CSS】用户想改界面样子时，你可以写 CSS 并提交。target 为 "global" 时作用于整个界面（替换全部全局样式，所以要在现有内容基础上改）；' +
@@ -179,6 +181,17 @@ function assistantPrompt(char) {
         return '· ' + (c.charAlias || c.charName) + '：聊天窗口 CSS ' + (c.customCss ? '「' + c.customCss.slice(0, 600) + '」' : '（空）') +
           '；剧情窗口格式 ' + fmt + '，剧情窗口 CSS ' + (dl.customCss ? '「' + dl.customCss.slice(0, 600) + '」' : '（空）');
       }).join('\n') + '\n卡片上会自动显示一张缩小版的效果图，用户看了满意就点「应用」，不满意会让你再改。');
+    // 各角色现在的状态栏：开没开、正则、美化 HTML、卡片 CSS（太长的截一段），祂改之前先看
+    var stLines = charList.filter(function(c) { return c.look && (c.look.statusOn || c.look.statusTpl || c.look.statusCss); }).slice(0, 6).map(function(c) {
+      var l = Object.assign({}, DEFAULT_LOOK, c.look || {});
+      return '· ' + (c.charAlias || c.charName) + '：' + (l.statusOn ? '开着' : '关着') + '；匹配正则「' + String(l.statusFind || '').slice(0, 200) + '」；美化 HTML「' + String(l.statusTpl || '').slice(0, 800) + '」；卡片 CSS「' + String(l.statusCss || '').slice(0, 400) + '」；生成规则约 ' + String(l.statusRules || '').length + ' 字';
+    });
+    out.push('【权限 · 状态栏】你可以直接改某个角色的状态栏（set_status，只写要改的那几项）：on（开 / 关）、rules（生成规则：要角色每次写什么、按什么格式）、find（匹配正则，认出回复里那段状态栏，括号里的是 $1、$2）、tpl（美化 HTML，用 $1、$2 填内容，可以带 <style>）、css（卡片 CSS：卡片画在 Shadow DOM 里，这里的 CSS 只管卡片自己，可以用 :host 改卡片外框，也能直接写模板里的类名改里面的样子）。' +
+      '想要的只是换个样子，就只改 tpl 或 css；改了格式（字段、标签）要 rules、find、tpl 三样一起对上。字体默认跟着小手机，模板里写 Microsoft YaHei、Arial 这类通用字体会被忽略，要特别的字体就写它的名字（需要的话用 @import 引入）。卡片上会有效果图（拿这个角色最近一条状态栏画）。\n' +
+      '现在的状态栏：\n' + (stLines.join('\n') || '（还没有角色开着状态栏）'));
+    out.push('【权限 · 气泡】set_css 里还可以顺便换气泡（不写 css 也行）："bubbleTpl"（气泡模板：聊天窗口 plain 默认 / tail 小尾巴 / jelly 果冻 / line 线框 / glass 毛玻璃 / sticker 贴纸 / night 夜色 / siya 仿siya；剧情窗口只有 plain 和 siyad 剧情版仿siya）、"bubblePreset"（颜色预设 0 蓝粉 / 1 紫灰 / 2 橙绿 / 3 白绿）、"bubbleOpacity"（0～100）、"bubbleEffect"（none / shadow-out 外阴影 / shadow-in 内阴影 / glow 发光）、"showAvatar"（true / false，消息旁边的头像）。');
+    acts.push('<mphone-action>{"type":"set_status","target":"角色名","css":"卡片 CSS（只改样子时写这个）","tpl":"美化 HTML（可选）","find":"匹配正则（可选）","rules":"生成规则（可选）","on":true}</mphone-action>（只写要改的那几项）');
+    acts.push('<mphone-action>{"type":"set_css","target":"角色名","bubbleTpl":"jelly","bubblePreset":1,"bubbleOpacity":80,"css":""}</mphone-action>（只换气泡时 css 留空字符串）');
     acts.push('<mphone-action>{"type":"set_css","target":"global","css":"完整的 CSS"}</mphone-action>');
     acts.push('<mphone-action>{"type":"set_css","target":"角色名","view":"drama","format":"box","boxLayout":"side","boxStyle":"glass","mode":"replace","css":"剧情窗口的 CSS（只换模板和头像位置时可以留空字符串）"}</mphone-action>');
   }
@@ -213,7 +226,7 @@ function extractAssistantActions(hist, raw, out) {
   return raw.replace(/<mphone-action>([\s\S]*?)<\/mphone-action>/g, function(_, body) {
     var a = null;
     try { a = JSON.parse(body.trim().replace(/^```(?:json)?\s*|\s*```$/g, '')); } catch (_) {}
-    if (!a || (a.type !== 'add_worldbook' && a.type !== 'set_css')) a = { type: 'invalid', raw: body.trim().slice(0, 200) };
+    if (!a || ASSISTANT_ACTION_TYPES.indexOf(a.type) < 0) a = { type: 'invalid', raw: body.trim().slice(0, 200) };
     a.state = a.type === 'invalid' ? 'failed' : 'pending';
     out.push(a);
     return '';
@@ -225,8 +238,12 @@ function findCharByName(name) {
   name = String(name || '').trim();
   return charList.filter(function(c) { return name && (c.charAlias === name || c.charName === name); })[0] || null;
 }
+var ASSISTANT_ACTION_TYPES = ['add_worldbook', 'edit_worldbook', 'del_worldbook', 'set_css', 'set_status'];
 function actionTitle(a) {
   if (a.type === 'add_worldbook') return '添加世界书「' + (a.name || '未命名') + '」';
+  if (a.type === 'edit_worldbook') return '修改世界书「' + (a.name || '') + '」';
+  if (a.type === 'del_worldbook') return '删除世界书「' + (a.name || '') + '」';
+  if (a.type === 'set_status') return '修改「' + (a.target || '') + '」的状态栏';
   if (a.type === 'set_css') return a.target === 'global' || !a.target ? '修改全局样式' : '修改「' + a.target + '」的' + (a.view === 'drama' ? '剧情窗口' : '聊天') + '样式';
   return '无法识别的操作';
 }
@@ -234,8 +251,40 @@ var ACTION_STATE_TEXT = { pending: '等待用户确认', done: '用户已确认�
 function actionTextForAI(a) {
   return '〔操作卡片：' + actionTitle(a) + ' — ' + (ACTION_STATE_TEXT[a.state] || '') + (a.error ? '（' + a.error + '）' : '') + '〕';
 }
-function actionPermKey(a) { return a.type === 'add_worldbook' ? 'wb' : a.type === 'set_css' ? 'css' : ''; }
-var ACTION_PERM_NAME = { wb: '添加世界书', css: '设计界面 CSS' };
+function actionPermKey(a) { return /_worldbook$/.test(a.type) ? 'wb' : (a.type === 'set_css' || a.type === 'set_status') ? 'css' : ''; }
+var ACTION_PERM_NAME = { wb: '管理世界书', css: '改美化（CSS / 气泡 / 状态栏）' };
+function findWbEntry(name) {
+  name = String(name || '').trim();
+  return wbEntries.filter(function(e) { return e.name === name; })[0] || wbEntries.filter(function(e) { return String(e.name || '').trim() === name; })[0] || null;
+}
+function wbFolderIdByName(name) {
+  name = String(name || '').trim();
+  if (!name || name === '未分类') return WB_NONE;
+  var f = wbFolders.filter(function(x) { return x.name === name; })[0];
+  if (!f) { f = { id: genWbId('wf'), name: name }; wbFolders.push(f); }
+  return f.id;
+}
+// 气泡那几项（set_css 顺便带的）：只收认得的值；剧情窗口只能用剧情那几个模板
+function bubblePatch(a, drama) {
+  var o = {};
+  if (a.bubbleTpl && typeof BUBBLE_TPLS !== 'undefined' && BUBBLE_TPLS.some(function(t) { return t.id === a.bubbleTpl && (drama ? !t.chat : !t.drama); })) o.tpl = a.bubbleTpl;
+  var pr = parseInt(a.bubblePreset, 10);
+  if (!isNaN(pr) && typeof BUBBLE_PRESETS !== 'undefined' && pr >= 0 && pr < BUBBLE_PRESETS.length) o.preset = pr;
+  var op = parseInt(a.bubbleOpacity, 10);
+  if (!isNaN(op)) o.opacity = Math.max(0, Math.min(100, op));
+  if (['none', 'shadow-out', 'shadow-in', 'glow'].indexOf(a.bubbleEffect) >= 0) o.effect = a.bubbleEffect;
+  return o;
+}
+// set_status：这个角色的状态栏会变成什么样（只改写了的那几项）
+function statusLookPatch(a) {
+  var o = {};
+  if (typeof a.on === 'boolean') o.statusOn = a.on;
+  if (typeof a.rules === 'string') o.statusRules = a.rules;
+  if (typeof a.find === 'string') o.statusFind = a.find;
+  if (typeof a.tpl === 'string') o.statusTpl = a.tpl;
+  if (typeof a.css === 'string') o.statusCss = a.css;
+  return o;
+}
 
 // ---------- 执行 / 撤销 ----------
 function runAction(a) {
@@ -266,6 +315,30 @@ function runAction(a) {
     if (linked.length) saveCharList();
     renderWbList();
     a.result = { entryId: entry.id, createdFolder: createdFolder, linked: linked };
+  } else if (a.type === 'edit_worldbook') {
+    var en = findWbEntry(a.name);
+    if (!en) throw new Error('找不到世界书「' + a.name + '」');
+    a.result = { entryId: en.id, prev: JSON.parse(JSON.stringify(en)), prevFolders: wbFolders.length };
+    if (typeof a.newName === 'string' && a.newName.trim()) en.name = a.newName.trim();
+    if (typeof a.content === 'string' && a.content.trim()) en.content = a.content;
+    if (typeof a.keywords === 'string') en.keywords = a.keywords.trim();
+    if (['auto', 'before', 'middle', 'after'].indexOf(a.pos) >= 0) en.pos = a.pos;
+    if (typeof a.enabled === 'boolean') en.enabled = a.enabled;
+    if (typeof a.folder === 'string' && a.folder.trim()) { var before = wbFolders.length; en.folderId = wbFolderIdByName(a.folder); a.result.createdFolder = wbFolders.length > before ? en.folderId : ''; }
+    saveWbEntries(); renderWbList();
+  } else if (a.type === 'del_worldbook') {
+    var de = findWbEntry(a.name);
+    if (!de) throw new Error('找不到世界书「' + a.name + '」');
+    a.result = { entry: JSON.parse(JSON.stringify(de)), index: wbEntries.indexOf(de) };
+    wbEntries = wbEntries.filter(function(x) { return x !== de; });
+    saveWbEntries(); renderWbList();
+  } else if (a.type === 'set_status') {
+    var sc = findCharByName(a.target);
+    if (!sc) throw new Error('找不到角色「' + a.target + '」');
+    a.result = { charId: sc.id, prevLook: JSON.parse(JSON.stringify(sc.look || {})) };
+    sc.look = Object.assign({}, sc.look || {}, statusLookPatch(a));
+    saveCharList();
+    if (charList[openingChatCharIdx] === sc) { applyChatRoomStyle(sc); if (typeof refreshStatusPanel === 'function') refreshStatusPanel(); }
   } else if (a.type === 'set_css') {
     if (!a.target || a.target === 'global') {
       a.result = { prev: globalCss };
@@ -280,10 +353,14 @@ function runAction(a) {
         a.result = { charId: c.id, view: 'drama', prev: dl.customCss || '', prevFormat: (dl.look || {}).format };
         dl.customCss = a.mode === 'replace' ? String(a.css || '') : ((dl.customCss ? dl.customCss + '\n' : '') + String(a.css || ''));
         a.result.prevLook = JSON.parse(JSON.stringify(dl.look || {}));
-        dl.look = Object.assign({}, dl.look || {}, dramaLookPatch(a));
+        a.result.prevBubble = JSON.parse(JSON.stringify(dl.bubble || {}));
+        dl.look = Object.assign({}, dl.look || {}, dramaLookPatch(a), typeof a.showAvatar === 'boolean' ? { showAvatar: a.showAvatar } : {});
+        dl.bubble = Object.assign({}, DEFAULT_BUBBLE, dl.bubble || {}, bubblePatch(a, true));
       } else {
-        a.result = { charId: c.id, prev: c.customCss || '' };
-        c.customCss = a.mode === 'replace' ? String(a.css || '') : ((c.customCss ? c.customCss + '\n' : '') + String(a.css || ''));
+        a.result = { charId: c.id, prev: c.customCss || '', prevBubble: JSON.parse(JSON.stringify(c.bubble || {})), prevChatLook: JSON.parse(JSON.stringify(c.look || {})) };
+        if (a.css || a.mode === 'replace') c.customCss = a.mode === 'replace' ? String(a.css || '') : ((c.customCss ? c.customCss + '\n' : '') + String(a.css || ''));
+        c.bubble = Object.assign({}, DEFAULT_BUBBLE, c.bubble || {}, bubblePatch(a, false));
+        if (typeof a.showAvatar === 'boolean') c.look = Object.assign({}, c.look || {}, { showAvatar: a.showAvatar });
       }
       saveCharList();
       if (charList[openingChatCharIdx] === c) applyChatRoomStyle(c);
@@ -315,13 +392,24 @@ function undoAction(a) {
     saveWbEntries();
     saveCharList();
     renderWbList();
+  } else if (a.type === 'edit_worldbook') {
+    wbEntries = wbEntries.map(function(e) { return e.id === r.entryId ? r.prev : e; });
+    if (r.createdFolder && !wbEntries.some(function(e) { return e.folderId === r.createdFolder; })) wbFolders = wbFolders.filter(function(f) { return f.id !== r.createdFolder; });
+    saveWbEntries(); renderWbList();
+  } else if (a.type === 'del_worldbook') {
+    if (r.entry && !wbEntries.some(function(e) { return e.id === r.entry.id; })) wbEntries.splice(Math.min(r.index || 0, wbEntries.length), 0, r.entry);
+    saveWbEntries(); renderWbList();
+  } else if (a.type === 'set_status') {
+    var sc = charList.filter(function(x) { return x.id === r.charId; })[0];
+    if (sc) { sc.look = r.prevLook; saveCharList(); if (charList[openingChatCharIdx] === sc) { applyChatRoomStyle(sc); if (typeof refreshStatusPanel === 'function') refreshStatusPanel(); } }
   } else if (a.type === 'set_css') {
     if (r.charId) {
       var c = charList.filter(function(x) { return x.id === r.charId; })[0];
       if (c && r.view === 'drama' && c.dramaLook) {
         c.dramaLook.customCss = r.prev;
         c.dramaLook.look = r.prevLook ? r.prevLook : Object.assign({}, c.dramaLook.look || {}, { format: r.prevFormat || 'bubble' });
-      } else if (c) c.customCss = r.prev;
+        if (r.prevBubble) c.dramaLook.bubble = r.prevBubble;
+      } else if (c) { c.customCss = r.prev; if (r.prevBubble) c.bubble = r.prevBubble; if (r.prevChatLook) c.look = r.prevChatLook; }
       if (c) { saveCharList(); if (charList[openingChatCharIdx] === c) applyChatRoomStyle(c); }
     } else {
       setGlobalCss(r.prev || '');
@@ -350,7 +438,7 @@ function paintActionCard(card, m) {
 
   var head = document.createElement('div');
   head.className = 'cr-action-head';
-  head.textContent = (a.type === 'set_css' ? '🎨 ' : a.type === 'add_worldbook' ? '📚 ' : '⚠️ ') + actionTitle(a);
+  head.textContent = ({ set_css: '🎨 ', set_status: '📊 ', add_worldbook: '📚 ', edit_worldbook: '📚 ', del_worldbook: '🗑️ ' }[a.type] || '⚠️ ') + actionTitle(a);
   card.appendChild(head);
 
   var body = document.createElement('div');
@@ -370,15 +458,43 @@ function paintActionCard(card, m) {
     line('文件夹', a.folder || '未分类');
     line('注入位置', { auto: '自动', before: '前', middle: '中', after: '后' }[a.pos] || '自动');
     line('关联角色', [].concat(a.link || []).join('、'));
+  } else if (a.type === 'edit_worldbook') {
+    if (a.newName) line('新名字', a.newName);
+    if (typeof a.keywords === 'string') line('关键词', a.keywords || '（改成常驻）');
+    if (a.pos) line('注入位置', { auto: '自动', before: '前', middle: '中', after: '后' }[a.pos] || a.pos);
+    if (typeof a.enabled === 'boolean') line('开关', a.enabled ? '打开' : '关掉');
+    if (a.folder) line('换到文件夹', a.folder);
+    if (a.content) line('内容', '整段换成下面这样');
+  } else if (a.type === 'del_worldbook') {
+    var dEn = findWbEntry(a.name);
+    line('内容', dEn ? String(dEn.content || '').slice(0, 60) + (String(dEn.content || '').length > 60 ? '…' : '') : (a.state === 'done' ? '（已删掉）' : '（找不到这条）'));
+  } else if (a.type === 'set_status') {
+    var parts = [];
+    if (typeof a.on === 'boolean') parts.push(a.on ? '打开状态栏' : '关掉状态栏');
+    [['rules', '生成规则'], ['find', '匹配正则'], ['tpl', '美化 HTML'], ['css', '卡片 CSS']].forEach(function(k) { if (typeof a[k[0]] === 'string') parts.push(k[1]); });
+    line('改了', parts.join('、') || '（没写要改什么）');
   } else if (a.type === 'set_css' && a.target && a.target !== 'global') {
-    line('方式', a.mode === 'replace' ? '替换原有样式' : '追加到原有样式后面');
+    if (a.css || a.mode === 'replace') line('方式', a.mode === 'replace' ? '替换原有样式' : '追加到原有样式后面');
+    var bp = bubblePatch(a, a.view === 'drama');
+    if (bp.tpl) line('气泡模板', ((typeof BUBBLE_TPLS !== 'undefined' ? BUBBLE_TPLS : []).filter(function(t) { return t.id === bp.tpl; })[0] || { name: bp.tpl }).name);
+    if (bp.preset !== undefined) line('颜色预设', ['蓝粉', '紫灰', '橙绿', '白绿'][bp.preset] || String(bp.preset));
+    if (bp.opacity !== undefined) line('透明度', bp.opacity + '%');
+    if (bp.effect) line('效果', { none: '无', 'shadow-out': '外阴影', 'shadow-in': '内阴影', glow: '发光' }[bp.effect]);
+    if (typeof a.showAvatar === 'boolean') line('消息头像', a.showAvatar ? '显示' : '不显示');
     if (a.view === 'drama' && a.format) line('剧情窗口格式', { bubble: '气泡', box: '文本框', custom: '自定义' }[a.format] || a.format);
     if (a.view === 'drama' && a.boxLayout) line('头像位置', { center: '居中', side: '左右', left: '左对齐' }[a.boxLayout] || a.boxLayout);
     if (a.view === 'drama' && a.boxStyle) line('文本框模板', ((typeof DRAMA_BOX_STYLES !== 'undefined' ? DRAMA_BOX_STYLES : []).filter(function(s) { return s.id === a.boxStyle; })[0] || { name: a.boxStyle }).name);
   }
   var pre = document.createElement('pre');
   pre.className = 'cr-action-pre';
-  pre.textContent = a.type === 'add_worldbook' ? (a.content || '') : a.type === 'set_css' ? (a.css || '') : (a.raw || '');
+  pre.textContent = a.type === 'add_worldbook' || a.type === 'edit_worldbook' ? (a.content || '') : a.type === 'del_worldbook' ? '' : a.type === 'set_css' ? (a.css || '') :
+    a.type === 'set_status' ? [['rules', '生成规则'], ['find', '匹配正则'], ['tpl', '美化 HTML'], ['css', '卡片 CSS']].filter(function(k) { return typeof a[k[0]] === 'string'; }).map(function(k) { return '【' + k[1] + '】\n' + a[k[0]]; }).join('\n\n') : (a.raw || '');
+  if (!pre.textContent) pre.style.display = 'none';
+  // 改状态栏：用这个角色最近一条状态栏照新写法画一张（画不出来就只给代码）
+  if (a.type === 'set_status' && typeof statusPreviewEl === 'function') { var sp = statusPreviewEl(a); if (sp) { body.appendChild(sp); pre.style.display = 'none';
+    var sBtn = document.createElement('button'); sBtn.className = 'cr-action-code-btn'; sBtn.textContent = '看代码';
+    sBtn.addEventListener('click', function(e) { e.stopPropagation(); var on = pre.style.display === 'none'; pre.style.display = on ? '' : 'none'; sBtn.textContent = on ? '收起代码' : '看代码'; });
+    body.appendChild(sBtn); } }
   if (a.type === 'set_css' && typeof cssMiniPreview === 'function') {
     // 改样式的不给看代码（用户要的）：直接放一张缩小版的效果图；代码收在「看代码」里
     var mini = cssMiniPreview(a);
@@ -388,7 +504,7 @@ function paintActionCard(card, m) {
     codeBtn.textContent = '看代码';
     pre.style.display = 'none';
     codeBtn.addEventListener('click', function(e) { e.stopPropagation(); var on = pre.style.display === 'none'; pre.style.display = on ? '' : 'none'; codeBtn.textContent = on ? '收起代码' : '看代码'; });
-    body.appendChild(codeBtn);
+    if (a.css) body.appendChild(codeBtn);   // 只换气泡、没写 CSS 时没有代码可看
   }
   body.appendChild(pre);
   card.appendChild(body);
@@ -427,7 +543,7 @@ function paintActionCard(card, m) {
       catch (err) { a.error = err.message; showToast('✗ ' + err.message, 'error'); paintActionCard(card, m); }
     };
     if (a.state === 'pending') btn('忽略', 'ghost', function() { done('ignored'); });
-    btn(a.type === 'set_css' ? '应用' : '确认', 'primary', confirmNow);
+    btn(a.type === 'set_css' || a.type === 'set_status' ? '应用' : a.type === 'del_worldbook' ? '删除' : '确认', 'primary', confirmNow);
   }
   card.appendChild(foot);
 }

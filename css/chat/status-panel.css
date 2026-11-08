@@ -27,7 +27,8 @@
   max-height: calc(var(--sp-max, 420px) - 40px); overflow: hidden;
 }
 .cr-sp-scroll {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  /* 只管上下滑；左右滑要交给外面那条（以前 overscroll-behavior 两个方向都拦住了，左右滑不动，用户反馈过） */
+  flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; overscroll-behavior-x: auto;
   -webkit-overflow-scrolling: touch; scrollbar-width: none; border-radius: 10px;
 }
 .cr-sp-scroll::-webkit-scrollbar { display: none; }
@@ -62,3 +63,7 @@
 
 /* 收藏里的状态栏卡片 */
 .fav-item-status { margin: 6px 0 0 !important; max-width: none !important; }
+
+/* 小梦改状态栏的确认卡片里的效果图（js/chat/status-panel.js 的 statusPreviewEl） */
+.cr-action-status-preview { max-height: 240px; overflow: auto; margin: 6px 0 4px; border-radius: 10px; }
+.cr-action-status-preview .cr-status-card { margin: 0; max-width: none; }
