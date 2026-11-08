@@ -225,3 +225,13 @@
 .drama-box-style b { display: block; margin-top: 4px; font-size: 11.5px; font-weight: 500; color: #8a7480; }
 .drama-box-style.selected .dbs-swatch { border-color: #e08aa6; box-shadow: 0 0 0 2px rgba(224,138,166,0.25); }
 .drama-box-style.selected b { color: #c25a7e; font-weight: 600; }
+
+/* 气泡模板小卡片：里面是两个缩小的真气泡（js/char/settings.js 的 renderBubbleTpls） */
+.bubble-tpl { flex: 0 0 auto; width: 78px; text-align: center; cursor: pointer; }
+.bubble-tpl .btpl-box { height: 62px; border-radius: 10px; padding: 6px 7px; box-sizing: border-box; background: rgba(250,242,246,0.9); border: 1.5px solid rgba(200,170,180,0.3); display: flex; flex-direction: column; justify-content: center; gap: 4px; overflow: hidden; pointer-events: none; }
+.bubble-tpl .chat-msg-row { gap: 0; margin: 0; padding: 0; }
+.bubble-tpl .chat-msg-bubble { font-size: 10px !important; line-height: 1.3; padding: 3px 8px !important; max-width: none; white-space: nowrap; }
+.bubble-tpl .chat-msg-bubble::before { bottom: 3px !important; }
+.bubble-tpl b { display: block; margin-top: 4px; font-size: 11.5px; font-weight: 500; color: #8a7480; }
+.bubble-tpl.selected .btpl-box { border-color: #e08aa6; box-shadow: 0 0 0 2px rgba(224,138,166,0.25); }
+.bubble-tpl.selected b { color: #c25a7e; font-weight: 600; }

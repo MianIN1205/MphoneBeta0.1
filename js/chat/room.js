@@ -74,6 +74,43 @@ var DRAMA_BOX_STYLES = [
   { id: 'paper', name: '书页', lay: 'left', desc: '米色纸张、宋体字、虚线分隔，像在读一本书', sw: ['#fbf6ec', '#4a3d33', '#a65a32'] },
   { id: 'night', name: '夜色', lay: 'center', desc: '深色半透明，浅色字，对话是暖暖的金色，头像在中间', sw: ['#25223a', '#ebe5f3', '#f0c987'] }
 ];
+// 气泡模板（聊天窗口、剧情窗口的气泡格式，bubble.tpl）：换的是气泡的样子（形状、边框、质感），颜色还用「主题」里选的那一对和透明度（用户要的「气泡模式的预设」）
+var BUBBLE_TPLS = [
+  { id: 'plain', name: '默认', desc: '圆圆的气泡，靠头像那一角收尖一点' },
+  { id: 'tail', name: '小尾巴', desc: '方一点的气泡，朝头像那边伸出一个小尖角' },
+  { id: 'jelly', name: '果冻', desc: '胖胖的胶囊形，上面一层亮光，像果冻' },
+  { id: 'line', name: '线框', desc: '浅浅的底，主题色描一圈细边，清爽' },
+  { id: 'glass', name: '毛玻璃', desc: '半透明，透出背景图，带一点主题色' },
+  { id: 'sticker', name: '贴纸', desc: '一圈白边加投影，像贴在屏幕上的小贴纸' },
+  { id: 'night', name: '夜色', desc: '深色气泡、浅色字，晚上看不刺眼' }
+];
+function hexDarken(hex, k) {
+  var n = parseInt(String(hex).slice(1), 16);
+  var f = function(v) { return Math.max(0, Math.round(v * (1 - k))); };
+  return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')';
+}
+function bubbleTplCss(sel, tpl, colors, op) {
+  var T = ' .chat-msg-bubble:not(.error):not(.img-bubble):not(.sticker-bubble):not(.cr-narr):not(.cr-action-only)';
+  var A = sel + '.ai' + T, U = sel + '.user' + T, both = A + ', ' + U;
+  var ca = hexToRgba(colors[0], op), cu = hexToRgba(colors[1], op);
+  if (tpl === 'tail') return both + ' { border-radius: 10px; position: relative; }\n' +
+    A + ':not(.file-bubble)::before, ' + U + ':not(.file-bubble)::before { content: ""; position: absolute; bottom: 10px; width: 0; height: 0; border: 6px solid transparent; }\n' +
+    A + ':not(.file-bubble)::before { left: -11px; border-right-color: ' + ca + '; }\n' +
+    U + ':not(.file-bubble)::before { right: -11px; border-left-color: ' + cu + '; }\n';
+  if (tpl === 'jelly') return both + ' { border-radius: 22px; padding: 10px 15px; }\n' +
+    A + ' { background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0) 60%), ' + ca + '; box-shadow: inset 0 -2px 5px rgba(0,0,0,0.06), 0 3px 8px ' + hexToRgba(colors[0], 0.45) + '; }\n' +
+    U + ' { background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0) 60%), ' + cu + '; box-shadow: inset 0 -2px 5px rgba(0,0,0,0.06), 0 3px 8px ' + hexToRgba(colors[1], 0.45) + '; }\n';
+  if (tpl === 'line') return both + ' { border-radius: 16px; color: #4a3b42; }\n' +
+    A + ' { background: rgba(255,255,255,' + Math.min(0.85, op) + '); border: 1.5px solid ' + hexDarken(colors[0], 0.22) + '; }\n' +
+    U + ' { background: rgba(255,255,255,' + Math.min(0.85, op) + '); border: 1.5px solid ' + hexDarken(colors[1], 0.22) + '; }\n';
+  if (tpl === 'glass') return both + ' { border: 1px solid rgba(255,255,255,0.7); -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2); box-shadow: 0 4px 14px rgba(60,40,70,0.08); color: #3d3340; }\n' +
+    A + ' { background: linear-gradient(' + hexToRgba(colors[0], 0.3) + ', ' + hexToRgba(colors[0], 0.3) + '), rgba(255,255,255,0.35); }\n' +
+    U + ' { background: linear-gradient(' + hexToRgba(colors[1], 0.3) + ', ' + hexToRgba(colors[1], 0.3) + '), rgba(255,255,255,0.35); }\n';
+  if (tpl === 'sticker') return both + ' { border-radius: 14px; border: 2.5px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.05), 0 4px 10px rgba(80,60,80,0.14); }\n';
+  if (tpl === 'night') return both + ' { color: #eee8f6; }\n' +
+    A + ' { background: rgba(40,36,62,' + Math.max(0.75, op) + '); }\n' + U + ' { background: rgba(64,54,92,' + Math.max(0.75, op) + '); }\n';
+  return '';
+}
 function dramaBoxStyleCss(sel, look, colors, op) {
   var row = sel + ':not(.cr-narr-row)', st = look.boxStyle || 'soft';
   var cont = sel + '.ai + .chat-msg-row.ai, ' + sel + '.user + .chat-msg-row.user';
@@ -124,6 +161,7 @@ function lookCss(part, scope) {
     sel + '.ai .chat-msg-bubble:not(.error) { background: ' + hexToRgba(colors[0], op) + ';' + (fx ? ' box-shadow: ' + fx(colors[0]) + ';' : '') + ' }\n' +
     sel + '.user .chat-msg-bubble:not(.error) { background: ' + hexToRgba(colors[1], op) + ';' + (fx ? ' box-shadow: ' + fx(colors[1]) + ';' : '') + ' }\n';
   if (!look.showAvatar) css += scope + ' .chat-msg-avatar { display: none; }\n';
+  if (look.format !== 'box' && look.format !== 'text' && b.tpl && b.tpl !== 'plain') css += bubbleTplCss(sel, b.tpl, colors, op);
   // 文段：不要气泡，像小说一样整段排开；自己说的话用浅一点的颜色靠右
   if (look.format === 'text') {
     css += sel + ' .chat-msg-bubble:not(.error) { background: transparent !important; box-shadow: none !important; max-width: 100%; padding: 2px 2px; border-radius: 0; line-height: 1.8; }\n' +

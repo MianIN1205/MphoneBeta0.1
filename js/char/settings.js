@@ -70,7 +70,7 @@ var BUBBLE_PRESETS = [
   ['#E8CEB8', '#B8D8C4'],
   ['#FFFFFF', '#B8D8C4']
 ];
-var DEFAULT_BUBBLE = { preset: 0, opacity: 85, effect: 'none' };
+var DEFAULT_BUBBLE = { preset: 0, opacity: 85, effect: 'none', tpl: 'plain' };
 var DEFAULT_CHAT_BG = { color: '#FFF0F5', image: '' };
 
 // 头像：有图片用图片，否则兼容旧数据里的背景色
@@ -118,6 +118,38 @@ function setBubbleForm(b) {
   document.querySelectorAll('#bubbleEffectChips .bubble-effect-chip').forEach(function(c) {
     c.classList.toggle('selected', c.dataset.effect === b.effect);
   });
+  bubbleTplCur = b.tpl || 'plain';
+  renderBubbleTpls();
+}
+// 气泡模板：每张小卡片里画两个真的小气泡（用 lookCss 套上现在的主题色、透明度和这个模板），点一下就换
+var bubbleTplCur = 'plain';
+var bubbleTplStyle = document.createElement('style');
+document.head.appendChild(bubbleTplStyle);
+function renderBubbleTpls() {
+  var row = document.getElementById('bubbleTplRow');
+  if (!row || typeof BUBBLE_TPLS === 'undefined') return;
+  var p = document.querySelector('#bubblePresetRow .bubble-preset-item.selected');
+  var base = { preset: p ? parseInt(p.dataset.preset, 10) : 0, opacity: parseInt(bubbleOpacitySlider.value, 10), effect: 'none' };
+  var css = '';
+  row.innerHTML = '';
+  BUBBLE_TPLS.forEach(function(t) {
+    var c = document.createElement('div');
+    c.className = 'bubble-tpl' + (t.id === bubbleTplCur ? ' selected' : '');
+    c.id = 'btpl-' + t.id;
+    c.dataset.v = t.id;
+    c.innerHTML = '<div class="btpl-box"><div class="chat-msg-row ai"><div class="chat-msg-bubble">嗨</div></div><div class="chat-msg-row user"><div class="chat-msg-bubble">在呢</div></div></div><b></b>';
+    c.querySelector('b').textContent = t.name;
+    c.addEventListener('click', function() {
+      bubbleTplCur = t.id;
+      row.querySelectorAll('.bubble-tpl').forEach(function(x) { x.classList.toggle('selected', x === c); });
+      document.getElementById('bubbleTplHint').textContent = t.desc;
+    });
+    row.appendChild(c);
+    if (typeof lookCss === 'function') css += lookCss({ bubble: Object.assign({}, base, { tpl: t.id }), look: { format: 'bubble', showAvatar: false } }, '#btpl-' + t.id);
+  });
+  bubbleTplStyle.textContent = css;
+  var cur = BUBBLE_TPLS.filter(function(t) { return t.id === bubbleTplCur; })[0];
+  document.getElementById('bubbleTplHint').textContent = cur ? cur.desc : '';
 }
 
 function readBubbleForm() {
@@ -126,7 +158,8 @@ function readBubbleForm() {
   return {
     preset:  p ? parseInt(p.dataset.preset, 10) : 0,
     opacity: parseInt(bubbleOpacitySlider.value, 10),
-    effect:  e ? e.dataset.effect : 'none'
+    effect:  e ? e.dataset.effect : 'none',
+    tpl:     bubbleTplCur || 'plain'
   };
 }
 
@@ -489,6 +522,7 @@ function syncDramaFormatUi() {
   document.getElementById('dramaFormatHint').textContent = DRAMA_FORMAT_HINT[fmt] || '';
   document.getElementById('dramaBoxOpts').style.display = fmt === 'box' || fmt === 'custom' ? '' : 'none';
   document.getElementById('dramaBoxStyleWrap').style.display = fmt === 'box' ? '' : 'none';
+  document.getElementById('bubbleTplWrap').style.display = drama && fmt !== 'bubble' ? 'none' : '';   // 气泡模板只给气泡格式
   document.getElementById('customCssLabel').textContent = !drama ? '聊天窗口专属样式（进入该角色聊天时生效）'
     : fmt === 'box' ? '文本框样式（CSS，可选）' : fmt === 'custom' ? '整个剧情窗口的 CSS' : '剧情窗口专属样式（进入该角色剧情时生效）';
   var hint = document.getElementById('customCssHint');
@@ -553,6 +587,7 @@ function paintLookPreview() {
   var bg = p.chatBg || DEFAULT_CHAT_BG;
   box.style.background = bg.image ? 'url(' + bg.image + ') center / cover no-repeat' : (bg.color || DEFAULT_CHAT_BG.color);
   csLookPreviewStyle.textContent = (typeof lookCss === 'function') ? lookCss(p, '#csLookPreview') : '';
+  renderBubbleTpls();   // 换了主题色、透明度，模板小卡片跟着变
 }
 
 // 美化页的改动立刻生效：写回角色并刷新聊天窗口（新建角色只更新预览）
