@@ -302,7 +302,7 @@ function readerChatRender() {
     if (!mine) text = fillMacros(text, c);
     // 角色的 *动作* 拿出来变成小灰字，和聊天窗口一样
     var acts = [];
-    if (!mine) text = text.replace(/\*([^*\n]+)\*/g, function(_, t) { acts.push(t.trim()); return ''; }).replace(/〔译〕[\s\S]*$/, '').trim();
+    if (!mine) text = text.replace(actionRe(), function(a) { acts.push(a.slice(1, -1).trim()); return ''; }).replace(/〔译〕[\s\S]*$/, '').trim();
     if (text) {
       var row = document.createElement('div');
       row.className = 'reader-chat-msg ' + (mine ? 'me' : 'ta');

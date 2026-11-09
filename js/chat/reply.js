@@ -49,7 +49,7 @@ function commitAssistantReply(hist, raw, list, empty) {
   var calItems = [];
   if (rc && chatHistories[rc.id] === hist && typeof extractCalTags === 'function') raw = extractCalTags(rc, raw, calItems);
   if (rc && chatHistories[rc.id] === hist && !(rc.chatCfg && rc.chatCfg.actionOn)) {
-    raw = raw.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
+    raw = raw.replace(actionRe(), '').replace(/[ \t]{2,}/g, ' ');
   }
   // 剧情配图：<配图>这一幕的画面</配图> 拿出来，回复后面单独一条（设置里剧情配图选了生图才会写）
   var illus = '', isDramaHist = !!(rc && dramaHistories[rc.id] === hist);
@@ -98,12 +98,11 @@ function chatLineDone(s) {
   return !/[一-鿿A-Za-z0-9，、,；;：:（(「『“‘《【]$/.test(s);   // 以字、逗号、前括号结尾 = 这句还没说完
 }
 function chatSentences(seg) {
-  var out = [], buf = '', depth = 0, star = false, OPEN = '「『“‘（(【《', CLOSE = '」』”’）)】》';
+  var out = [], buf = '', depth = 0, spans = actionSpans(seg), OPEN = '「『“‘（(【《', CLOSE = '」』”’）)】》';
   for (var i = 0; i < seg.length; i++) {
     var ch = seg[i];
     buf += ch;
-    if (ch === '*') { star = !star; continue; }
-    if (star) continue;
+    if (inSpans(spans, i)) continue;   // *动作* 里面不断开
     if (OPEN.indexOf(ch) >= 0) depth++;
     else if (CLOSE.indexOf(ch) >= 0) depth = Math.max(0, depth - 1);
     var next = seg[i + 1] || '';
@@ -116,11 +115,11 @@ function chatSplitLines(parts) {
   var out = [];
   parts.forEach(function(p) {
     if (typeof p !== 'string' || msgHtmlLike(p)) { out.push(p); return; }   // 带 HTML 的整条不拆，免得拆坏
-    p = p.replace(/\*[^*]+\*/g, function(a) { return a.replace(/\s*\n+\s*/g, ' '); });   // *动作* 中间换了行的接回一行
+    p = p.replace(new RegExp(ACTION_SRC_ML, 'g'), function(a) { return a.replace(/\s*\n+\s*/g, ' '); });   // *动作* 中间换了行的接回一行
     var lines = p.split(/\n+/).map(function(l) { return l.trim(); }).filter(Boolean);
     // 只有 (1h)、(read)、（已读）这种记号的行不要：角色偶尔学着标时间 / 已读，小手机自己会显示隔了多久
     lines = lines.filter(function(l) { return !CHAT_MARK_RE.test(l); }).map(function(l) {
-      return (l.match(/\*/g) || []).length % 2 ? l + '*' : l;   // 星号只写了一半（忘了收尾）的补上
+      return /\*\s*[\u4e00-\u9fff][^*]*$/.test(l.replace(actionRe(), '')) ? l + '*' : l;   // 动作只写了前半个星号（忘了收尾）的补上；颜文字里的星号不管
     });
     var hasTr = lines.some(function(l) { return /^〔译〕/.test(l); });
     // 没说完的行接上下一行
@@ -135,7 +134,7 @@ function chatSplitLines(parts) {
     segs.forEach(function(seg) {
       if (/^〔译〕/.test(seg)) { if (out.length && typeof out[out.length - 1] === 'string') out[out.length - 1] += '\n' + seg; return; }
       (hasTr ? [seg] : chatSentences(seg)).forEach(function(t) {
-        if (/^(\*[^*]+\*\s*)+$/.test(t)) { pending += (pending ? ' ' : '') + t; return; }
+        if (ACTION_LINE_RE.test(t)) { pending += (pending ? ' ' : '') + t; return; }
         out.push((pending ? pending + ' ' : '') + t);
         pending = '';
       });
@@ -157,16 +156,15 @@ var CHAT_BUBBLE_SPLIT = 30;   // 超过这么多字才帮着拆
 var CHAT_BUBBLE_MAX = 20;     // 拆开后每条尽量不超过这么多字
 var CHAT_MARK_RE = /^(?:[(（\[【]\s*(?:read|已读|未读|\d+\s*(?:h|hr|hrs|hours?|min|mins|m|s|d|天|小时|分钟|分|秒)(?:\s*later)?)\s*[)）\]】]\s*)+$/i;
 function chatSplitLong(p) {
-  var m = p.match(/^((?:\*[^*]+\*\s*)*)([\s\S]*)$/), lead = m[1], body = m[2].trim();
+  var m = p.match(new RegExp('^((?:' + ACTION_SRC + '\\s*)*)([\\s\\S]*)$')), lead = m[1], body = m[2].trim();
   if (body.length <= CHAT_BUBBLE_SPLIT || !/[\u4e00-\u9fff]/.test(body) || /https?:|\[表情包|〔译〕|<\/?[a-z撤日]/i.test(body)) return [p];
   // 切成小段：在句末标点后、或者（引号外的）逗号顿号分号后断开，标点留在前一段
-  var pieces = [], buf = '', depth = 0, star = false;
+  var pieces = [], buf = '', depth = 0, spans = actionSpans(body);
   var OPEN = '「『“‘（(【《', CLOSE = '」』”’）)】》';
   for (var i = 0; i < body.length; i++) {
     var ch = body[i];
     buf += ch;
-    if (ch === '*') { star = !star; continue; }   // *动作* 里面不断开
-    if (star) continue;
+    if (inSpans(spans, i)) continue;   // *动作* 里面不断开
     if (OPEN.indexOf(ch) >= 0) depth++;
     else if (CLOSE.indexOf(ch) >= 0) depth = Math.max(0, depth - 1);
     var next = body[i + 1] || '';
@@ -326,10 +324,10 @@ function sendMsg(userText, requestOnly, onDone) {
     var done = shown.slice(0, cut + 1);
     // 没写完的标记、表情包、撤回先不显示，等正式消息
     done = done.replace(/<撤回>[\s\S]*?(<\/撤回>|$)/g, '').replace(/\[表情包[:：][^\]\n]*\]?/g, '').replace(/<[^>\n]*$/, '');
-    if (!rcCfg.actionOn) done = done.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ');
+    if (!rcCfg.actionOn) done = done.replace(actionRe(), '').replace(/[ \t]{2,}/g, ' ');
     var parts = chatSplitLines(done.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean));
     // 一行刚写完、后面的「〔译〕」或者跟着的动作还没到时，最后一条可能还会变：先不出
-    if (parts.length && /^(\*[^*]+\*\s*)+$/.test(String(parts[parts.length - 1]))) parts.pop();
+    if (parts.length && ACTION_LINE_RE.test(String(parts[parts.length - 1]))) parts.pop();
     var same = previewParts.every(function(p, i) { return parts[i] === p; });
     if (!same) clearPreview();
     var list = typing.row.parentNode;

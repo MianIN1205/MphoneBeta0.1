@@ -213,6 +213,15 @@ function fmtAgo(t) {
   return Math.floor(m / 1440) + ' 天前';
 }
 // 一段时长：25 分钟 / 3 小时 / 2 天
+// *动作描写*：两个星号中间至少有两个汉字、开头不是空格或右括号，才算动作（颜文字 (*^▽^*)、ヾ(≧▽≦*)o 里的星号不算，用户问过）。
+// 用到星号的地方都用这一个规则：拿动作出来变小灰字、关了动作描写时去掉、分气泡时不在动作里断开
+var ACTION_SRC = '\\*(?![\\s)）])(?=(?:[^*\\n]*?[\\u4e00-\\u9fff]){2})[^*\\n]+\\*';
+var ACTION_SRC_ML = '\\*(?![\\s)）])(?=(?:[^*]*?[\\u4e00-\\u9fff]){2})[^*]+\\*';   // 允许中间换行（接回一行时用）
+function actionRe(flags) { return new RegExp(ACTION_SRC, flags === undefined ? 'g' : flags); }
+var ACTION_LINE_RE = new RegExp('^(?:' + ACTION_SRC + '\\s*)+$');
+function actionSpans(s) { var out = [], re = actionRe(), m; while ((m = re.exec(s))) out.push([m.index, m.index + m[0].length]); return out; }
+function inSpans(spans, i) { for (var k = 0; k < spans.length; k++) if (i > spans[k][0] && i < spans[k][1] - 1) return true; return false; }
+
 function durText(ms) {
   var m = Math.round(ms / 60000);
   if (m < 60) return m + ' 分钟';

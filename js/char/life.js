@@ -57,7 +57,7 @@ function lifeFormatRules(char) {
   for (var i = hist.length - 1; i >= 0 && heads.length < 8; i--) {
     var m = hist[i];
     if (m.role !== 'assistant' || m.recalled || m.pat || m.note || m.action || !m.content || m.sticker || m.textImg) continue;
-    var h = String(m.content).replace(/\*[^*]*\*/g, '').trim().slice(0, 6);
+    var h = String(m.content).replace(actionRe(), '').trim().slice(0, 6);
     if (h && heads.indexOf(h) < 0) heads.push(h);
   }
   if (heads.length >= 3) out.push('你最近几条是这样开头的：' + heads.map(function(h) { return '「' + h + '…」'; }).join('') + '。这次换个开头和说法，别重复自己的口头禅和句式；语音、表情包、照片、撤回这些偶尔用、换着用，不要总是同一种。');

@@ -49,7 +49,7 @@ function shotItemOf(el, char) {
   else if (m.textImg) { it.textImg = m.textImg; }
   else if (m.file) it.text = '📄 ' + (m.file.name || '文件');
   else if (m.voice) it.text = '🎤 语音' + (m.transcript ? '：' + m.transcript : '');
-  else it.text = fill(String(m.content || '').replace(/\*([^*\n]+)\*/g, '（$1）'));
+  else it.text = fill(String(m.content || '').replace(actionRe(), function(a) { return '（' + a.slice(1, -1) + '）'; }));
   if (m.quote) it.quote = '「' + m.quote.author + '：' + m.quote.text + '」';
   return it;
 }

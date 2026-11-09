@@ -78,8 +78,9 @@ function setBubbleText(bubble, content, isAi, isChat) {
 // 把 *动作* 和说的话分开：说话之前的动作放气泡上方，之后的放下方
 function splitActions(text) {
   var out = { before: [], text: '', after: [] }, said = [];
-  text.split(/(\*[^*\n]+\*)/).forEach(function(part) {
-    if (/^\*[^*\n]+\*$/.test(part)) (said.length ? out.after : out.before).push(part.slice(1, -1).trim());
+  var one = new RegExp('^' + ACTION_SRC + '$');
+  text.split(new RegExp('(' + ACTION_SRC + ')')).forEach(function(part) {
+    if (one.test(part)) (said.length ? out.after : out.before).push(part.slice(1, -1).trim());
     else if (part.trim()) said.push(part.trim());
   });
   out.text = said.join('\n');
@@ -157,7 +158,7 @@ function addDramaHead(row, bubble, m) {
 }
 // 剧情窗口里引号中的对话包成 .cr-dq：文本框风格给它换颜色（像酒馆美化那样一眼分出说话和叙述），气泡格式不加颜色；
 // *动作* 包成 .cr-act（星号留着），仿siya 给它浅紫色。聊天窗口用了仿siya 时也这样包（动作留在气泡里）
-var DRAMA_DQ_RE = /(“[^”\n]*”|「[^」\n]*」|"[^"\n]*"|\*[^*\n]+\*)/;
+var DRAMA_DQ_RE = new RegExp('(“[^”\\n]*”|「[^」\\n]*」|"[^"\\n]*"|' + ACTION_SRC + ')');
 function fillDramaText(el, text) {
   el.textContent = '';
   String(text).split(DRAMA_DQ_RE).forEach(function(part, i) {

@@ -493,7 +493,7 @@ function generateCharPost(idx) {
     '想配图的话，在正文后面用 <文字图>画面描述</文字图> 附上 1～3 张「文字图」（用一两句话描述照片里的画面，比如：窗外的晚霞，橘粉色的云）；不配图也可以。'
   )]);
   return callApiOnce(msgs, char).then(function(text) {
-    text = memExtractTags(char, text).replace(/\*[^*\n]+\*/g, '').replace(/#[^#\s]{1,20}#?/g, '').replace(/[ \t]{2,}/g, ' ');   // TA 顺手记下的记忆；动作描写、# 话题标签去掉
+    text = memExtractTags(char, text).replace(actionRe(), '').replace(/#[^#\s]{1,20}#?/g, '').replace(/[ \t]{2,}/g, ' ');   // TA 顺手记下的记忆；动作描写、# 话题标签去掉
     var textImgs = [];
     text = text.replace(/<文字图>([\s\S]*?)<\/文字图>/g, function(_, t) { if (t.trim()) textImgs.push(t.trim()); return ''; });
     feedPosts.unshift({
@@ -545,7 +545,7 @@ function charNpcComments(post, idx) {
     var m = String(text).match(/\{[\s\S]*\}/);
     if (!m) return;
     var o; try { o = JSON.parse(m[0]); } catch (_) { return; }
-    var clean = function(s) { return String(s || '').replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ').trim(); };
+    var clean = function(s) { return String(s || '').replace(actionRe(), '').replace(/[ \t]{2,}/g, ' ').trim(); };
     var t = Date.now(), names = {};
     (Array.isArray(o.comments) ? o.comments : []).slice(0, 4).forEach(function(c) {
       var name = clean(c && c.name).slice(0, 12), txt = clean(c && c.text);
@@ -653,7 +653,7 @@ function charInteract(post, idx) {
   )]);
   return callApiOnce(msgs, char).then(function(text) {
     var r = parseInteraction(memExtractTags(char, text));
-    r.comment = r.comment.replace(/\*[^*\n]+\*/g, '').replace(/[ \t]{2,}/g, ' ').trim();
+    r.comment = r.comment.replace(actionRe(), '').replace(/[ \t]{2,}/g, ' ').trim();
     if (r.like && !isOwn && !post.likes.some(function(a) { return sameAuthor(a, me); })) post.likes.push(me);
     if (r.comment) {
       // 回复对象：最近一条 @ 自己或评论自己动态的用户评论
