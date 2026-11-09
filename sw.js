@@ -3,7 +3,7 @@
 // 只处理本站文件，AI / 语音 / 生图等外部接口请求完全不经过这里。
 
 // 文件拆分后 css/、js/ 也要预先缓存；改动这个列表时把版本号加一
-const V = '56';   // 和 index.html、js/core/boot.js 里的版本号一样，用 tools/bump-version.py 一起改
+const V = '57';   // 和 index.html、js/core/boot.js 里的版本号一样，用 tools/bump-version.py 一起改
 const CACHE = 'mphone-v' + V;
 const CSS = ['core/base', 'core/app-screen', 'core/controls', 'core/avatar', 'core/image-picker',
              'desk/statusbar', 'desk/desktop', 'desk/iconsets', 'desk/widgets', 'desk/appearance', 'desk/bookshelf',
@@ -11,7 +11,7 @@ const CSS = ['core/base', 'core/app-screen', 'core/controls', 'core/avatar', 'co
              'chat/tabs', 'chat/header', 'chat/contacts', 'chat/list', 'chat/new-chat',
              'chat/feed', 'char/settings', 'chat/mine', 'chat/room', 'chat/messages',
              'chat/msg-menu', 'chat/msg-ops', 'chat/calendar', 'chat/quick-bar', 'chat/status-panel',
-             'chat/stickers', 'char/look', 'char/assistant', 'prompt/prompt', 'desk/pet', 'chat/file-send', 'chat/peek', 'desk/places', 'desk/books']
+             'chat/stickers', 'char/look', 'char/assistant', 'prompt/prompt', 'desk/pet', 'chat/file-send', 'chat/peek', 'desk/places', 'desk/books', 'desk/blindbox']
   .map(function (n) { return './css/' + n + '.css?v=' + V; });
 const JS = ['core/boot', 'core/utils', 'desk/statusbar', 'settings/api', 'core/api-errors',
             'desk/screens', 'desk/appearance', 'chat/tabs', 'desk/bookshelf', 'chat/header',
@@ -25,7 +25,7 @@ const JS = ['core/boot', 'core/utils', 'desk/statusbar', 'settings/api', 'core/a
             'core/image-viewer', 'char/assistant', 'settings/assist', 'core/llm', 'core/mcp', 'core/mcp-builtin',
             'desk/gallery', 'desk/anniv', 'desk/diary', 'desk/widgets', 'char/memory',
             'desk/memory-lib', 'chat/quick-bar', 'chat/status-panel', 'chat/stickers', 'chat/msg-ops',
-            'settings/backup', 'chat/calendar', 'core/errors', 'char/archive', 'chat/opening', 'desk/places', 'desk/pet', 'desk/letters', 'desk/greenhouse', 'desk/starjar', 'desk/books', 'chat/moments', 'char/life', 'char/migrate', 'prompt/wb-import']
+            'settings/backup', 'chat/calendar', 'core/errors', 'char/archive', 'chat/opening', 'desk/places', 'desk/pet', 'chat/assets', 'desk/blindbox', 'desk/letters', 'desk/greenhouse', 'desk/starjar', 'desk/books', 'chat/moments', 'char/life', 'char/migrate', 'prompt/wb-import']
   .map(function (n) { return './js/' + n + '.js?v=' + V; });
 const CORE = ['./', './index.html', './manifest.webmanifest',
               './icons/icon.png', './icons/logo.png', './icons/badge.png', './icons/mianin.jpg']

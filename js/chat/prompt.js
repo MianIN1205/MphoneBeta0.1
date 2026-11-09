@@ -67,6 +67,8 @@ function chatFormatRules(char) {
   }
   // 待关心、补人设、防复读（js/char/life.js）
   if (typeof lifeFormatRules === 'function') lifeFormatRules(char).forEach(function(r) { rules.push(r); });
+  // 帮{{user}}记现实里的东西（js/chat/assets.js）
+  if (typeof assetRuleFor === 'function') { var assetRule = assetRuleFor(char); if (assetRule) rules.push(assetRule); }
   // 名字下面那行小字：状态变了才写，跟着这次回复一起带回来
   // 个性签名（资料卡上那句，「此刻」卡片第一行）：还没有就写一个，之后很少换
   rules.push(char.charBio ? '你的个性签名（资料卡上那句话，像微信的个性签名）现在是「' + char.charBio + '」；心境有比较大的变化时才换（很少），换的时候在全部消息最后另起一行写 <个性签名>不超过 30 个字</个性签名>。'
@@ -242,6 +244,7 @@ function realWorldContext(char, hist) {
   }
   if (typeof gardenContextLine === 'function') { var gl = gardenContextLine(char); if (gl) lines.push(gl); }
   if (typeof starAnonContextLine === 'function') { var sa = starAnonContextLine(char); if (sa) lines.push(sa); }   // 只有写的人自己知道
+  if (typeof assetContextLine === 'function') { var asl = assetContextLine(char); if (asl) lines.push(asl); }   // 资产：赛博小物（虚拟的）和现实持有
   if (typeof togetherContextLine === 'function') { var tl = togetherContextLine(char); if (tl) lines.push(tl); }
   if (typeof lifeContextLines === 'function') lifeContextLines(char).forEach(function(l) { lines.push(l); });   // TA 的今天、记着要关心的事（js/char/life.js）
   // 生日临近（7 天内）：今天是谁的生日、还有几天

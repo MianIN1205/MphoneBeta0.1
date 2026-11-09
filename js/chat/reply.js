@@ -322,6 +322,7 @@ function sendMsg(userText, requestOnly, onDone) {
     if (typeof peekTakeLockTag === 'function') text = peekTakeLockTag(replyChar, text);   // TA 决定改手机密码
     if (typeof starTakeTag === 'function') text = starTakeTag(replyChar, text);   // 悄悄叠的星星放进星星瓶
     if (typeof lifeTakeTags === 'function') text = lifeTakeTags(replyChar, text);   // 待关心、已关心、补人设
+    if (typeof assetTakeTags === 'function') text = assetTakeTags(replyChar, text);   // 记下持有（js/chat/assets.js）
     var mark = list ? list.lastChild : null;
     var added = commitAssistantReply(hist, text, list, null);
     if (isChatView && added.length && typeof peekCaughtDone === 'function') peekCaughtDone(replyChar);   // 发现查手机的事已经提过了
@@ -421,13 +422,13 @@ function sendMsg(userText, requestOnly, onDone) {
       // 操作块不直接显示原始代码，写完后会变成确认卡片
       var shown = liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
         .replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
-        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设)[\s\S]*?(<\/(待关心|已关心|补人设)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设|记下持有)[\s\S]*?(<\/(待关心|已关心|补人设|记下持有)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
         .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, '').trim();
       if (bubbleStream && shown.indexOf('⚙️') < 0) {
         // 聊天窗口：写完的句子一个一个冒出来，打字气泡保持小点
         if (started) { typing.bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>'; started = false; }
         previewStream(liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
-          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设)[\s\S]*?(<\/(待关心|已关心|补人设)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设|记下持有)[\s\S]*?(<\/(待关心|已关心|补人设|记下持有)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
           .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, ''));
       } else {
         if (!started) { typing.bubble.innerHTML = ''; started = true; }

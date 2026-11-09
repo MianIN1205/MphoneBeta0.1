@@ -79,10 +79,10 @@
 }
 .mine-acc-del-btn:hover { color: #D05858; }
 
-.mine-acc-actions { display: flex; gap: 8px; }
+.mine-acc-actions { display: flex; gap: 8px; align-self: stretch; }   /* 弹窗里内容居中时也撑满，不然按钮缩成一个小圆点 */
 .mine-acc-btn {
   flex: 1; border: none; border-radius: 12px;
-  padding: 9px 0; font-size: 13px; font-weight: 600;
+  padding: 9px 14px; min-width: 64px; font-size: 13px; font-weight: 600;   /* 单独放的按钮也有个正常宽度 */
   cursor: pointer; font-family: inherit;
 }
 .mine-acc-btn-add { background: #D05858; color: #fff; }

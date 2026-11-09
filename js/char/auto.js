@@ -141,6 +141,7 @@ function autoSendMessage(idx) {
     if (viewing && typeof crMarkOtherView === 'function') crMarkOtherView(true);
     if (typeof peekTakeLockTag === 'function') text = peekTakeLockTag(char, text);
     if (typeof lifeTakeTags === 'function') text = lifeTakeTags(char, text);   // 主动消息里问过的事也划掉
+    if (typeof assetTakeTags === 'function') text = assetTakeTags(char, text);
     var added = commitAssistantReply(hist, text,
       showNow ? document.getElementById('chatMsgList') : null,
       showNow ? document.getElementById('chatRoomEmpty') : null);

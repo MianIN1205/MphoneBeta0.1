@@ -5,15 +5,17 @@
 // =============================================
 // 钱包：{ 账号 uid: { balance, records: [{ id, amount, note, time }] } }，amount 正为收入、负为支出
 function loadWallets() { return mphoneStore.load('mphone_wallet', {}) || {}; }
+var WALLET_START = 520;          // 新钱包一开始有 520（用户定的）
+var WALLET_TOPUP_MAX = 100000;   // 充值一次最多 10 万
 function getWallet(uid) {
   var all = loadWallets();
-  return all[uid] || { balance: 0, records: [] };
+  return all[uid] || { balance: WALLET_START, records: [] };
 }
 // 记一笔账（以后红包、转账等功能也调用这里），返回新余额
 function walletAdd(amount, note, uid) {
   uid = uid || getMainAccount().uid;
   var all = loadWallets();
-  var w = all[uid] || { balance: 0, records: [] };
+  var w = all[uid] || { balance: WALLET_START, records: [] };
   w.balance = Math.round((w.balance + amount) * 100) / 100;
   w.records.unshift({ id: genFeedId('w'), amount: amount, note: note || (amount >= 0 ? '收入' : '支出'), time: Date.now() });
   all[uid] = w;
@@ -103,14 +105,15 @@ var _walletTopupPending = false;
 document.getElementById('walletTopupBtn').addEventListener('click', function() {
   presetModalMode = 'wallet';
   _walletTopupPending = true;
-  document.querySelector('#presetModal .modal-title').textContent = '充值金额（元）';
+  document.querySelector('#presetModal .modal-title').textContent = '充值金额（一次最多 10 万）';
   presetNameInput.value = '';
   presetModal.classList.add('open');
   presetNameInput.focus();
 });
 function confirmWalletTopup(text) {
   var amount = Math.round(parseFloat(text) * 100) / 100;
-  if (!(amount > 0) || amount > 1e8) return false;
+  if (!(amount > 0)) return false;
+  if (amount > WALLET_TOPUP_MAX) { showToast('一次最多充 10 万哦', 'error'); return false; }
   walletAdd(amount, '充值');
   renderWallet();
   refreshMineEntries();
