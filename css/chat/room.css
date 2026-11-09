@@ -73,6 +73,7 @@
 /* 聊天窗口内视图切换（聊天 / 剧情） */
 .cr-view {
   display: none;
+  position: relative;   /* 「↓ N 条新消息」贴着它的底边 */
   flex: 1;
   flex-direction: column;
   overflow: hidden;

@@ -136,6 +136,8 @@ function sendPickedImage(file) {
 var ROOM_PAGE = 50;
 function renderMsgPage(list, empty, hist, count) {
   list.innerHTML = '';
+  list._away = false;
+  if (typeof crPillReset === 'function') crPillReset(list);
   list.appendChild(empty);
   empty.style.display = hist.length ? 'none' : 'flex';
   var start = Math.max(0, hist.length - count);

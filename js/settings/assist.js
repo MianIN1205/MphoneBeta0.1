@@ -6,7 +6,7 @@
 // 后台保活：循环播放一段听不见的声音，让手机不那么快暂停这个网页。
 // 只在应用还在后台运行时有效；彻底关掉后收不到（那需要推送服务器）。
 // =============================================
-var assistCfg = Object.assign({ notify: false, keepAlive: false }, mphoneStore.load('mphone_assist', {}));
+var assistCfg = Object.assign({ notify: false, keepAlive: false, fakeStream: false }, mphoneStore.load('mphone_assist', {}));
 function saveAssistCfg() { mphoneStore.save('mphone_assist', assistCfg); }
 
 var notifyOnInput    = document.getElementById('notifyOn');
@@ -55,6 +55,12 @@ function notifyIcon(char) {
   return av && av.length < 300000 ? av : 'icons/icon.png';
 }
 // 通知显示名称：填了就用它当标题（比如「微信」），内容写成「角色：消息」
+// 回复一条条蹦出来（假流式，用户要的开关，默认关）：js/chat/reply.js 的 previewStream / crRevealOneByOne 看这个
+(function() {
+  var t = document.getElementById('fakeStreamOn');
+  t.checked = !!assistCfg.fakeStream;
+  t.addEventListener('change', function() { assistCfg.fakeStream = t.checked; saveAssistCfg(); });
+})();
 var notifyNameInput = document.getElementById('notifyName');
 notifyNameInput.value = assistCfg.notifyName || '';
 notifyNameInput.addEventListener('input', function() { assistCfg.notifyName = this.value.trim(); saveAssistCfg(); });

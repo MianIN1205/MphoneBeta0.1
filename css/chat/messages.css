@@ -298,3 +298,8 @@
 /* 剧情窗口每条的「名字 + 时间」：只有文本框、自定义格式显示（js/chat/room.js 的 dramaBoxCss） */
 .cr-msg-head { display: none; }
 /* 隔了一个小时以上：这一行写「距离上次聊天 多久」（.cr-time-sep.cr-time-gap），不写时间 */
+/* 往上翻着看的时候来了新消息：底部「↓ N 条新消息」，点了跳到最下面（js/chat/render.js 的 crStick / crPill） */
+.cr-new-pill { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%) translateY(6px); z-index: 20; opacity: 0; pointer-events: none;
+  border: none; border-radius: 16px; padding: 6px 14px; font-family: inherit; font-size: 12.5px; color: #c0607a; background: rgba(255,255,255,0.94);
+  box-shadow: 0 3px 12px rgba(150,100,120,0.2); transition: opacity 0.2s, transform 0.2s; cursor: pointer; }
+.cr-new-pill.show { opacity: 1; pointer-events: auto; transform: translateX(-50%); }

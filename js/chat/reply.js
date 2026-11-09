@@ -92,6 +92,35 @@ function commitAssistantReply(hist, raw, list, empty) {
 // · TA 换了行、但这一行没说完（结尾是字或逗号），就接着下一行，不会从一句话中间断开（以前「拉严 / 实点」「守着你 / 呢」，用户反馈过）
 // · 一句太长（超过 CHAT_BUBBLE_SPLIT 字）才在逗号处再分；只有 *动作* 的一句跟着下一句（显示成气泡外的灰色小字）；「〔译〕」跟着上一条
 // · 句号存着（这样 TA 在聊天记录里看到的是好好的句子），显示时把句尾单个「。」藏掉（render.js）
+// 把 mark 后面新画出来的几条先藏起来，中间放「正在输入」，一条一条亮出来（每条跟着它的动作小字、小时间）
+function crBubbleGap(t) { return 350 + Math.min(String(t || '').length * 30, 900); }   // 下一条冒出来前停多久（上一条越长停越久）
+function crRevealOneByOne(list, mark, shown) {
+  var els = [], el = mark ? mark.nextSibling : list.firstChild;
+  for (; el; el = el.nextSibling) els.push(el);
+  var groups = [], g = null;
+  els.forEach(function(e) {
+    if (e.classList && e.classList.contains('chat-msg-row') || !g) { g = []; groups.push(g); }
+    g.push(e);
+  });
+  var from = Math.max(1, shown || 0);
+  if (groups.length <= from) { crStick(list); return; }
+  groups.slice(from).forEach(function(gr) { gr.forEach(function(e) { e.style.display = 'none'; }); });
+  crStick(list);
+  var dots = appendMsg('ai', '', true, list).row, i = from;
+  list.insertBefore(dots, groups[from - 1][groups[from - 1].length - 1].nextSibling);
+  (function next() {
+    if (i >= groups.length || !dots.parentNode) { dots.remove(); return; }
+    var gr = groups[i];
+    setTimeout(function() {
+      gr.forEach(function(e) { e.style.display = ''; });
+      list.insertBefore(dots, gr[gr.length - 1].nextSibling);
+      if (list._away && typeof crPillPaint === 'function') { (list._newRows = list._newRows || []).push(gr[0]); crPillPaint(list); }
+      crStick(list);
+      i++;
+      if (i >= groups.length) dots.remove(); else next();
+    }, i === from && shown ? 300 : crBubbleGap(groups[i - 1][0].textContent));
+  })();
+}
 function chatLineDone(s) {
   s = String(s).trim();
   if (/\*$/.test(s)) return true;   // 以 *动作* 收尾
@@ -242,7 +271,7 @@ function genReattach() {
     g.previews().forEach(function(r) { list.appendChild(r); });
     list.appendChild(g.typing.row);
     var empty = list._empty; if (empty) empty.style.display = 'none';
-    list.scrollTop = list.scrollHeight;
+    crStick(list);
   });
   syncGenBtn();
 }
@@ -267,7 +296,7 @@ function sendMsg(userText, requestOnly, onDone) {
   syncGenBtn();
   // 这个角色的聊天室开着（不管在看聊天还是剧情）就画进对应的列表；切去别的角色时不碰那边的列表
   function roomOpen() { return appChatRoom.classList.contains('active') && charList[openingChatCharIdx] === replyChar; }
-  function scrollLive() { var L = typing.row.parentNode; if (L) L.scrollTop = 999999; }
+  function scrollLive() { var L = typing.row.parentNode; if (L) crStick(L); }
 
   // 出错：还在这个对话里就在列表里放一行小字（点开看原因）；已经离开了就在顶部提示一下是谁回复失败。
   // 报错条记在这份记录里，回来时还在原处
@@ -284,6 +313,7 @@ function sendMsg(userText, requestOnly, onDone) {
   // 只写进记录并记为未读；切走又切回来时打字气泡已被重绘掉，就画到当前列表里
   function deliver(text) {
     typing.row.remove();
+    var shownCount = previewRows.length;   // 已经冒出来的几条：收完以后这些直接显示，剩下的接着一条条出
     clearPreview();
     var showing = roomOpen();
     var list = showing ? document.getElementById(listId) : null;
@@ -292,9 +322,12 @@ function sendMsg(userText, requestOnly, onDone) {
     if (typeof peekTakeLockTag === 'function') text = peekTakeLockTag(replyChar, text);   // TA 决定改手机密码
     if (typeof starTakeTag === 'function') text = starTakeTag(replyChar, text);   // 悄悄叠的星星放进星星瓶
     if (typeof lifeTakeTags === 'function') text = lifeTakeTags(replyChar, text);   // 待关心、已关心、补人设
+    var mark = list ? list.lastChild : null;
     var added = commitAssistantReply(hist, text, list, null);
     if (isChatView && added.length && typeof peekCaughtDone === 'function') peekCaughtDone(replyChar);   // 发现查手机的事已经提过了
-    if (list) list.scrollTop = list.scrollHeight;
+    // 假流式（用户要的）：回复是一次性整段到的（接口不是边写边出、没冒过预览气泡），聊天窗口里也一条一条蹦出来
+    if (list && isChatView && bubbleStream && typeof assistCfg !== 'undefined' && assistCfg.fakeStream && added.length > Math.max(1, shownCount)) crRevealOneByOne(list, mark, shownCount);
+    else if (list) crStick(list);
     if (!showing && added.length && replyChar) {
       chatUnread[replyChar.id] = (chatUnread[replyChar.id] || 0) + added.length;
       mphoneStore.save('mphone_unread', chatUnread);
@@ -311,8 +344,9 @@ function sendMsg(userText, requestOnly, onDone) {
   // 这些气泡只是预览，回复完整收到后换成正式的消息（拆法和 commitAssistantReply 一样，看起来不会跳）
   var rcCfg = Object.assign({}, DEFAULT_CHAT_CFG, (replyChar && replyChar.chatCfg) || {});
   var bubbleStream = isChatView && rcCfg.replyMax > 1 && !(typeof charBigBubble === 'function' && charBigBubble(replyChar));   // 仿siya 不一句句冒出来
-  var previewRows = [], previewParts = [];
+  var previewRows = [], previewParts = [], previewTimer = 0, previewAt = 0;
   function clearPreview() {
+    clearTimeout(previewTimer);
     previewRows.forEach(function(r) { (r._actionNotes || []).forEach(function(x) { x.remove(); }); r.remove(); });
     previewRows = []; previewParts = [];
   }
@@ -332,14 +366,22 @@ function sendMsg(userText, requestOnly, onDone) {
     if (!same) clearPreview();
     var list = typing.row.parentNode;
     if (!list) return;
-    for (var i = previewParts.length; i < parts.length; i++) {
+    // 一次只冒一条，和上一条隔一会儿（接口一下子给了好几句时也一条条出来，用户要的「假流式」）；没轮到的过一会儿再来
+    // 设置里开了「回复一条条蹦出来」才这样，关着时写好一句就出一句（以前的样子）
+    var fake = typeof assistCfg !== 'undefined' && assistCfg.fakeStream;
+    clearTimeout(previewTimer);
+    var wait = fake && previewParts.length ? crBubbleGap(previewParts[previewParts.length - 1]) - (Date.now() - previewAt) : 0;
+    if (wait > 0) { previewTimer = setTimeout(function() { previewStream(shown); }, wait); return; }
+    for (var i = previewParts.length, upto = fake ? previewParts.length + 1 : parts.length; i < parts.length && i < upto; i++) {
       previewParts.push(parts[i]);
       if (typeof parts[i] !== 'string' || !parts[i]) continue;
       var r = appendMsg('ai', parts[i], false, list);
       r.row.classList.add('cr-stream-preview');
       previewRows.push(r.row);
       list.appendChild(typing.row);   // 「正在输入」一直在最下面
+      previewAt = Date.now();
     }
+    if (parts.length > previewParts.length) previewTimer = setTimeout(function() { previewStream(shown); }, crBubbleGap(previewParts[previewParts.length - 1]));
   }
 
   // 聊天视图附加回复格式要求（剧情视图不拆条、不加状态栏）；请求按接口类型自动适配（见 js/core/llm.js）

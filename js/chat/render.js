@@ -13,6 +13,46 @@ function createMsgAvatar(role) {
   }
   return av;
 }
+// 往上翻着看旧消息时，新消息来了不把人拽到最下面（用户要的，像 QQ）：底部冒一个「↓ N 条新消息」，点了才跳下去；
+// 本来就在最底下就照常跟着滚。list._away 只在用户自己滚动时更新（离底部超过 150px 算翻上去了）
+function crStick(list) {
+  if (!list) return;
+  if (!list._away) list.scrollTop = list.scrollHeight;
+}
+function crPill(list) {
+  if (!list._pill) {
+    var p = document.createElement('button');
+    p.className = 'cr-new-pill';
+    p.addEventListener('click', function() { list._away = false; list.scrollTop = list.scrollHeight; crPillReset(list); });
+    list.parentNode.appendChild(p);
+    list._pill = p;
+  }
+  return list._pill;
+}
+function crPillReset(list) { list._newRows = []; if (list._pill) list._pill.classList.remove('show'); }
+function crPillPaint(list) {
+  list._newRows = (list._newRows || []).filter(function(r) { return r.parentNode === list && r.style.display !== 'none'; });
+  var n = list._newRows.length, p = crPill(list);
+  p.textContent = '↓ ' + n + ' 条新消息';
+  p.classList.toggle('show', n > 0 && list._away && list.offsetParent !== null);
+}
+['chatMsgList', 'dramaMsgList'].forEach(function(id) {
+  var list = document.getElementById(id);
+  if (!list) return;
+  list.addEventListener('scroll', function() {
+    list._away = list.scrollHeight - list.scrollTop - list.clientHeight > 150;
+    if (!list._away) crPillReset(list);
+  });
+  // 翻上去的时候新来的消息（正在输入的小点不算）记下来，数出有几条
+  new MutationObserver(function(ms) {
+    if (!list._away) return;
+    ms.forEach(function(m) { Array.prototype.forEach.call(m.addedNodes, function(n) {
+      if (n.classList && n.classList.contains('chat-msg-row') && !n.querySelector('.typing-dots')) (list._newRows = list._newRows || []).push(n);
+    }); });
+    crPillPaint(list);
+  }).observe(list, { childList: true });
+});
+
 function appendMsg(role, content, isTyping, targetListEl, targetEmptyEl) {
   var list  = targetListEl  || getActiveMsgListEl();
   var empty = targetEmptyEl || getActiveEmptyEl();
@@ -27,7 +67,7 @@ function appendMsg(role, content, isTyping, targetListEl, targetEmptyEl) {
   row.appendChild(bubble);
   list.appendChild(row);
   placeActionNotes(row);
-  list.scrollTop = list.scrollHeight;
+  crStick(list);
   return { row: row, bubble: bubble };
 }
 
@@ -349,7 +389,7 @@ function renderPatNotice(m, list, empty) {
   el._msg = m;
   el._extras = [];
   list.appendChild(el);
-  list.scrollTop = list.scrollHeight;
+  crStick(list);
   return el;
 }
 // 剧情开场白：居中的旁白块（不是谁说的话），长按和普通消息一样（见 js/chat/opening.js）
@@ -364,7 +404,7 @@ function renderNarration(m, list, empty) {
   row._msg = m;
   row._extras = [];
   list.appendChild(row);
-  list.scrollTop = list.scrollHeight;
+  crStick(list);
   return row;
 }
 // 思维链折叠条：Prompt → 思维链 开了「在聊天里显示思考」才有，放在那次回复的第一条前面，点开看思考全文
@@ -439,7 +479,7 @@ function renderRecallNotice(m, list, empty) {
     el._msg = m;
     el._extras = [];
     list.appendChild(el);
-    list.scrollTop = list.scrollHeight;
+    crStick(list);
     return el;
   }
   el.appendChild(document.createTextNode('你撤回了一条消息'));
@@ -457,7 +497,7 @@ function renderRecallNotice(m, list, empty) {
   el._msg = m;
   el._extras = [];
   list.appendChild(el);
-  list.scrollTop = list.scrollHeight;
+  crStick(list);
   return el;
 }
 
@@ -485,6 +525,6 @@ function appendImgMsg(role, imgSrc, targetListEl, targetEmptyEl) {
   bubble.appendChild(img);
   row.appendChild(bubble);
   list.appendChild(row);
-  list.scrollTop = list.scrollHeight;
+  crStick(list);
   return { row: row, bubble: bubble };
 }

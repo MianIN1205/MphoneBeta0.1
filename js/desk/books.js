@@ -264,7 +264,7 @@ function openTogether(idx) {
       document.getElementById('togetherPickOverlay').classList.remove('open');
       bookTogether[char.id] = { bookId: meta.id, at: Date.now() };
       saveBookTogether();
-      togetherNote(char, '你邀请「' + (char.charAlias || char.charName || 'TA') + '」一起看《' + meta.title + '》', '（用户邀请你一起看《' + meta.title + '》，现在你们在一起看这本书）');
+      togetherNote(char, '📖 和「' + (char.charAlias || char.charName || 'TA') + '」一起翻开了《' + meta.title + '》', '（用户邀请你一起看《' + meta.title + '》，现在你们在一起看这本书）');
       openReader(meta.id, { charId: char.id });
     });
     list.appendChild(row);
@@ -378,7 +378,7 @@ document.getElementById('readerTgStop').addEventListener('click', function() {
   openConfirm('不和「' + (c.charAlias || c.charName) + '」一起看《' + meta.title + '》了？', function() {
     delete bookTogether[c.id];
     saveBookTogether();
-    togetherNote(c, '你们不一起看《' + meta.title + '》了', '（你们暂时不一起看《' + meta.title + '》了）');
+    togetherNote(c, '📖 《' + meta.title + '》一起看到第 ' + (readerState.page + 1) + ' 页，先合上了', '（你们暂时不一起看《' + meta.title + '》了，一起看到了第 ' + (readerState.page + 1) + ' 页）');
     setReaderChat(false);
     renderReader();
   });
@@ -506,3 +506,29 @@ function readerTgPaint() {
   // 从阅读器回到聊天窗口时重新量一下（藏着的时候量不出位置）
   new MutationObserver(function() { if (!appReader.classList.contains('active')) readerTgPaintSoon(); }).observe(appReader, { attributes: true, attributeFilter: ['class'] });
 })();
+
+// ---------- 一起看中途回到聊天：聊天窗口上面一个「继续看」小条，点了回到看到的地方（用户要的，不用再去加号里找） ----------
+function togetherChipSync() {
+  var view = document.querySelector('#appChatRoom .cr-view[data-crview="chat"]');
+  if (!view) return;
+  var chip = document.getElementById('crTogetherChip');
+  if (!chip) {
+    chip = document.createElement('button');
+    chip.id = 'crTogetherChip';
+    chip.className = 'cr-together-chip';
+    chip.addEventListener('click', function() {
+      var c = charList[openingChatCharIdx], t = c && bookTogether[c.id];
+      if (t && bookMeta(t.bookId)) openReader(t.bookId, { charId: c.id });
+    });
+    view.appendChild(chip);
+  }
+  var c = charList[openingChatCharIdx], t = c && bookTogether[c.id], meta = t && bookMeta(t.bookId);
+  var on = !!meta && appChatRoom.classList.contains('active') && !appReader.classList.contains('active');
+  chip.classList.toggle('show', on);
+  view.classList.toggle('has-tg-chip', on);   // 列表顶上让出位置，不挡住第一条
+  if (on) chip.textContent = '📖 一起看《' + meta.title + '》· 第 ' + (bookPageOf(meta.id, meta.pos || 0) + 1) + ' 页　继续看 ›';
+}
+[appChatRoom, appReader].forEach(function(el) { new MutationObserver(togetherChipSync).observe(el, { attributes: true, attributeFilter: ['class'] }); });
+if (typeof renderRoomLists === 'function') { var _tgRender = renderRoomLists; renderRoomLists = function(idx) { var r = _tgRender.apply(this, arguments); togetherChipSync(); return r; }; }
+var _tgSaveTogether = saveBookTogether;
+saveBookTogether = function() { _tgSaveTogether(); togetherChipSync(); };
