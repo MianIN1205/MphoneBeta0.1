@@ -1,7 +1,7 @@
 # 眠花糖机（Mphone）
 
 一个“小手机”风格的 AI 角色扮演网页（PWA），纯原生 HTML/CSS/JS，没有构建步骤。
-英文名 Muse（标题和开屏写「眠花糖机 · Muse」；桌面图标下的名字仍是「眠花糖机」，因为 iPhone 改名要重新添加图标，会清数据）。
+英文名 Muse（标题和开屏写「眠花糖机 · Muse」；桌面图标下的名字 2026-11-09 用户要改成「眠花糖机·Muse」（manifest 的 short_name、apple-mobile-web-app-title），她要删掉重新添加桌面图标换新 logo；iPhone 删图标会清数据，先备份）。
 线上地址：https://mianin1205.github.io/MphoneBeta0.1/ （GitHub Pages，仓库 MianIN1205/MphoneBeta0.1，分支 main）
 
 ## 和用户合作的规矩
