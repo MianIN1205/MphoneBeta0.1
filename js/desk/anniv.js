@@ -22,7 +22,7 @@ function saveAnnivs() {
 // 每一条：{ id, kind, title, date, time, big, note, unit, past, today, order, pin, show, a（自己添加的原始数据）, charId }
 function annivEntries() {
   var today = dayStart(Date.now()), list = [];
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     var first = 0;
     [chatHistories[c.id], dramaHistories[c.id]].forEach(function(h) {
       (h || []).forEach(function(m) { if (m.time && (!first || m.time < first)) first = m.time; });
@@ -177,7 +177,7 @@ function renderAnnivPeople() {
   u.textContent = 'user';
   u.addEventListener('click', function() { annivWithUser = !annivWithUser; renderAnnivPeople(); });
   box.appendChild(u);
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     var b = document.createElement('button');
     b.className = 'stk-chip' + (annivPeople.indexOf(c.id) >= 0 ? ' selected' : '');
     b.textContent = c.charAlias || c.charName || '未命名';

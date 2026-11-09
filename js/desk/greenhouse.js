@@ -365,7 +365,7 @@ function renderGarden(fx) {
   });
   gdBody.appendChild(info);
   // 分享给谁：分享了的角色才知道这盆花（会在 TA 的聊天里发一张花的照片），知道的角色会时不时悄悄来照顾它
-  var chars = charList.filter(function(c) { return c.id && (c.inChat || c.builtinAssistant); });
+  var chars = charList.filter(function(c) { return c.id && !c.isGroup && (c.inChat || c.builtinAssistant); });
   if (chars.length && hl !== 'dead') {
     var share = document.createElement('div');
     share.className = 'settings-card gd-share';

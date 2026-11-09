@@ -12,7 +12,7 @@ var selectedNewChatIndex  = -1;
 function openNewChatModal() {
   selectedNewChatIndex = -1;
   newChatList.innerHTML = '';
-  charList.forEach(function(char, i) {
+  charList.forEach(function(char, i) { if (char.isGroup) return;   // 群聊不算
     var item = document.createElement('div');
     item.className = 'new-chat-char-item';
     item.dataset.index = i;

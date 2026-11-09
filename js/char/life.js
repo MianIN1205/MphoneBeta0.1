@@ -94,7 +94,7 @@ function lifeTick() {
   if (!api.url || !api.key || !api.model) return;
   var today = lifeDayKey(), now = Date.now();
   var char = charList.filter(function(c) {
-    if (!c.id || c.builtinAssistant || (lifeRetry[c.id] || 0) > now) return false;
+    if (!c.id || c.isGroup || c.builtinAssistant || (lifeRetry[c.id] || 0) > now) return false;
     if (lifeDays[c.id] && lifeDays[c.id].date === today) return false;
     var last = typeof lastSessionMsg === 'function' ? lastSessionMsg(c) : null;
     return c.inChat && last && last.time && now - last.time < 7 * 86400000;   // 一周内聊过的才写，省请求

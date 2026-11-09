@@ -319,7 +319,7 @@ document.getElementById('feedBtnPost').addEventListener('click', function(e) {
   renderComposeImgs();
   // 谁可以看：默认全部角色
   feedVisibleList.innerHTML = '';
-  charList.forEach(function(char) {
+  charList.forEach(function(char) { if (char.isGroup) return;   // 群聊不算
     var chip = document.createElement('span');
     chip.className = 'feed-visible-chip on';
     chip.dataset.id = char.id;
@@ -362,7 +362,7 @@ document.getElementById('feedBtnCharPost').addEventListener('click', function(e)
   e.stopPropagation();
   feedPopup.classList.remove('open');
   feedCharPickList.innerHTML = '';
-  charList.forEach(function(char, idx) {
+  charList.forEach(function(char, idx) { if (char.isGroup) return;   // 群聊不算
     var item = document.createElement('div');
     item.className = 'mine-acc-item';
     var av = document.createElement('div');
@@ -523,7 +523,7 @@ function charNpcComments(post, idx) {
   var char = charList[idx];
   if (!char) return Promise.resolve();
   var me = charAuthor(char);
-  var others = charList.filter(function(c) { return c !== char; }).map(function(c) { return c.charAlias || c.charName; }).filter(Boolean);
+  var others = charList.filter(function(c) { return c !== char && !c.isGroup; }).map(function(c) { return c.charAlias || c.charName; }).filter(Boolean);
   var known = (char.feedNpcs || []).slice(-12);
   var pastComments = [];
   charRecentPosts(char, 5).forEach(function(p) {
@@ -606,7 +606,7 @@ function feedPostAsText(post, viewer) {
 var FEED_CONTEXT_MAX = 6;
 function feedContextFor(char) {
   if (!char || !char.id) return '';
-  var friends = charList.filter(function(c) { return c !== char && (char.circle || []).indexOf(c.id) >= 0; })
+  var friends = charList.filter(function(c) { return c !== char && !c.isGroup && (char.circle || []).indexOf(c.id) >= 0; })
     .map(function(c) { return c.charAlias || c.charName; }).filter(Boolean);
   var posts = feedPosts.filter(function(p) { return charCanSeePost(char, p); }).slice(0, FEED_CONTEXT_MAX);
   var out = '【社交圈】除了用户，你认识的其他角色：' + (friends.join('、') || '没有') + '。其他角色你都不认识，也看不到他们的动态。';
@@ -694,7 +694,7 @@ function requestFeedInteraction(post, opts) {
   opts = opts || {};
   if (post._busy) return;
   var targets = [];
-  charList.forEach(function(char, idx) {
+  charList.forEach(function(char, idx) { if (char.isGroup) return;   // 群聊不算
     var me = charAuthor(char);
     var canSee = charCanSeePost(char, post);
     if (canSee && charNeedsToRespond(post, me)) targets.push(idx);

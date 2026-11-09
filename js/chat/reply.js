@@ -284,6 +284,7 @@ function sendMsg(userText, requestOnly, onDone) {
   var hist = getActiveHistory(openingChatCharIdx);
   var replyCharIdx = openingChatCharIdx;
   var replyChar = charList[replyCharIdx];
+  var isGrp = !!(replyChar && replyChar.isGroup);   // 群聊：一次写全群，按「名字：」拆给每个成员（js/chat/group.js）
   var isChatView = hist === getChatHistory(replyCharIdx);
   var gKey = genKey(replyChar, isChatView);
   if (genStates[gKey]) { showToast('正在回复中，可以先点 ⏹ 停止', 'error'); if (onDone) onDone([]); return; }
@@ -319,15 +320,16 @@ function sendMsg(userText, requestOnly, onDone) {
     var list = showing ? document.getElementById(listId) : null;
     if (showing && typeof crMarkOtherView === 'function') crMarkOtherView(isChatView);
     if (showing && !isChatView && currentCrSubView === 'contacts' && typeof crDramaSeen === 'function') crDramaSeen(replyChar);
-    if (typeof peekTakeLockTag === 'function') text = peekTakeLockTag(replyChar, text);   // TA 决定改手机密码
-    if (typeof starTakeTag === 'function') text = starTakeTag(replyChar, text);   // 悄悄叠的星星放进星星瓶
-    if (typeof lifeTakeTags === 'function') text = lifeTakeTags(replyChar, text);   // 待关心、已关心、补人设
-    if (typeof assetTakeTags === 'function') text = assetTakeTags(replyChar, text);   // 记下持有（js/chat/assets.js）
+    if (!isGrp && typeof peekTakeLockTag === 'function') text = peekTakeLockTag(replyChar, text);   // TA 决定改手机密码
+    if (!isGrp && typeof starTakeTag === 'function') text = starTakeTag(replyChar, text);   // 悄悄叠的星星放进星星瓶
+    if (!isGrp && typeof lifeTakeTags === 'function') text = lifeTakeTags(replyChar, text);   // 待关心、已关心、补人设
+    if (!isGrp && typeof assetTakeTags === 'function') text = assetTakeTags(replyChar, text);   // 记下持有（js/chat/assets.js）
     var mark = list ? list.lastChild : null;
-    var added = commitAssistantReply(hist, text, list, null);
-    if (isChatView && added.length && typeof peekCaughtDone === 'function') peekCaughtDone(replyChar);   // 发现查手机的事已经提过了
+    var added = isGrp ? groupCommitReply(replyChar, hist, text, list) : commitAssistantReply(hist, text, list, null);
+    if (isChatView && !isGrp && added.length && typeof peekCaughtDone === 'function') peekCaughtDone(replyChar);   // 发现查手机的事已经提过了
     // 假流式（用户要的）：回复是一次性整段到的（接口不是边写边出、没冒过预览气泡），聊天窗口里也一条一条蹦出来
-    if (list && isChatView && bubbleStream && typeof assistCfg !== 'undefined' && assistCfg.fakeStream && added.length > Math.max(1, shownCount)) crRevealOneByOne(list, mark, shownCount);
+    if (list && isGrp && added.length > 1) crRevealOneByOne(list, mark, 0);   // 群里大家一条条说
+    else if (list && isChatView && bubbleStream && typeof assistCfg !== 'undefined' && assistCfg.fakeStream && added.length > Math.max(1, shownCount)) crRevealOneByOne(list, mark, shownCount);
     else if (list) crStick(list);
     if (!showing && added.length && replyChar) {
       chatUnread[replyChar.id] = (chatUnread[replyChar.id] || 0) + added.length;
@@ -344,7 +346,7 @@ function sendMsg(userText, requestOnly, onDone) {
   // 聊天窗口边生成边出气泡：写完一行（或 |||）就先冒出一个气泡，正在写的那句只显示「正在输入」的小点
   // 这些气泡只是预览，回复完整收到后换成正式的消息（拆法和 commitAssistantReply 一样，看起来不会跳）
   var rcCfg = Object.assign({}, DEFAULT_CHAT_CFG, (replyChar && replyChar.chatCfg) || {});
-  var bubbleStream = isChatView && rcCfg.replyMax > 1 && !(typeof charBigBubble === 'function' && charBigBubble(replyChar));   // 仿siya 不一句句冒出来
+  var bubbleStream = !isGrp && isChatView && rcCfg.replyMax > 1 && !(typeof charBigBubble === 'function' && charBigBubble(replyChar));   // 仿siya 不一句句冒出来
   var previewRows = [], previewParts = [], previewTimer = 0, previewAt = 0;
   function clearPreview() {
     clearTimeout(previewTimer);
@@ -391,9 +393,9 @@ function sendMsg(userText, requestOnly, onDone) {
     endGen();
     if (aiText) {
       var added = deliver(aiText);
-      if (isChatView) maybeAutoSummarize(replyCharIdx);
+      if (isChatView && !isGrp) maybeAutoSummarize(replyCharIdx);
       // 只在「聊天」子视图回复后按概率触发动态（剧情不触发）
-      if (isChatView) maybeAutoPostAfterChat(replyCharIdx);
+      if (isChatView && !isGrp) maybeAutoPostAfterChat(replyCharIdx);
       if (onDone) onDone(added);
     } else {
       typing.row.remove();
@@ -403,10 +405,11 @@ function sendMsg(userText, requestOnly, onDone) {
     }
   }
   // 开了 MCP 时把工具交给模型；用工具的过程显示在打字气泡里
-  var mcpTools = (typeof mcpActiveTools === 'function') ? mcpActiveTools() : [];
+  var mcpTools = (!isGrp && typeof mcpActiveTools === 'function') ? mcpActiveTools() : [];
   // 开了向量记忆时先算好这次对话的向量（失败就用本地相似度）
-  (typeof memPrepare === 'function' ? memPrepare(replyChar, hist) : Promise.resolve()).then(function() {
-    if (typeof cotModeFor === 'function') cfg.cot = cotModeFor(replyChar, !isChatView);   // 这个角色这个窗口的思考方式（llm.js 的 llmThinkOff 看它）
+  (!isGrp && typeof memPrepare === 'function' ? memPrepare(replyChar, hist) : Promise.resolve()).then(function() {
+    if (isGrp) cfg.cot = 'off';
+    else if (typeof cotModeFor === 'function') cfg.cot = cotModeFor(replyChar, !isChatView);   // 这个角色这个窗口的思考方式（llm.js 的 llmThinkOff 看它）
     return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : dramaFormatRules(charList[replyCharIdx]), cotRules(!isChatView, replyChar)), {
     stream: true,
     signal: ctrl.signal,
@@ -417,6 +420,7 @@ function sendMsg(userText, requestOnly, onDone) {
     onStatus: function(text) { typing.bubble.textContent = text; scrollLive(); },
     onText: function(full) {
       aiText = full;
+      if (isGrp) { scrollLive(); return; }   // 群聊：收完再一条条出来，中间只显示「正在输入」
       // 导入的酒馆状态栏那段不在聊天里冒出来
       var liveText = (isChatView && typeof statusStreamCut === 'function') ? statusStreamCut(replyChar, aiText) : aiText;
       // 操作块不直接显示原始代码，写完后会变成确认卡片

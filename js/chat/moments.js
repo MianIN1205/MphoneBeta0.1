@@ -6,7 +6,7 @@ var momentSeen = mphoneStore.load('mphone_moment_seen', {}) || {};
 var MOMENT_MAX = 8;
 function momentChars() {
   if (Array.isArray(momentPick)) return momentPick.map(function(id) { return charList.filter(function(c) { return c.id === id; })[0]; }).filter(Boolean);
-  return charList.filter(function(c) { return c.id && (c.inChat || c.builtinAssistant); }).map(function(c) {
+  return charList.filter(function(c) { return c.id && !c.isGroup && (c.inChat || c.builtinAssistant); }).map(function(c) {
     var last = typeof lastSessionMsg === 'function' ? lastSessionMsg(c) : null;
     return { c: c, t: (last && last.time) || c.chatTouchedAt || 0 };
   }).sort(function(a, b) { return b.t - a.t; }).slice(0, 3).map(function(x) { return x.c; });
@@ -77,7 +77,7 @@ document.getElementById('momentChat').addEventListener('click', function() {
 function openMomentPick() {
   var cur = momentChars().map(function(c) { return c.id; }), list = document.getElementById('momentPickList');
   list.innerHTML = '';
-  charList.filter(function(c) { return c.id; }).forEach(function(c) {
+  charList.filter(function(c) { return c.id && !c.isGroup; }).forEach(function(c) {
     var chip = document.createElement('span');
     chip.className = 'feed-visible-chip' + (cur.indexOf(c.id) >= 0 ? ' on' : '');
     chip.textContent = c.charAlias || c.charName || '未命名';

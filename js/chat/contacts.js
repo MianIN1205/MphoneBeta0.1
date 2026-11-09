@@ -28,7 +28,7 @@ function renderContactList() {
   list.innerHTML = '';
   index.innerHTML = '';
   var displayName = function(c) { return c.charAlias || c.charName || '未命名'; };
-  var items = charList.map(function(c, i) { return { char: c, idx: i, letter: nameInitial(displayName(c)) }; });
+  var items = charList.map(function(c, i) { return { char: c, idx: i, letter: nameInitial(displayName(c)) }; }).filter(function(it) { return !it.char.isGroup; });   // 群聊不在通讯录里
   var groups = [];
   var starred = items.filter(function(it) { return it.char.starred; });
   if (starred.length) groups.push({ key: '★', label: '星标好友', items: starred });

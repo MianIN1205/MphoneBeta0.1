@@ -11,7 +11,7 @@ function renderDiaryChars() {
   var row = document.getElementById('diaryCharRow');
   row.innerHTML = '';
   if (!charList.some(function(c) { return c.id === diaryCharId; })) diaryCharId = charList[0] ? charList[0].id : '';
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     var chip = document.createElement('span');
     chip.className = 'feed-visible-chip' + (c.id === diaryCharId ? ' on' : '');
     chip.textContent = c.charAlias || c.charName || '未命名';
@@ -126,7 +126,7 @@ function diaryTick() {
   var now = new Date(), day = diaryDayKey(now);
   for (var i = 0; i < charList.length; i++) {
     var c = charList[i], cfg = Object.assign({}, DEFAULT_DIARY_CFG, c.diaryCfg || {});
-    if (!cfg.on || !c.id || (diaryAutoRetry[c.id] || 0) > Date.now()) continue;
+    if (c.isGroup || !cfg.on || !c.id || (diaryAutoRetry[c.id] || 0) > Date.now()) continue;
     var done = diaryAutoDone[c.id] || [];
     // 今天已经到点、还没写过的时段；同时错过两个只写一篇
     var due = (cfg.times || []).filter(function(t) { return /^\d{1,2}:\d{2}$/.test(t || ''); }).map(function(t) {

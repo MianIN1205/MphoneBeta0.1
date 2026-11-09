@@ -110,7 +110,7 @@ function ppHeads(text) {
 function renderPromptPreview() {
   var chips = document.getElementById('promptPreviewChars');
   chips.innerHTML = '';
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     if (!c.id) return;
     if (!ppState.charId) ppState.charId = c.id;
     var chip = document.createElement('span');

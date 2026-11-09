@@ -71,7 +71,7 @@ var deskEditing = false;
 function widgetChar(w) {
   var c = charList.filter(function(x) { return x.id === w.charId; })[0];
   if (c) return c;
-  return charList.filter(function(x) { return (chatHistories[x.id] || []).length; })[0] || charList[0] || null;
+  return charList.filter(function(x) { return !x.isGroup && (chatHistories[x.id] || []).length; })[0] || charList[0] || null;
 }
 function widgetLatestPhoto() {
   var items = (typeof galleryItems === 'function') ? galleryItems().filter(function(it) { return it.src; }) : [];
@@ -438,7 +438,7 @@ function fillWidgetEdit() {
   var row = document.getElementById('wgCharRow');
   row.innerHTML = '';
   var cur = widgetChar(w);
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     var chip = document.createElement('span');
     chip.className = 'feed-visible-chip' + (cur && c.id === cur.id ? ' on' : '');
     chip.textContent = c.charAlias || c.charName || '未命名';

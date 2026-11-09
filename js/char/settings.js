@@ -706,7 +706,7 @@ function fillCircleForm(char) {
   var box = document.getElementById('csCircleList');
   box.innerHTML = '';
   var mine = (char && char.circle) || [];
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     if (c === char || (char && char.id && c.id === char.id)) return;
     var chip = document.createElement('span');
     chip.className = 'feed-visible-chip' + (mine.indexOf(c.id) >= 0 ? ' on' : '');
@@ -728,7 +728,7 @@ function readCircleForm() {
 // 认识是双向的：保存后同步到其他角色
 function syncCharCircle(char) {
   var mine = char.circle || [];
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     if (c === char) return;
     var list = (c.circle || []).filter(function(id) { return id !== char.id; });
     if (mine.indexOf(c.id) >= 0) list.push(char.id);

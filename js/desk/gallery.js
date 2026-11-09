@@ -52,7 +52,7 @@ var galleryFilter = 'all';
 function galleryItems() {
   var items = [];
   var byName = {};
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     var name = c.charAlias || c.charName || '角色';
     [c.charAlias, c.charName].forEach(function(n) { if (n) byName[n] = c.id; });
     [[chatHistories[c.id], '聊天'], [dramaHistories[c.id], '剧情']].forEach(function(x) {

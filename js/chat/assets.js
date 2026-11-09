@@ -247,7 +247,7 @@ function openAssetReal(x) {
   if (x) { nameIn.value = x.name; noteIn.value = x.note || ''; }
   var picked = x ? x.chars.slice() : (assetRealFilter ? [assetRealFilter] : []);
   var chipBox = ov.querySelector('.asset-rel-chips');
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     var b = document.createElement('button');
     b.className = 'pet-chip' + (picked.indexOf(c.id) >= 0 ? ' active' : '');
     b.textContent = assetCharLabel(c);

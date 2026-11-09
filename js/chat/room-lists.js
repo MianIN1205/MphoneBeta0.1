@@ -73,6 +73,8 @@ function sendPickedImage(file) {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
         var funcName = this.dataset.func || '';
+        var curC = charList[openingChatCharIdx];
+        if (curC && curC.isGroup && (funcName === '查手机' || funcName === '一起看')) { showToast('群聊里用不了「' + funcName + '」', 'plain'); return; }
         if (funcName === '相册' && crAlbumFileInput) {
           // 抽屉先不收，小菜单从「相册」这个图标上方冒出来（用户要的）；选好了再收
           if (typeof openAlbumPick === 'function') openAlbumPick(this.querySelector('.cr-plus-box') || this);

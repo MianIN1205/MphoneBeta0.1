@@ -5,6 +5,7 @@ function createMsgAvatar(role) {
   var av = document.createElement('div');
   av.className = 'chat-msg-avatar';
   var char = charList[openingChatCharIdx];
+  if (role !== 'user' && crRowSpeaker && char && char.isGroup) char = charList[findCharIdx(crRowSpeaker)] || char;   // 群聊：这条是谁说的就画谁
   if (role === 'user') {
     var acc = resolveCharAccount(char);
     paintAvatar(av, acc && acc.avatar, '');
@@ -13,6 +14,7 @@ function createMsgAvatar(role) {
   }
   return av;
 }
+var crRowSpeaker = null;   // 群聊里正在画的这条是哪个成员说的（renderHistMsg 里设）
 // 往上翻着看旧消息时，新消息来了不把人拽到最下面（用户要的，像 QQ）：底部冒一个「↓ N 条新消息」，点了才跳下去；
 // 本来就在最底下就照常跟着滚。list._away 只在用户自己滚动时更新（离底部超过 150px 算翻上去了）
 function crStick(list) {
@@ -248,13 +250,28 @@ function renderHistMsg(m, list, empty) {
     return vrow;
   }
   var role = m.role === 'user' ? 'user' : 'ai';
+  crRowSpeaker = role === 'ai' ? m.speaker || null : null;
   var r = (m.file && typeof appendFileMsg === 'function') ? appendFileMsg(role, m, list, empty)
         : (m.textImg && !m.imgSrc && typeof appendTextImgMsg === 'function') ? appendTextImgMsg(role, m, list, empty)
         : m.imgSrc ? appendImgMsg(role, m.imgSrc, list, empty)
         : (m.sticker && typeof appendStickerMsg === 'function') ? appendStickerMsg(role, m, list, empty)
         : appendMsg(role, m.content, false, list, empty);
+  crRowSpeaker = null;
   r.row._msg = m;
   r.row._extras = thinkBar ? [thinkBar] : [];
+  // 群聊：换了一个人说话时，头像旁边写上名字（js/chat/group.js）
+  if (role === 'ai' && m.speaker) {
+    var prevRow = r.row.previousElementSibling;
+    while (prevRow && !prevRow.classList.contains('chat-msg-row') && !prevRow.classList.contains('cr-time-sep')) prevRow = prevRow.previousElementSibling;
+    if (!(prevRow && prevRow._msg && prevRow._msg.speaker === m.speaker)) {
+      var spk = charList[findCharIdx(m.speaker)];
+      var nameEl = document.createElement('div');
+      nameEl.className = 'cr-speaker';
+      nameEl.textContent = spk ? groupLabel(spk) : '';
+      list.insertBefore(nameEl, r.row);
+      r.row._extras.push(nameEl);
+    }
+  }
   if (list.id === 'dramaMsgList') addDramaHead(r.row, r.bubble, m);
   if (m.quote) r.row._extras.push(appendQuoteBlock(list, m.quote, role));
   if (m.alts && m.alts.length > 1) { r.row._extras.push(appendAltSwitch(list, m)); list._altTime = m.time || 1; }
@@ -292,7 +309,7 @@ function refreshMsgStamps(list) {
   Array.prototype.slice.call(list.children).forEach(function(el) {
     if (el.classList.contains('chat-msg-row')) {
       if (!el._msg) return;   // 打字中的气泡、报错提示
-      if (prev && (broken || prev.classList.contains('user') !== el.classList.contains('user'))) stamp(prev);
+      if (prev && (broken || prev.classList.contains('user') !== el.classList.contains('user') || (prev._msg && prev._msg.speaker) !== (el._msg && el._msg.speaker))) stamp(prev);   // 群里换了人也算新的一段
       prev = el;
       broken = false;
     } else if (el.matches('.cr-time-sep, .cr-recall-notice, .cr-action-card, .cr-cal-card')) {
@@ -441,7 +458,7 @@ document.getElementById('chatMsgList').addEventListener('click', function(e) {
   patLastTap = { el: null, time: 0 };
   var char = charList[openingChatCharIdx];
   var cfg = Object.assign({}, DEFAULT_CHAT_CFG, (char && char.chatCfg) || {});
-  if (!char || !cfg.patOn) return;
+  if (!char || !cfg.patOn || char.isGroup) return;   // 群里不拍一拍
   var row = av.closest('.chat-msg-row');
   var self = !!(row && row.classList.contains('user'));
   var m = { role: 'user', content: '', pat: self ? 'self' : 'char', patSuffix: self ? '' : (cfg.patSuffix || ''), time: now };

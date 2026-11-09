@@ -51,7 +51,7 @@ function starDailyTick() {
   if (!api.url || !api.key || !api.model) return;
   var today = starDayKey(Date.now());
   var char = charList.filter(function(c) {
-    if (!c.id || !(c.inChat || c.builtinAssistant) || !starOn(c) || (starDailyRetry[c.id] || 0) > Date.now()) return false;
+    if (!c.id || c.isGroup || !(c.inChat || c.builtinAssistant) || !starOn(c) || (starDailyRetry[c.id] || 0) > Date.now()) return false;
     return !stars.some(function(s) { return s.charId === c.id && s.src === 'daily' && starDayKey(s.at) === today; });
   })[0];
   if (!char) return;

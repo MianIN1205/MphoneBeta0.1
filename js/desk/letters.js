@@ -168,7 +168,7 @@ function letterSetDays(n) {
 document.getElementById('lettersWriteBtn').addEventListener('click', function() {
   var sel = document.getElementById('letterTo');
   sel.innerHTML = '<option value="self">未来的自己</option>';
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     var o = document.createElement('option');
     o.value = c.id; o.textContent = c.charAlias || c.charName || '未命名';
     sel.appendChild(o);

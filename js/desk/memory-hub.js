@@ -50,7 +50,7 @@ function hubApi(path, opt) {
 function hubSnapshot(state) {
   var out = {};
   var put = function(it) { var id = state.alias[it.id] || it.id; it.id = id; out[id] = it; };
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     var key = hubCharKey(c);
     if (!key) return;
     (typeof memList === 'function' ? memList(c.id) : []).forEach(function(m) {

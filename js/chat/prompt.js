@@ -18,11 +18,13 @@ function splitRounds(hist) {
 // 角色名下面那行小字：角色在聊天回复里写 <签名>…</签名> 就更新，没写过时用默认的
 var CHAT_SUB_DEFAULT = '嗯嗯你说我在听';
 function paintChatSubTitle(char) {
+  if (char && char.isGroup && typeof groupMembers === 'function') { document.getElementById('chatRoomSubTitle').textContent = groupMembers(char).map(groupLabel).join('、'); return; }
   document.getElementById('chatRoomSubTitle').textContent = (char && char.headStatus) || CHAT_SUB_DEFAULT;
 }
 
 // 聊天回复的格式要求：语言 / 翻译 / 回复条数 / 状态栏（发消息和主动消息使用，动态不用）
 function chatFormatRules(char) {
+  if (char && char.isGroup && typeof groupFormatRules === 'function') return groupFormatRules(char);   // 群聊（js/chat/group.js）
   var c = Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {});
   var look = Object.assign({}, DEFAULT_LOOK, char.look || {});
   var rules = [];
@@ -244,6 +246,7 @@ function realWorldContext(char, hist) {
   }
   if (typeof gardenContextLine === 'function') { var gl = gardenContextLine(char); if (gl) lines.push(gl); }
   if (typeof starAnonContextLine === 'function') { var sa = starAnonContextLine(char); if (sa) lines.push(sa); }   // 只有写的人自己知道
+  if (typeof groupContextLine === 'function') { var gcl = groupContextLine(char); if (gcl) lines.push(gcl); }   // 在群里聊过的（成员能单独关掉）
   if (typeof assetContextLine === 'function') { var asl = assetContextLine(char); if (asl) lines.push(asl); }   // 资产：赛博小物（虚拟的）和现实持有
   if (typeof togetherContextLine === 'function') { var tl = togetherContextLine(char); if (tl) lines.push(tl); }
   if (typeof lifeContextLines === 'function') lifeContextLines(char).forEach(function(l) { lines.push(l); });   // TA 的今天、记着要关心的事（js/char/life.js）
@@ -288,7 +291,7 @@ var COT_DRAMA = '【回复前先想一想】在回复最开头，用 <thinking><
   '- {{char}}按人设和此刻的心情会怎么反应：说什么、做什么、心里想什么\n' +
   '- 这一轮怎么往下推进，哪些细节要和前文对上；不要替{{user}}决定行动和结果';
 function cotRules(isDrama, char) {
-  if (isDrama) return [];   // 思维链只给聊天窗口；剧情的思考交给预设（用户定的）
+  if (isDrama || (char && char.isGroup)) return [];   // 思维链只给聊天窗口；剧情的思考交给预设（用户定的）
   var on = typeof cotModeFor === 'function' ? cotModeFor(char, false) === 'mine' : (typeof cotModeNow === 'function' && cotModeNow() === 'mine');
   return on ? [{ role: 'system', content: COT_CHAT }] : [];
 }
@@ -313,6 +316,7 @@ var WB_WRAP = '【背景设定】下面是这个世界、地点、人物和事�
 
 function buildMsgs(idx, histOverride) {
   var char = charList[idx] || {};
+  if (char.isGroup && typeof buildGroupMsgs === 'function') return buildGroupMsgs(char, histOverride || getActiveHistory(idx));   // 群聊（js/chat/group.js）
   var sys  = (document.getElementById('systemPromptTA') ? document.getElementById('systemPromptTA').value.trim() : '');
   var extra = '';
   var fixed = char.builtinAssistant && typeof MIANIN_PERSONA !== 'undefined';   // MianIN：名字和人设固定（见 js/char/assistant.js）

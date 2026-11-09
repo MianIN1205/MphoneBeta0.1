@@ -24,7 +24,7 @@ function renderMemHome() {
   var grid = document.getElementById('memCharGrid');
   grid.innerHTML = '';
   if (!charList.length) { grid.innerHTML = '<div class="auto-hint desk-empty">还没有角色</div>'; return; }
-  charList.forEach(function(c) {
+  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
     var n = memCounts(c.id), total = n.precious + n.long + n.short;
     var card = document.createElement('div');
     card.className = 'mem-char-card';
@@ -282,7 +282,7 @@ document.getElementById('memLibExport').addEventListener('click', function() {
   if (c) memExportDocx([c]);
 });
 document.getElementById('memExportAll').addEventListener('click', function() {
-  if (charList.length) memExportDocx(charList);
+  if (charList.length) memExportDocx(charList.filter(function(c) { return !c.isGroup; }));
 });
 
 // 添加 / 编辑一条记忆

@@ -168,7 +168,7 @@ function renderChatCharList() {
         updateUnreadTotal();
       }
       var char = charList[openingChatCharIdx];
-      chatRoomTitle.textContent = char.charAlias || char.charName || '未命名';
+      chatRoomTitle.textContent = char.isGroup && typeof groupTitle === 'function' ? groupTitle(char) : (char.charAlias || char.charName || '未命名');
       applyChatRoomStyle(char);
       // 回到上次离开时的那边（聊天 / 剧情，用户要的）；有没看的新消息时先看聊天
       switchChatRoomSubView(hadUnread ? 'chat' : ((crLastView[char.id] === 'contacts') ? 'contacts' : 'chat'));

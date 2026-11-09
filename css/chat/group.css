@@ -1,0 +1,24 @@
+/* 眠花糖机 — 群聊：成员拼图头像、说话人名字、新建群聊 / 群设置弹窗（js/chat/group.js） */
+
+/* 群头像：没换图片时用成员头像拼（1～4 个） */
+.grp-avatar { background: #f3e6ec !important; }
+.grp-av-grid { position: absolute; inset: 0; display: grid; gap: 1px; padding: 2px; box-sizing: border-box; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
+.grp-av-grid[data-n="1"] { grid-template-columns: 1fr; }
+.grp-av-grid[data-n="3"] .grp-av-cell:first-child { grid-column: span 2; }
+.grp-av-cell { border-radius: 4px; background: #fff center / cover no-repeat; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: #b0889a; overflow: hidden; min-width: 0; min-height: 0; }
+
+/* 聊天里：换了一个人说话时头像上方写名字 */
+.cr-speaker { font-size: 11px; color: #a88a98; margin: 4px 0 -4px 40px; line-height: 1.3; }
+#appChatRoom.is-group #crQuickBar { display: none; }
+
+/* 新建群聊（小窗口）；群设置是整页（index.html 的 #appGroupSetting） */
+.grp-modal { width: 310px; }
+.grp-label { font-size: 12.5px; color: #8a6a7a; margin-bottom: -4px; }
+.grp-label span { margin-left: 6px; font-size: 11px; color: #c0a8b4; }
+.grp-chips { max-height: 120px; overflow-y: auto; }
+.grp-gap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.grp-danger { display: flex; gap: 8px; }
+.grp-danger button { flex: 1; padding: 10px 0; border-radius: 12px; border: 1.5px solid rgba(220, 150, 160, 0.4); background: transparent; color: #c0586a;
+  font-size: 13px; cursor: pointer; font-family: inherit; }
+#grpAvatarBox { cursor: pointer; }

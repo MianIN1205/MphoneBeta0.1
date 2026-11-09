@@ -44,8 +44,10 @@ function crMarkOtherView(isChat) {
 }
 function switchChatRoomSubView(view) {
   var vc0 = charList[openingChatCharIdx];
-  if (vc0 && vc0.builtinAssistant) view = 'chat';   // MianIN 没有剧情窗口（用户要的），切换按钮也藏起来
-  appChatRoom.classList.toggle('no-drama', !!(vc0 && vc0.builtinAssistant));
+  var noDrama = !!(vc0 && (vc0.builtinAssistant || vc0.isGroup));   // 群聊先只做聊天（用户说先把聊天做稳，再试剧情）
+  if (noDrama) view = 'chat';   // MianIN 没有剧情窗口（用户要的），切换按钮也藏起来
+  appChatRoom.classList.toggle('no-drama', noDrama);
+  appChatRoom.classList.toggle('is-group', !!(vc0 && vc0.isGroup));
   var isDrama = (view === 'contacts');
   (isDrama ? msgBtnContacts : msgBtnChat).classList.remove('has-new');
   currentCrSubView = isDrama ? 'contacts' : 'chat';

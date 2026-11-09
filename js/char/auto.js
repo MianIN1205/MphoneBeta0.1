@@ -176,7 +176,7 @@ function autoDelay(a) {
 function autoTick() {
   var now = Date.now();
   var changed = false;
-  charList.forEach(function(char, idx) {
+  charList.forEach(function(char, idx) { if (char.isGroup) return;   // 群聊不算
     var a = char.auto;
     if (!a || !(a.msgOn || a.postOn)) {
       if (autoNext[char.id]) { delete autoNext[char.id]; changed = true; }
