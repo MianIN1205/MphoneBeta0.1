@@ -46,3 +46,5 @@
 .phone.iconset-soft #dockAppearance > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/appearance.png); }
 .phone.iconset-soft #dockChat > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/chat.png); }
 .phone.iconset-soft #dockPrompt > .dock-icon:not(.dock-own) { background-image: url(../../icons/desk/soft/prompt.png); }
+/* 盲盒还没有成套的图：纸片、软萌预设下也显示画的那个礼盒（不带方块底） */
+.phone[class*="iconset-"] #dockBlindbox > .dock-icon:not(.dock-own) > .dock-svg { display: block; width: 46px; height: 46px; }

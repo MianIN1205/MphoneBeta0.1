@@ -50,6 +50,8 @@
 }
 
 .signature { font-size: 12.5px; color: #777; letter-spacing: 0.5px; }
+.signature { cursor: text; min-height: 1.2em; }
+.signature[contenteditable="true"] { -webkit-user-select: text; user-select: text; outline: none; border-bottom: 1px dashed rgba(150,120,130,0.5); }
 
 /* 程序坞 */
 .dock {

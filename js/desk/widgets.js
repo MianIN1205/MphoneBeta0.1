@@ -16,15 +16,53 @@ var WIDGET_TYPES = {
 function widgetSize(w) { var t = WIDGET_TYPES[w.type] || {}; return { w: t.w || 2, h: t.h || 2 }; }
 var DESK_COLS = 4;
 var deskWidgets = mphoneStore.load('mphone_widgets', null);
-if (!Array.isArray(deskWidgets)) {
-  // 第一次：原来的「纪念日」图标改成桌面上的纪念日小组件
-  deskWidgets = [{ id: 'w' + Date.now().toString(36), type: 'anniv', style: 'avatars', charId: '', image: '', emoji: '💝' }];
-  mphoneStore.save('mphone_widgets', deskWidgets);
-}
 var deskLayout = mphoneStore.load('mphone_desk_layout', {});   // { 'app:dockNotes': { x, y }, 'w:小组件id': { x, y } }
+if (!Array.isArray(deskWidgets)) {
+  // 第一次打开：默认桌面（用户定的布局，2026-11-09 照她的桌面截图）：
+  // 纪念日 2×2 在左上，右边 见面 花房 / 记忆库 星星瓶；第三排 灯塔 书架 + 右边黑胶唱片 2×2；左边胶囊 2×2；下面 桌宠 慢信；盲盒在胶囊下面
+  deskWidgets = [
+    { id: 'anniv0', type: 'anniv', style: 'avatars', charId: '', image: '', emoji: '💝' },
+    { id: 'vinyl0', type: 'vinyl', image: '', text1: '' },
+    { id: 'caps0', type: 'capsule', title: '', text1: '要开心哦 ^^', text2: '嗯！你也是 ><', image: '', image2: '', picSide: '' }
+  ];
+  mphoneStore.save('mphone_widgets', deskWidgets);
+  deskLayout = {
+    'w:anniv0': { x: 0, y: 0 }, 'app:dockMeet': { x: 2, y: 0 }, 'app:dockGreenhouse': { x: 3, y: 0 },
+    'app:dockMemory': { x: 2, y: 1 }, 'app:dockStarJar': { x: 3, y: 1 },
+    'app:dockLighthouse': { x: 0, y: 2 }, 'app:dockNotes': { x: 1, y: 2 }, 'w:vinyl0': { x: 2, y: 2 },
+    'w:caps0': { x: 0, y: 3 }, 'app:dockPet': { x: 2, y: 4 }, 'app:dockLetters': { x: 3, y: 4 },
+    'app:dockBlindbox': { x: 0, y: 5 }
+  };
+  mphoneStore.save('mphone_desk_layout', deskLayout);
+}
 function saveWidgets() { mphoneStore.save('mphone_widgets', deskWidgets); }
 function saveDeskLayout() { mphoneStore.save('mphone_desk_layout', deskLayout); }
 
+// 时钟下面那句话（以前写死的「代码连接中」）：点一下就能改，回车或点别处存下，清空就回到默认（用户要的）。
+// 存 mphone_desk_sign，顺便抄到 localStorage 的 mphoneDeskSign，index.html 一打开就先写上
+(function() {
+  var el = document.getElementById('deskSign'), DEF = '代码连接中';
+  if (!el) return;
+  var cur = mphoneStore.load('mphone_desk_sign', '') || '';
+  el.textContent = cur || DEF;
+  el.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (el.isContentEditable) return;
+    el.contentEditable = 'true';
+    el.focus();
+    var r = document.createRange(); r.selectNodeContents(el);
+    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  });
+  el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+  el.addEventListener('blur', function() {
+    el.contentEditable = 'false';
+    var t = el.textContent.replace(/\s+/g, ' ').trim().slice(0, 30);
+    cur = t === DEF ? '' : t;
+    el.textContent = cur || DEF;
+    mphoneStore.save('mphone_desk_sign', cur);
+    try { if (cur) localStorage.setItem('mphoneDeskSign', cur); else localStorage.removeItem('mphoneDeskSign'); } catch (_) {}
+  });
+})();
 var deskEl = document.querySelector('.desktop');
 var deskGrid = document.getElementById('deskGrid');
 var deskEditing = false;
@@ -70,7 +108,7 @@ function buildWidget(w) {
     if (w.picSide === 'right') face.classList.add('swap');
     var tt = face.querySelector('.caps-title');
     if (w.title) tt.textContent = w.title; else tt.remove();
-    [[w.image, w.text1 || '今天也要开心'], [w.image2, w.text2 || '早点睡觉']].forEach(function(p, i) {
+    [[w.image, w.text1 || '要开心哦 ^^'], [w.image2, w.text2 || '嗯！你也是 ><']].forEach(function(p, i) {
       var pill = face.querySelectorAll('.caps-pill')[i];
       if (p[0]) pill.querySelector('.capsule-pic').style.backgroundImage = 'url("' + p[0] + '")'; else pill.querySelector('.capsule-pic').textContent = '♡';
       pill.querySelector('.caps-text').textContent = p[1];

@@ -6,7 +6,7 @@
   document.getElementById('dock' + name).addEventListener('click', function() { screen.classList.add('active'); });
   document.getElementById('back' + name).addEventListener('click', function() { screen.classList.remove('active'); });
 });
-// 灯塔、见面只有图标、还没有功能：点了不进去，弹个小提示（用户要的）。做好了再改回上面那样打开
-['Lighthouse', 'Meet'].forEach(function(name) {
+// 灯塔、见面、盲盒只有图标、还没有功能：点了不进去，弹个小提示（用户要的）。做好了再改回上面那样打开
+['Lighthouse', 'Meet', 'Blindbox'].forEach(function(name) {
   document.getElementById('dock' + name).addEventListener('click', function() { showToast('还在开发中，敬请期待～', 'plain'); });
 });
