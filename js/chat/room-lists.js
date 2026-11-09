@@ -75,6 +75,11 @@ function sendPickedImage(file) {
         var funcName = this.dataset.func || '';
         var curC = charList[openingChatCharIdx];
         if (curC && curC.isGroup && (funcName === '查手机' || funcName === '一起看')) { showToast('群聊里用不了「' + funcName + '」', 'plain'); return; }
+        // 群里的小互动（js/chat/group-play.js）：投票、抽奖、拼手气红包
+        if (curC && curC.isGroup && typeof gpOpenVote === 'function' && { '投票': 1, '抽奖': 1, '红包': 1 }[funcName]) {
+          (funcName === '投票' ? gpOpenVote : funcName === '抽奖' ? gpOpenLottery : gpOpenHb)();
+          return;
+        }
         if (funcName === '相册' && crAlbumFileInput) {
           // 抽屉先不收，小菜单从「相册」这个图标上方冒出来（用户要的）；选好了再收
           if (typeof openAlbumPick === 'function') openAlbumPick(this.querySelector('.cr-plus-box') || this);

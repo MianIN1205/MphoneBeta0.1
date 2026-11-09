@@ -251,7 +251,8 @@ function renderHistMsg(m, list, empty) {
   }
   var role = m.role === 'user' ? 'user' : 'ai';
   crRowSpeaker = role === 'ai' ? m.speaker || null : null;
-  var r = (m.file && typeof appendFileMsg === 'function') ? appendFileMsg(role, m, list, empty)
+  var r = (m.play && typeof appendPlayMsg === 'function') ? appendPlayMsg(role, m, list, empty)   // 群里的投票 / 抽奖 / 红包（js/chat/group-play.js）
+        : (m.file && typeof appendFileMsg === 'function') ? appendFileMsg(role, m, list, empty)
         : (m.textImg && !m.imgSrc && typeof appendTextImgMsg === 'function') ? appendTextImgMsg(role, m, list, empty)
         : m.imgSrc ? appendImgMsg(role, m.imgSrc, list, empty)
         : (m.sticker && typeof appendStickerMsg === 'function') ? appendStickerMsg(role, m, list, empty)

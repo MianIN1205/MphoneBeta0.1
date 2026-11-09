@@ -457,6 +457,7 @@ function msgTextForAI(m) {
   if (m.narr) return '【旁白 · 剧情开场】（这是中立的旁白，交代场景，不是用户说的话）\n' + (m.content || '');
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   if (m.cal && typeof calTextForAI === 'function') return calTextForAI(m.cal);
+  if (m.play && typeof playTextForAI === 'function') return playTextForAI(m);   // 群里的投票 / 抽奖 / 红包
   var c = (m.file && typeof fileTextForAI === 'function') ? fileTextForAI(m)
         : m.textImg ? (m.illus ? '（这一幕的配图）' : m.role === 'assistant' ? '[你发了一张照片：' + m.textImg + ']' : '[发来一张照片（用文字描述的画面）：' + m.textImg + ']')
         : m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));

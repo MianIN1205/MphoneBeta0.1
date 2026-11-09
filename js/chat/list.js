@@ -23,6 +23,7 @@ function msgPreviewText(m) {
   if (m.pat) return '[拍一拍]';
   if (m.note) return m.note;
   if (m.cal) return '[' + m.cal.kind + '] ' + m.cal.title;
+  if (m.play && typeof playPreview === 'function') return playPreview(m);
   if (m.imgSrc) return '[图片]';
   if (m.file) return '[文件] ' + (m.file.name || '');
   if (m.textImg) return '[图片]';

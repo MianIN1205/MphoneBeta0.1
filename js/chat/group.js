@@ -119,12 +119,15 @@ function groupFormatRules(g) {
     '【群聊回复格式】接着群里的聊天往下说：不是每个人每次都要开口，谁会接这个话题谁就说，一共 2～8 条，像真的群聊一样有来有回、有人插话。' +
     '每条单独一行，开头写说话人的名字和冒号（名字只能是：' + names.join('、') + '），比如：\n' +
     names.slice(0, 2).map(function(n, i) { return n + '：' + (i ? '我在我在！' : '在吗。'); }).join('\n') +
-    '\n同一个人连着说几句可以写在一行里，每句照常写标点，小手机会按句子分成气泡。像平时发微信一样说话，口语、短句；不写旁白、动作描写和括号说明，不替{{user}}说话。') }];
+    '\n' + (typeof gpTagRule === 'function' ? gpTagRule() : '') + '\n同一个人连着说几句可以写在一行里，每句照常写标点，小手机会按句子分成气泡。像平时发微信一样说话，口语、短句；不写旁白、动作描写和括号说明，不替{{user}}说话。') }];
 }
 
 // ---------- 收到回复：按「名字：」拆给每个成员 ----------
 function groupCommitReply(g, hist, raw, list) {
   raw = typeof takeThink === 'function' ? takeThink(raw).text : String(raw || '');
+  // 投票 / 红包 / 抽奖的标签先换成占位，免得下面被当成别的标签去掉（js/chat/group-play.js）
+  var plays = [];
+  if (typeof GP_TAG_RE !== 'undefined') raw = raw.replace(GP_TAG_RE, function(_, kind, attrs, body) { plays.push([kind, attrs, body]); return '\u0001P' + (plays.length - 1) + '\u0001'; });
   raw = raw.replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<([一-鿿A-Za-z]+)[^>]*>[\s\S]*?<\/\1>/g, '').replace(/<[一-鿿]+[^>]*\/>/g, '');
   var members = groupMembers(g), byName = {};
   members.forEach(function(c) {
@@ -144,13 +147,22 @@ function groupCommitReply(g, hist, raw, list) {
   var now = Date.now(), added = [];
   segs.forEach(function(s) {
     if (!s.id || !s.text.trim()) return;
-    var text = s.text.replace(actionRe(), '').replace(/[ \t]{2,}/g, ' ');
-    chatSplitLines([text.trim()]).forEach(function(p) {
-      if (typeof p !== 'string' || !p.trim() || CHAT_MARK_RE.test(p.trim())) return;
-      added.push({ role: 'assistant', content: p, speaker: s.id, time: now });
+    s.text.split(/\u0001P(\d+)\u0001/).forEach(function(piece, k) {
+      if (k % 2) {   // 占位：这个人发起的投票 / 红包 / 抽奖
+        var t = plays[+piece], play = t && gpFromTag(t[0], t[1], t[2], g, s.id);
+        if (play) added.push({ role: 'assistant', content: '[' + GP_NAMES[play.kind] + '] ' + (play.q || play.prize || play.wish), play: play, speaker: s.id, time: now });
+        return;
+      }
+      var text = piece.replace(actionRe(), '').replace(/[ \t]{2,}/g, ' ').trim();
+      if (!text) return;
+      chatSplitLines([text]).forEach(function(p) {
+        if (typeof p !== 'string' || !p.trim() || CHAT_MARK_RE.test(p.trim())) return;
+        added.push({ role: 'assistant', content: p, speaker: s.id, time: now });
+      });
     });
   });
   added.forEach(function(m) { hist.push(m); if (list) renderHistMsg(m, list, null); });
+  added.forEach(function(m) { if (m.play && typeof gpAfterAdd === 'function') gpAfterAdd(g, m); });
   return added;
 }
 
