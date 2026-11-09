@@ -19,16 +19,32 @@
   }
 })();
 // 选好（或拍好）的照片压一下发出去（和回车一样，只发自己的，不叫 AI）
+function confirmPickedImage(src, onSend) {
+  var ov = document.createElement('div');
+  ov.className = 'mine-acc-overlay open';
+  ov.style.zIndex = '2600';
+  ov.innerHTML = '<div class="mine-acc-modal" style="padding:14px;"><img alt="" style="display:block;max-width:100%;max-height:55vh;margin:0 auto 12px;border-radius:12px;object-fit:contain;">' +
+    '<div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close">取消</button><button class="mine-acc-btn mine-acc-btn-add">发送</button></div></div>';
+  ov.querySelector('img').src = src;
+  var close = function() { ov.remove(); };
+  ov.querySelector('.mine-acc-btn-close').addEventListener('click', close);
+  ov.querySelector('.mine-acc-btn-add').addEventListener('click', function() { close(); onSend(); });
+  ov.addEventListener('click', function(e) { if (e.target === ov) close(); });
+  (document.querySelector('.phone') || document.body).appendChild(ov);
+}
 function sendPickedImage(file) {
   if (!file || openingChatCharIdx === -1) return;
   var reader = new FileReader();
   reader.onload = function(ev) {
     compressImage(ev.target.result, 1024, function(dataUrl) {
-      var im = { role: 'user', content: '[图片消息]', imgSrc: dataUrl, time: Date.now() };
-      if (pendingQuote) { im.quote = pendingQuote; clearQuote(); }
-      getActiveHistory(openingChatCharIdx).push(im);
-      renderHistMsg(im);
-      saveHistories();
+      // 先看一眼大图再发（用户要的：以前点了就直接发出去了）
+      confirmPickedImage(dataUrl, function() {
+        var im = { role: 'user', content: '[图片消息]', imgSrc: dataUrl, time: Date.now() };
+        if (pendingQuote) { im.quote = pendingQuote; clearQuote(); }
+        getActiveHistory(openingChatCharIdx).push(im);
+        renderHistMsg(im);
+        saveHistories();
+      });
     });
   };
   reader.readAsDataURL(file);
