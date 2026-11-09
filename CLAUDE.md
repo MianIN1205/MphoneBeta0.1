@@ -27,7 +27,7 @@
   - **加载顺序在 `js/core/boot.js` 的 `MPHONE_SCRIPTS` 里，和文件夹无关，顺序很重要**：后面的脚本会用到前面定义的东西，加载时（不在函数里）调用后面文件的函数会报错；要么用 `typeof` 判断，要么用 `onMphoneReady(fn)`（最后一个脚本加载完才执行）。2026-11-01 按功能拆分时保持了原来的加载顺序，所以同一个功能有时会分在两三个文件里（比如角色设置：`char/settings.js`、`char/settings-save.js`、`char/look.js`）。
   - 每个文件第一行写了它管什么，找东西先看第一行。
   - 新增 js/css 文件：加进 `MPHONE_SCRIPTS`（js）和 `sw.js` 的文件列表（css 还要在 index.html 加 `<link>`，带上 `?v=当前版本`）。
-  - **每次改了 css / js 推之前跑 `python3 tools/bump-version.py`**：版本号一起加一（index.html 里样式和 boot.js 的 `?v=`、boot.js 的 `MPHONE_V`、sw.js 的 `V`，缓存名 `mphone-v<V>` 跟着变，现在是 60）。所有样式和脚本网址都带 `?v=版本`：新页面只要新文件、旧页面只要旧的；以前网慢时新的 index.html 配上手机里存的旧脚本，外观里图标预设一片空白（用户不开梯子时遇到过）。
+  - **每次改了 css / js 推之前跑 `python3 tools/bump-version.py`**：版本号一起加一（index.html 里样式和 boot.js 的 `?v=`、boot.js 的 `MPHONE_V`、sw.js 的 `V`，缓存名 `mphone-v<V>` 跟着变，现在是 61）。所有样式和脚本网址都带 `?v=版本`：新页面只要新文件、旧页面只要旧的；以前网慢时新的 index.html 配上手机里存的旧脚本，外观里图标预设一片空白（用户不开梯子时遇到过）。
 - `sw.js` / `manifest.webmanifest` / `icons/`：PWA 文件，要和其他文件一起提交。sw.js 取文件：网快时先拿网上的（推了刷新就能看到），首页 2.5 秒（`NET_WAIT`）拿不到或哪个文件超时就算网慢，这次打开剩下的都先用手机里存的、后台悄悄更新（不开梯子时 github.io 很慢，以前一百多个文件挨个等网络，载入特别卡、桌面出不来，用户反馈过）。manifest 的 `orientation` 是 `portrait`：写成 `any` 时安卓桌面版会无视系统的方向锁定，躺着就转屏。
   - logo 是用户提供的图：睡觉的那只不是小熊，是**薯饼**，头上的蓝色小花是简然（**蓝色小花代表简然。简然是眠眠心里生长开花闪闪发光的蓝色小花。**），用户说「这是薯饼和你」。`icons/icon.png` 是 App 图标（iPhone、安卓、通知、网页图标都用这一张，用户要求不分开做）：2026-11-07 换成新的——用户给的「薯饼睡在云朵上、旁边月亮和光环」那张（抠出来），藏蓝夜空底（中间亮四角暗、撒小星点），沿轮廓发白光外面再晕一圈粉紫光，占 76%，manifest 里是 `any maskable`；`icons/logo.png` 是旧的透明底加白色描边的 logo，载入页里用（载入页用户暂时不想改）。`icons/desk/paper/`、`icons/desk/soft/` 是桌面图标预设「纸片」「软萌」的 12 个图标（见 desk-icons）。另有 `icons/badge.png`：从 logo 轮廓做的透明底白色剪影，只给系统通知的小图标（badge）用——安卓通知栏只认单色透明图，给彩色的会换成 Chrome 的图标（用户看到的谷歌 logo）。
   - 载入页有开关：外观「载入页 → 打开时显示载入页」，**默认关**（用户要的；关着时整个载入页直接拿掉，连底色也不留——一开始留了一层纯色底，用户以为渐变背景没关掉；打开时先看到桌面一点点画出来，时钟先写「加载中…」），存 localStorage `mphoneBootSplash`=1（载入页在脚本前就要读，所以不用 mphoneStore）。载入页在 `index.html` 开头（样式内联，小字随机；logo 沿轮廓发白光（用户要的是边缘发光，不是圆形光晕），不要做呼吸、缩放这类循环动画），`js/core/boot.js` 的 `hideBootSplash` 在脚本加载完后淡出。
@@ -78,6 +78,7 @@
 | 文件 | 内容 |
 |---|---|
 | （聊天列表滚动）| 往上翻着看旧消息时新消息来了不把人拽下去（用户要的，像 QQ）：render.js 的 `crStick(list)` 代替所有「滚到底」，`list._away` 只在用户自己滚动时更新（离底部超过 150px 算翻上去了），翻上去时新来的消息数进底部「↓ N 条新消息」（`.cr-new-pill`，点了跳到底），`renderMsgPage` 重画时清零 |
+| whatsnew | 更新提示（用户要的，要轻、不拖累小手机：一个小文件，弹窗用时才建）：第一次打开弹「欢迎来到眠花糖机」整体介绍（`WN_INTRO`）+ 这次更新；之后每次版本号变了、`WN_NOTES` 里有比上次看过的新的，就弹「小手机更新了」，样子和备份提醒一样，等备份提醒关了才弹。按钮「不再弹出」「知道了」；设置 → 辅助功能「更新提示」能再打开、能「看看」介绍和最近更新。只记在这台手机的 localStorage（`mphoneSeenV` 看过的版本、`mphoneNoteOff`）。**每次推有用户看得到的变化时，在 `WN_NOTES` 最前面加一条（`v` 写 bump 之后的版本号，几句大白话），超过 5 条删最旧的** |
 | tabs / header / list / new-chat / contacts / moments | Chat 底部标签、消息页顶栏和加号菜单、消息列表（会话卡片、未读、删除会话）、新建对话、通讯录。moments：消息列表最上面那排圆圈「此刻」（以前是占位圆圈）：每个是一个角色（头像 + 名字），TA 换了签名（`char.headStatusAt`，reply.js 里签名变了才记）或发了新动态，角色头像发蓝光、MianIN 发粉光（用户定的，不要彩虹圈）；点开半透明毛玻璃小卡片：头像在左、名字和个性签名在右，下面一行「此刻」（签名 + 多久前）、一行「动态」（最新一条），「去聊天」；样式类名没加 !important，全局 CSS 能改（`.chat-avatar-row` `.moment-item` `.moment-av` `.moment-name` `.moment-card` 等）；没设头像的显示默认小人（`.moment-av` / `.moment-card-av` 加进了 avatar.css 的默认头像那组，以前是空白）；「+」挑放哪几个（最多 8，`mphone_moment_chars`，没挑过就是最近聊过的三个），看过记 `mphone_moment_seen` |
 | room / room-view / room-lists | 聊天室：返回、齿轮、应用角色美化；聊天 / 剧情切换和底部抽屉开关；打开时画两个列表（分页）、相册发图（选完先弹大图「取消 / 发送」再发，`confirmPickedImage`，用户要的；拍照也一样） |
 | history | 聊天 / 剧情记录的存取（`stripMsg` 决定存哪些字段）、当前窗口用哪份记录、`getApiCfg(char)` |
