@@ -27,7 +27,7 @@ function llmCaps(cfg) {
 // 中转或模型不认这个参数报错时，自动去掉再发一次，并记住这个模型（mphone_think_block）
 var llmThinkBlock = mphoneStore.load('mphone_think_block', {});
 function llmThinkOff(cfg) {
-  if (typeof cotModeNow === 'function' && cotModeNow() === 'native') return null;   // 思考方式选了「模型自带的」：不去关
+  if ((cfg.cot || (typeof cotModeNow === 'function' && cotModeNow())) === 'native') return null;   // 思考方式选了「模型自带的」：不去关（cfg.cot 是这个角色单独选的）
   if (llmProvider(cfg) === 'anthropic' || llmThinkBlock[cfg.model]) return null;
   var m = llmModelName(cfg);
   if (/gemini/.test(m)) return { reasoning_effort: 'none' };

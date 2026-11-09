@@ -284,9 +284,10 @@ var COT_DRAMA = '【回复前先想一想】在回复最开头，用 <thinking><
   '- {{user}}刚做了什么、说了什么，背后可能是什么情绪\n' +
   '- {{char}}按人设和此刻的心情会怎么反应：说什么、做什么、心里想什么\n' +
   '- 这一轮怎么往下推进，哪些细节要和前文对上；不要替{{user}}决定行动和结果';
-function cotRules(isDrama) {
-  var on = typeof cotModeNow === 'function' && cotModeNow() === 'mine';
-  return on ? [{ role: 'system', content: isDrama ? COT_DRAMA : COT_CHAT }] : [];
+function cotRules(isDrama, char) {
+  if (isDrama) return [];   // 思维链只给聊天窗口；剧情的思考交给预设（用户定的）
+  var on = typeof cotModeFor === 'function' ? cotModeFor(char, false) === 'mine' : (typeof cotModeNow === 'function' && cotModeNow() === 'mine');
+  return on ? [{ role: 'system', content: COT_CHAT }] : [];
 }
 // 从回复里摘出思考：<thinking>…</thinking>、有的模型直接把自带思考写成 <think>…</think>；只有开头没有结尾的就把那个标签去掉
 function takeThink(text) {

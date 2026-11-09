@@ -128,7 +128,7 @@ function renderPromptPreview() {
   var drama = ppState.view === 'drama', msgs;
   try {
     msgs = buildMsgs(idx, drama ? getDramaHistory(idx) : getChatHistory(idx))
-      .concat(drama ? dramaFormatRules(char) : chatFormatRules(char), cotRules(drama))
+      .concat(drama ? dramaFormatRules(char) : chatFormatRules(char), cotRules(drama, char))
       .map(function(m) { return typeof m.content === 'string' ? { role: m.role, content: fillMacros(m.content, char) } : m; });
   } catch (e) { sum.textContent = '拼的时候出错了：' + e.message; return; }
   var total = 0;

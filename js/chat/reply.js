@@ -405,7 +405,8 @@ function sendMsg(userText, requestOnly, onDone) {
   var mcpTools = (typeof mcpActiveTools === 'function') ? mcpActiveTools() : [];
   // 开了向量记忆时先算好这次对话的向量（失败就用本地相似度）
   (typeof memPrepare === 'function' ? memPrepare(replyChar, hist) : Promise.resolve()).then(function() {
-    return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : dramaFormatRules(charList[replyCharIdx]), cotRules(!isChatView)), {
+    if (typeof cotModeFor === 'function') cfg.cot = cotModeFor(replyChar, !isChatView);   // 这个角色这个窗口的思考方式（llm.js 的 llmThinkOff 看它）
+    return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : dramaFormatRules(charList[replyCharIdx]), cotRules(!isChatView, replyChar)), {
     stream: true,
     signal: ctrl.signal,
     cfg: cfg,

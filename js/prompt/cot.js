@@ -10,6 +10,13 @@
 var cotMode = mphoneStore.load('mphone_cot_mode', null);
 if (!cotMode) cotMode = String(mphoneStore.load('mphone_cot_enabled', 'false')) === 'true' ? 'mine' : 'off';   // 以前只有一个开关
 function cotModeNow() { return cotMode; }
+// 某个角色现在用哪种（便捷拓展栏里单独选的 char.cotMode，没选就跟全局）。思维链只给聊天窗口（用户定的，和预设只给剧情对应）：
+// 剧情窗口不加眠花糖机的思维链，模型自带的思考照这个设置开 / 关
+var COT_MODE_NAMES = { off: '不思考', mine: '眠花糖机的', native: '模型自带的' };
+function cotModeFor(char, drama) {
+  var m = (char && COT_MODE_NAMES[char.cotMode]) ? char.cotMode : cotMode;
+  return drama && m === 'mine' ? 'off' : m;
+}
 function paintCotMode() {
   document.querySelectorAll('#cotModeRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.mode === cotMode); });
 }

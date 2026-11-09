@@ -69,13 +69,12 @@ function renderQuickBar() {
   val('api', api ? api.name : (getApiCfg().model || '未选模型'));
   var drama = typeof currentCrSubView !== 'undefined' && currentCrSubView === 'contacts';
   crQuickBar.querySelector('[data-qb="preset"]').style.display = drama ? '' : 'none';
-  crQuickBar.querySelector('[data-qb="status"]').style.display = drama ? 'none' : '';
+  crQuickBar.querySelector('[data-qb="cot"]').style.display = drama ? 'none' : '';
   var gPre = typeof stPresets !== 'undefined' && (stPresets[stActivePresetIdx] || stPresets[0]);
   val('preset', pre ? pre.name : (gPre ? gPre.name : '无'));
   var wbNames = charWbOf(char, qbDrama).folders.map(function(id) { var f = (typeof wbFolders !== 'undefined' ? wbFolders : []).filter(function(x) { return x.id === id; })[0]; return f ? f.name : ''; }).filter(Boolean);
   val('wb', !nWb ? '未选' : wbNames.length ? wbNames[0] + (nWb > 1 ? ' 等 ' + nWb + ' 本' : '') : nWb + ' 本');
-  var sp = charStatusPreset(char);
-  val('status', !sp ? '关' : sp === 'custom' ? '自定义' : sp.name);
+  val('cot', typeof cotModeFor === 'function' ? COT_MODE_NAMES[cotModeFor(char, false)] : '');
   if (crQuickOpen) renderQuickPop();
 }
 
@@ -250,15 +249,13 @@ function renderQuickPop() {
       });
     });
     if (!groups.length) crQuickPop.insertAdjacentHTML('beforeend', '<div class="cr-qb-empty">还没有世界书</div>');
-  } else if (crQuickOpen === 'status') {
-    var now = charStatusPreset(char);
-    var pick = function(p) { applyStatusPreset(char, p); closeQuickPop(); renderQuickBar(); };
-    quickItem('关闭', '这个角色不带状态栏', !now, function() { pick(null); });
-    if (now === 'custom') quickItem('自定义', '角色设置里改过的', true, function() { closeQuickPop(); });
-    [statusBuiltin()].concat(statusPresets).forEach(function(p) {
-      quickItem(p.name, p.tpl ? 'HTML 模板' : '字段：' + p.fields, now === p || (now && now !== 'custom' && now.id === p.id && now.name === p.name), function() { pick(p); });
+  } else if (crQuickOpen === 'cot') {
+    // 思维链：这个角色单独选，或者跟着 Prompt 页的全局设置
+    var own = char.cotMode && COT_MODE_NAMES[char.cotMode] ? char.cotMode : '';
+    quickItem('跟随全局', COT_MODE_NAMES[cotModeNow()], !own, function() { setQuickField('cotMode', ''); });
+    [['off', '模型自带的思考也尽量关掉，回得最快'], ['mine', '回复前按眠花糖机的方式想一想'], ['native', '模型有自己的思考就用，没有就直接回']].forEach(function(o) {
+      quickItem(COT_MODE_NAMES[o[0]], o[1], own === o[0], function() { setQuickField('cotMode', o[0]); });
     });
-    if (!statusPresets.length) crQuickPop.insertAdjacentHTML('beforeend', '<div class="cr-qb-empty">可以在角色设置「美化 → 状态栏」里把现在的样子「存为预设」</div>');
   }
 }
 
