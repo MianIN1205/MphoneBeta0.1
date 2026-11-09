@@ -27,6 +27,12 @@ function statusRegexOf(find) {
   var m = find.match(/^\/([\s\S]+)\/([a-z]*)$/);
   try { return m ? new RegExp(m[1], m[2].replace(/g/g, '')) : new RegExp(find); } catch (e) { return null; }
 }
+// 先照原样匹配；对不上再让「.」也能跨行试一次（角色把一项写成两行时，没写 s 标记的正则就对不上，退回横线纸，用户遇到过时好时坏）
+function statusRegexMatch(find, t) {
+  var re = statusRegexOf(find), m = re && t.match(re);
+  if (!m && re && !re.dotAll) { try { re = new RegExp(re.source, re.flags + 's'); m = t.match(re); } catch (e) {} }
+  return { re: re, m: m };
+}
 // 状态栏外面那层标签的名字（[状态栏]、<StatusBlock> 这种），角色写成另一种括号时换成正则要的那种
 function statusRegexTag(find) {
   var s = String(find || '').replace(/^\//, '').replace(/^\^/, '');
@@ -48,7 +54,7 @@ function statusRegexNorm(find, text) {
 }
 // 从回复里取出状态栏：正则对上的那段；对不上时把外层标签包住的那段拿走（不让它出现在聊天里）
 function statusRegexTake(spec, raw) {
-  var re = statusRegexOf(spec.find), t = statusRegexNorm(spec.find, raw), m = re && t.match(re);
+  var t = statusRegexNorm(spec.find, raw), rm = statusRegexMatch(spec.find, t), re = rm.re, m = rm.m;
   if (!m) {
     var tag = statusRegexTag(spec.find);
     if (tag) {
@@ -61,7 +67,7 @@ function statusRegexTake(spec, raw) {
 }
 // 套进 HTML：和酒馆一样，$1、$2… 是第几个括号，{{match}} 是整段
 function statusRegexRender(spec, s) {
-  var re = statusRegexOf(spec.find), t = statusRegexNorm(spec.find, s), m = re && t.match(re);
+  var t = statusRegexNorm(spec.find, s), rm = statusRegexMatch(spec.find, t), re = rm.re, m = rm.m;
   if (!m) return null;
   return m[0].replace(re, String(spec.tpl || '').replace(/\{\{\s*match\s*\}\}/gi, '$$&'));
 }
