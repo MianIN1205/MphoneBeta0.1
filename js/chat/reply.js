@@ -121,13 +121,15 @@ function chatSplitLines(parts) {
     return typeof p === 'string' ? p.replace(/([^。.…])。(\s*(?:\*[^*]+\*)?\s*)$/, '$1$2') : p;
   });
 }
-// 一条太长（超过 CHAT_BUBBLE_MAX 字）就拆开：先按句号、问号、感叹号断句，还长就按逗号、顿号、分号断，
+// 断句交给 TA 自己（用 ||| 分条，提示词里写清楚）；小手机只管一件事：某一条超过 CHAT_BUBBLE_SPLIT 字时，才在句号、逗号处帮忙断开（用户要简单、不堆规矩）。
+// 拆的时候：先按句号、问号、感叹号断句，还长就按逗号、顿号、分号断，
 // 再把太碎的小段拼回去，每条尽量不超过 CHAT_BUBBLE_MAX 字。引号、括号里面不断开；有链接、表情包、翻译的不动
-var CHAT_BUBBLE_MAX = 16;   // 手机上一个气泡一行大约 14～16 个字
+var CHAT_BUBBLE_SPLIT = 30;   // 超过这么多字才帮着拆
+var CHAT_BUBBLE_MAX = 20;     // 拆开后每条尽量不超过这么多字
 var CHAT_MARK_RE = /^(?:[(（\[【]\s*(?:read|已读|未读|\d+\s*(?:h|hr|hrs|hours?|min|mins|m|s|d|天|小时|分钟|分|秒)(?:\s*later)?)\s*[)）\]】]\s*)+$/i;
 function chatSplitLong(p) {
   var m = p.match(/^((?:\*[^*]+\*\s*)*)([\s\S]*)$/), lead = m[1], body = m[2].trim();
-  if (body.length <= CHAT_BUBBLE_MAX || !/[\u4e00-\u9fff]/.test(body) || /https?:|\[表情包|〔译〕|<\/?[a-z撤日]/i.test(body)) return [p];
+  if (body.length <= CHAT_BUBBLE_SPLIT || !/[\u4e00-\u9fff]/.test(body) || /https?:|\[表情包|〔译〕|<\/?[a-z撤日]/i.test(body)) return [p];
   // 切成小段：在句末标点后、或者（引号外的）逗号顿号分号后断开，标点留在前一段
   var pieces = [], buf = '', depth = 0, star = false;
   var OPEN = '「『“‘（(【《', CLOSE = '」』”’）)】》';
