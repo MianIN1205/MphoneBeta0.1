@@ -27,7 +27,8 @@ function msgPreviewText(m) {
   if (m.file) return '[文件] ' + (m.file.name || '');
   if (m.textImg) return '[图片]';
   if (m.voice) return '[语音]' + (m.transcript ? ' ' + m.transcript : '');
-  return String(m.content || '').replace(/〔译〕[\s\S]*$/, '').replace(/\s+/g, ' ');
+  var t = String(m.content || '').replace(/〔译〕[\s\S]*$/, '').replace(/\s+/g, ' ').trim();
+  return m.role === 'assistant' ? t.replace(/([^。.…])。$/, '$1') : t;   // 角色句尾的句号不显示（和聊天窗口一样）
 }
 
 // 剧情看到哪儿了：角色 id → 时间。剧情里有比这更新的角色回复，列表卡片下面多一行「[剧情]：…」（用户要的）

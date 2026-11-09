@@ -87,39 +87,68 @@ function commitAssistantReply(hist, raw, list, empty) {
   return added;
 }
 
-// 聊天窗口：一条里换了行、空了行的，每一行拆成单独一个气泡（用户要日常微信那种短短一条条的，不要大段气泡）
-// · 只有 *动作* 的一行跟着下一句（它显示成气泡外的灰色小字，自己成不了气泡）
-// · 「〔译〕」开头的翻译跟着上一句
-// · 句尾单个「。」去掉，聊天时一般不打句号（「……」「。。。」这类不动）
+// 聊天窗口分气泡（用户要简单、精确、什么情况都适用）：一个气泡 = 一句话。
+// · 句子在 。！？!?…～~ 这些句末标点处断开（引号、括号、*动作* 里面不断）；||| 也算断开
+// · TA 换了行、但这一行没说完（结尾是字或逗号），就接着下一行，不会从一句话中间断开（以前「拉严 / 实点」「守着你 / 呢」，用户反馈过）
+// · 一句太长（超过 CHAT_BUBBLE_SPLIT 字）才在逗号处再分；只有 *动作* 的一句跟着下一句（显示成气泡外的灰色小字）；「〔译〕」跟着上一条
+// · 句号存着（这样 TA 在聊天记录里看到的是好好的句子），显示时把句尾单个「。」藏掉（render.js）
+function chatLineDone(s) {
+  s = String(s).trim();
+  if (/\*$/.test(s)) return true;   // 以 *动作* 收尾
+  return !/[一-鿿A-Za-z0-9，、,；;：:（(「『“‘《【]$/.test(s);   // 以字、逗号、前括号结尾 = 这句还没说完
+}
+function chatSentences(seg) {
+  var out = [], buf = '', depth = 0, star = false, OPEN = '「『“‘（(【《', CLOSE = '」』”’）)】》';
+  for (var i = 0; i < seg.length; i++) {
+    var ch = seg[i];
+    buf += ch;
+    if (ch === '*') { star = !star; continue; }
+    if (star) continue;
+    if (OPEN.indexOf(ch) >= 0) depth++;
+    else if (CLOSE.indexOf(ch) >= 0) depth = Math.max(0, depth - 1);
+    var next = seg[i + 1] || '';
+    if (depth === 0 && /[。！？!?…～~]/.test(ch) && !/[。！？!?…～~」』”’）)]/.test(next)) { if (buf.trim()) out.push(buf.trim()); buf = ''; }
+  }
+  if (buf.trim()) out.push(buf.trim());
+  return out;
+}
 function chatSplitLines(parts) {
   var out = [];
   parts.forEach(function(p) {
     if (typeof p !== 'string' || msgHtmlLike(p)) { out.push(p); return; }   // 带 HTML 的整条不拆，免得拆坏
-    // *动作* 中间换了行的先接回一行，不然拆成两条，星号一边一个（用户遇到过）
-    p = p.replace(/\*[^*]+\*/g, function(a) { return a.replace(/\s*\n+\s*/g, ' '); });
+    p = p.replace(/\*[^*]+\*/g, function(a) { return a.replace(/\s*\n+\s*/g, ' '); });   // *动作* 中间换了行的接回一行
     var lines = p.split(/\n+/).map(function(l) { return l.trim(); }).filter(Boolean);
     // 只有 (1h)、(read)、（已读）这种记号的行不要：角色偶尔学着标时间 / 已读，小手机自己会显示隔了多久
     lines = lines.filter(function(l) { return !CHAT_MARK_RE.test(l); }).map(function(l) {
       return (l.match(/\*/g) || []).length % 2 ? l + '*' : l;   // 星号只写了一半（忘了收尾）的补上
     });
-    var pending = '';
+    var hasTr = lines.some(function(l) { return /^〔译〕/.test(l); });
+    // 没说完的行接上下一行
+    var segs = [], buf = '';
     lines.forEach(function(l) {
-      if (/^〔译〕/.test(l) && out.length && typeof out[out.length - 1] === 'string') { out[out.length - 1] += '\n' + l; return; }
-      if (/^(\*[^*]+\*\s*)+$/.test(l)) { pending += (pending ? ' ' : '') + l; return; }
-      out.push((pending ? pending + ' ' : '') + l);
-      pending = '';
+      if (/^〔译〕/.test(l)) { if (buf) { segs.push(buf); buf = ''; } segs.push(l); return; }
+      buf = buf ? buf + (/[A-Za-z0-9]$/.test(buf) && /^[A-Za-z0-9]/.test(l) ? ' ' : '') + l : l;
+      if (hasTr || chatLineDone(buf)) { segs.push(buf); buf = ''; }   // 带翻译的照行分，不按句子切（翻译要对着原文）
+    });
+    if (buf) segs.push(buf);
+    var pending = '';
+    segs.forEach(function(seg) {
+      if (/^〔译〕/.test(seg)) { if (out.length && typeof out[out.length - 1] === 'string') out[out.length - 1] += '\n' + seg; return; }
+      (hasTr ? [seg] : chatSentences(seg)).forEach(function(t) {
+        if (/^(\*[^*]+\*\s*)+$/.test(t)) { pending += (pending ? ' ' : '') + t; return; }
+        out.push((pending ? pending + ' ' : '') + t);
+        pending = '';
+      });
     });
     if (pending) {
       if (out.length && typeof out[out.length - 1] === 'string') out[out.length - 1] += ' ' + pending;
       else out.push(pending);
     }
   });
-  // 一行里太长的，再按句子、逗号拆成几条短的
+  // 一句太长的，再在逗号处分开
   var res = [];
   out.forEach(function(p) { if (typeof p === 'string' && !msgHtmlLike(p)) chatSplitLong(p).forEach(function(x) { res.push(x); }); else res.push(p); });
-  return res.map(function(p) {
-    return typeof p === 'string' ? p.replace(/([^。.…])。(\s*(?:\*[^*]+\*)?\s*)$/, '$1$2') : p;
-  });
+  return res;
 }
 // 断句交给 TA 自己（用 ||| 分条，提示词里写清楚）；小手机只管一件事：某一条超过 CHAT_BUBBLE_SPLIT 字时，才在句号、逗号处帮忙断开（用户要简单、不堆规矩）。
 // 拆的时候：先按句号、问号、感叹号断句，还长就按逗号、顿号、分号断，
@@ -290,7 +319,9 @@ function sendMsg(userText, requestOnly, onDone) {
     previewRows = []; previewParts = [];
   }
   function previewStream(shown) {
-    var cut = Math.max(shown.lastIndexOf('\n'), shown.lastIndexOf('|||') >= 0 ? shown.lastIndexOf('|||') + 2 : -1);
+    // 写完一句（句末标点）、一行或 ||| 就先冒出来
+    var lastEnd = -1; shown.replace(/[。！？!?…～~][」』”’）)]*/g, function(m0, at) { lastEnd = at + m0.length - 1; return m0; });
+    var cut = Math.max(shown.lastIndexOf('\n'), shown.lastIndexOf('|||') >= 0 ? shown.lastIndexOf('|||') + 2 : -1, lastEnd);
     if (cut < 0) return;
     var done = shown.slice(0, cut + 1);
     // 没写完的标记、表情包、撤回先不显示，等正式消息

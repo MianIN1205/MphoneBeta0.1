@@ -57,6 +57,7 @@ function setBubbleText(bubble, content, isAi, isChat) {
   var main = i < 0 ? content : content.slice(0, i).trim();
   var big = isAi && isChat && typeof charBigBubble === 'function' && charBigBubble(charList[openingChatCharIdx]);   // 仿siya：动作留在气泡里
   var parts = (isAi && isChat && !big) ? splitActions(main) : { before: [], text: main, after: [] };
+  if (isAi && isChat) parts.text = parts.text.replace(/([^。.…])。$/, '$1');   // 聊天窗口里句尾的句号不显示（记录里留着，TA 看到的是完整的句子）
   // 只有动作、没有说话：这条就只是一行动作小字
   var onlyAction = i < 0 && !parts.text && (parts.before.length + parts.after.length) > 0;
   bubble.classList.toggle('cr-action-only', onlyAction);
