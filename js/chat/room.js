@@ -266,6 +266,8 @@ function applyChatRoomStyle(char) {
   if (look.headAvatar) appChatRoom.classList.add('cr-head-avatar');
   if (look.headAlign === 'left') appChatRoom.classList.add('cr-head-left');
   paintCharAvatar(document.getElementById('chatRoomHeadAv'), char);
+  // 有状态栏时顶上名字右边一个很小的朝下箭头：让人知道点名字能看状态栏（用户要的，自然一点的提示）
+  appChatRoom.classList.toggle('cr-has-status', !!(Object.assign({}, DEFAULT_LOOK, char.look || {}).statusOn && (chatHistories[char.id] || []).some(function(m) { return m.status; })));
   if (typeof paintChatSubTitle === 'function') paintChatSubTitle(char);
 
   var bg = part.chatBg || DEFAULT_CHAT_BG;

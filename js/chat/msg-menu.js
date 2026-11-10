@@ -57,6 +57,8 @@ function openMsgCtx(bubble, listId, anchor) {
   msgCtxMenu.style.top = top + 'px';
 }
 
+var pressBubble = null, pressTimer = null;
+function unpress() { clearTimeout(pressTimer); if (pressBubble) pressBubble.classList.remove('cr-pressing'); pressBubble = null; }
 ['chatMsgList', 'dramaMsgList'].forEach(function(listId) {
   var list = document.getElementById(listId);
   var timer = null, sx = 0, sy = 0;
@@ -66,19 +68,24 @@ function openMsgCtx(bubble, listId, anchor) {
     if (typeof msgSelecting === 'function' && msgSelecting()) return;   // 多选时点一下就是勾选
     sx = e.clientX; sy = e.clientY;
     clearTimeout(timer);
+    // 按住时气泡慢慢往下沉一点（用户要的：让人自然知道「按住是有东西的」），松手或打开菜单就回来
+    pressBubble = bubble;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(function() { if (pressBubble === bubble) bubble.classList.add('cr-pressing'); }, 120);
     timer = setTimeout(function() {
       timer = null;
+      unpress();
       openMsgCtx(bubble, listId, bubble);
       suppressClick = true;
       if (navigator.vibrate) navigator.vibrate(15);
     }, 500);
   });
   list.addEventListener('pointermove', function(e) {
-    if (timer && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) { clearTimeout(timer); timer = null; }
+    if (timer && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) { clearTimeout(timer); timer = null; unpress(); }
   });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(function(ev) {
     list.addEventListener(ev, function() {
-      clearTimeout(timer); timer = null;
+      clearTimeout(timer); timer = null; unpress();
       // 触屏长按后不一定会产生点击，屏蔽只保留片刻，免得吞掉下一次正常点击
       if (suppressClick) setTimeout(function() { suppressClick = false; }, 350);
     });

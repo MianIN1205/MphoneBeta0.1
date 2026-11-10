@@ -170,7 +170,7 @@ function readBubbleForm() {
 var DEFAULT_CHAT_CFG = {
   maxMem: 50, attention: 10, autoSum: false, sumEvery: 10,
   lang: '', translate: false, replyMin: 2, replyMax: 5,
-  patOn: false, patSuffix: '', voiceId: '', vectorOn: false, quickBar: false, actionOn: false, ctxTokens: 16000,
+  patOn: true, patSuffix: '', voiceId: '', vectorOn: false, quickBar: true, actionOn: true, ctxTokens: 16000,
   recallOn: false, recallPeek: true, timeOn: true, timeZone: '', peekNotice: false, peekLock: false, starOn: true
 };
 // 状态栏 HTML 模板：用 {{心情}} 这样的占位符标出要填的地方，AI 只输出这些字段的内容，小手机按模板画出来

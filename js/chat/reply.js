@@ -48,7 +48,7 @@ function commitAssistantReply(hist, raw, list, empty) {
   // 聊天窗口：TA 帮忙记的提醒 / 闹钟 / 日程，记进桌面「纪念日」，后面单独成一张卡片
   var calItems = [];
   if (rc && chatHistories[rc.id] === hist && typeof extractCalTags === 'function') raw = extractCalTags(rc, raw, calItems);
-  if (rc && chatHistories[rc.id] === hist && !(rc.chatCfg && rc.chatCfg.actionOn)) {
+  if (rc && chatHistories[rc.id] === hist && !Object.assign({}, DEFAULT_CHAT_CFG, rc.chatCfg || {}).actionOn) {
     raw = raw.replace(actionRe(), '').replace(/[ \t]{2,}/g, ' ');
   }
   // 剧情配图：<配图>这一幕的画面</配图> 拿出来，回复后面单独一条（设置里剧情配图选了生图才会写）
@@ -75,7 +75,7 @@ function commitAssistantReply(hist, raw, list, empty) {
   calItems.forEach(function(c) { added.push({ role: 'assistant', content: '', cal: c, time: now }); });
   if (illus && isDramaHist && typeof imgUse === 'function' && imgUse('drama') === 'gen') added.push({ role: 'assistant', content: '[配图] ' + illus, textImg: illus, illus: true, time: now });
   var pc = charOfHistory(hist);
-  if (patBack && pc && chatHistories[pc.id] === hist && pc.chatCfg && pc.chatCfg.patOn) added.push({ role: 'assistant', content: '', pat: 'user', time: now });
+  if (patBack && pc && chatHistories[pc.id] === hist && Object.assign({}, DEFAULT_CHAT_CFG, pc.chatCfg || {}).patOn) added.push({ role: 'assistant', content: '', pat: 'user', time: now });
   added.forEach(function(m) {
     hist.push(m);
     if (list) renderHistMsg(m, list, empty);

@@ -239,6 +239,7 @@ function renderHistMsg(m, list, empty) {
     list._altTime = 0;
   }
   var thinkBar = m.think && m.role === 'assistant' ? renderThinkBar(m, list) : null;
+  if (m.status && list.id === 'chatMsgList') appChatRoom.classList.add('cr-has-status');   // 第一条状态栏来了，名字旁边的小箭头跟着出来
   if (m.recalled && !m._flash) return renderRecallNotice(m, list, empty);
   if (m.pat || m.note) return renderPatNotice(m, list, empty);
   if (m.whisperChat && typeof renderWhisperNotice === 'function') return renderWhisperNotice(m, list, empty);   // 群里的悄悄话：居中一行，点开看（js/chat/group.js）

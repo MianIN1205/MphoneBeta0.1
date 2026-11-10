@@ -57,7 +57,7 @@ function applyStatusPreset(char, p) {
 
 function renderQuickBar() {
   var char = crQuickChar();
-  var on = !!(char && char.chatCfg && char.chatCfg.quickBar);
+  var on = !!(char && Object.assign({}, DEFAULT_CHAT_CFG, char.chatCfg || {}).quickBar);   // 默认开（用户要的：第一次用就看得到）
   appChatRoom.classList.toggle('cr-qb-on', on);
   if (!on) { closeQuickPop(); return; }
   var api = charApiPreset(char);

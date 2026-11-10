@@ -130,7 +130,7 @@ function renderWhisperNotice(m, list, empty) {
   var el = document.createElement('div');
   el.className = 'cr-recall-notice cr-pat-notice cr-whisper-notice';
   var nm = whisperNames(m);
-  el.textContent = '🤫 ' + nm[0] + ' 和 ' + nm[1] + ' 说了几句悄悄话 ›';
+  el.textContent = '🤫 ' + nm[0] + ' 和 ' + nm[1] + ' 说了几句悄悄话';   // 后面朝下的小箭头在 css 里
   el.addEventListener('click', function(e) { e.stopPropagation(); openWhisperChat(m); });
   el._msg = m; el._extras = [];
   list.appendChild(el);

@@ -161,3 +161,7 @@
 .wg-caps-btns { display: flex; gap: 8px; margin-top: 8px; }
 .wg-caps-btns .mine-acc-btn { flex: 1; font-size: 12.5px; }
 #wgCapsWrap .mine-field-input, #wgTextWrap .mine-field-input { width: 100%; box-sizing: border-box; }
+
+/* 时钟下面那句话能点开改：按下去淡一下（自然地让人知道能点） */
+#deskSign { cursor: pointer; transition: opacity 0.15s; }
+#deskSign:active { opacity: 0.55; }

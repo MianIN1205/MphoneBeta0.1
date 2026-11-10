@@ -311,3 +311,10 @@
   border: none; border-radius: 16px; padding: 6px 14px; font-family: inherit; font-size: 12.5px; color: #c0607a; background: rgba(255,255,255,0.94);
   box-shadow: 0 3px 12px rgba(150,100,120,0.2); transition: opacity 0.2s, transform 0.2s; cursor: pointer; }
 .cr-new-pill.show { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
+
+/* 自然的小提示（用户要的，不加红点、不弹字）：按住气泡慢慢往下沉一点；有状态栏时名字右边一个朝下的小三角；悄悄话提示后面也是（用户要朝下的，不要 v 字形） */
+.chat-msg-bubble { transition: transform 0.35s ease; }
+.chat-msg-bubble.cr-pressing { transform: scale(0.96); }
+#appChatRoom.cr-has-status .chat-room-main-title::after, .cr-whisper-notice::after {
+  content: ''; display: inline-block; width: 0; height: 0; margin-left: 5px; vertical-align: 2px;
+  border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; opacity: 0.5; }
