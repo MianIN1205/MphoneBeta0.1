@@ -27,11 +27,27 @@ function statusRegexOf(find) {
   var m = find.match(/^\/([\s\S]+)\/([a-z]*)$/);
   try { return m ? new RegExp(m[1], m[2].replace(/g/g, '')) : new RegExp(find); } catch (e) { return null; }
 }
-// 先照原样匹配；对不上再让「.」也能跨行试一次（角色把一项写成两行时，没写 s 标记的正则就对不上，退回横线纸，用户遇到过时好时坏）
+// 先照原样匹配；对不上再把状态栏里「一项写成了两行」的接回一行再试（角色这样写时正则对不上，退回横线纸，用户遇到过时好时坏）。
+// 不能用「让 . 跨行」的 s 标记重试：用户那种二十个 (.*?) 的正则对不上时，s 标记会让手机算好几秒到几十秒，整个小手机卡住（用户遇到过：点状态栏卡住、等回复时点了没反应过一会儿突然跳界面）
 function statusRegexMatch(find, t) {
   var re = statusRegexOf(find), m = re && t.match(re);
-  if (!m && re && !re.dotAll) { try { re = new RegExp(re.source, re.flags + 's'); m = t.match(re); } catch (e) {} }
-  return { re: re, m: m };
+  if (!m && re) { var t2 = statusJoinWrapped(find, t); if (t2 !== t) { m = t2.match(re); if (m) t = t2; } }
+  return { re: re, m: m, t: t };
+}
+// 只动状态栏那一段：不像「名字：」开头的行，接到上一行后面
+function statusJoinWrapped(find, t) {
+  var tag = statusRegexTag(find);
+  if (!tag) return t;
+  var open = tag.square ? '[' + tag.name + ']' : '<' + tag.name + '>', close = tag.square ? '[/' + tag.name + ']' : '</' + tag.name + '>';
+  var a = t.indexOf(open);
+  if (a < 0) return t;
+  var b = t.indexOf(close, a), end = b < 0 ? t.length : b;
+  var lines = t.slice(a + open.length, end).split('\n'), out = [];
+  lines.forEach(function(l) {
+    if (out.length > 1 && l.trim() && !/^\s*([^\s:：]{1,8}[:：]|[\[<]|[♥❤])/.test(l)) out[out.length - 1] += ' ' + l.trim();
+    else out.push(l);
+  });
+  return t.slice(0, a + open.length) + out.join('\n') + t.slice(end);
 }
 // 状态栏外面那层标签的名字（[状态栏]、<StatusBlock> 这种），角色写成另一种括号时换成正则要的那种
 function statusRegexTag(find) {
@@ -55,6 +71,7 @@ function statusRegexNorm(find, text) {
 // 从回复里取出状态栏：正则对上的那段；对不上时把外层标签包住的那段拿走（不让它出现在聊天里）
 function statusRegexTake(spec, raw) {
   var t = statusRegexNorm(spec.find, raw), rm = statusRegexMatch(spec.find, t), re = rm.re, m = rm.m;
+  t = rm.t;
   if (!m) {
     var tag = statusRegexTag(spec.find);
     if (tag) {
@@ -252,10 +269,16 @@ function openStatusPanel() {
   crStatusPanel.style.maxHeight = maxH + 'px';
   crStatusPanel.style.setProperty('--sp-max', maxH + 'px');   // 每一条在这个高度里自己上下滑
   crStatusPanel.classList.add('open');
+  var mask = document.getElementById('crSpMask');
+  if (mask) { mask.style.top = top + 'px'; mask.classList.add('open'); }   // 后面模糊、点不到
   renderStatusPanel();
   crStatusPanel.scrollTop = 0;
 }
-function closeStatusPanel() { crStatusPanel.classList.remove('open'); }
+function closeStatusPanel() {
+  crStatusPanel.classList.remove('open');
+  var mask = document.getElementById('crSpMask');
+  if (mask) mask.classList.remove('open');
+}
 // 新回复到达、角色设置改动后：面板开着就刷新
 function refreshStatusPanel() {
   if (!statusPanelOpen()) return;

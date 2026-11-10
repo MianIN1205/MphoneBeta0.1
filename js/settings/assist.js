@@ -6,7 +6,8 @@
 // 后台保活：循环播放一段听不见的声音，让手机不那么快暂停这个网页。
 // 只在应用还在后台运行时有效；彻底关掉后收不到（那需要推送服务器）。
 // =============================================
-var assistCfg = Object.assign({ notify: false, keepAlive: false, fakeStream: false }, mphoneStore.load('mphone_assist', {}));
+var assistCfg = Object.assign({ notify: false, keepAlive: false, fakeStream: true }, mphoneStore.load('mphone_assist', {}));   // 假流式默认开（用户要的，能手动关）
+if (!mphoneStore.load('mphone_fakestream_on', false)) { assistCfg.fakeStream = true; mphoneStore.save('mphone_assist', assistCfg); mphoneStore.save('mphone_fakestream_on', true); }   // 以前存过「关」的也打开一次
 function saveAssistCfg() { mphoneStore.save('mphone_assist', assistCfg); }
 
 var notifyOnInput    = document.getElementById('notifyOn');

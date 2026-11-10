@@ -58,7 +58,8 @@ function buildGroupMsgs(g, history) {
   var sys = document.getElementById('systemPromptTA') ? document.getElementById('systemPromptTA').value.trim() : '';
   var roster = members.map(function(c) {
     var persona = c.builtinAssistant && typeof MIANIN_PERSONA !== 'undefined' ? MIANIN_PERSONA : c.charPersona;
-    var s = '【' + groupLabel(c) + '】\n' + (persona ? fillMacros(persona, c) : '（没有写人设）');
+    var tags = (groupAdmins(g).indexOf(c.id) >= 0 ? '（群管理员）' : '') + (groupMuteUntil(g, c.id) ? '（正在被禁言，' + new Date(groupMuteUntil(g, c.id)).getHours() + ':' + pad(new Date(groupMuteUntil(g, c.id)).getMinutes()) + ' 以前不能发言）' : '');
+    var s = '【' + groupLabel(c) + '】' + tags + '\n' + (persona ? fillMacros(persona, c) : '（没有写人设）');
     if ((c.selfFacts || []).length) s += '\n聊天里补充过的设定：' + c.selfFacts.join('；');
     if (c.userNickname) s += '\nTA 对{{user}}的称呼：' + c.userNickname;
     var imp = typeof impressionFor === 'function' ? impressionFor(c.userImpressions, acc.uid) : '';
@@ -76,12 +77,13 @@ function buildGroupMsgs(g, history) {
   // 世界书：按「是谁的」分开放（用户问过不适合某个角色怎么办）：所有成员都关联的是大家的背景；
   // 只有部分人关联的标明只和 TA 们有关，别的角色不知道、不用。同一条只放一次
   var seen = {}, wbList = [];
-  members.forEach(function(c) {
+  [g].concat(members).forEach(function(c) {   // 群自己关联的（便捷拓展栏里选的）算大家都知道
     if (typeof getActiveWbEntries !== 'function') return;
     getActiveWbEntries(c, history, false).forEach(function(e) {
       var k = e.id || (e.name + '\n' + e.content);
       if (!seen[k]) { seen[k] = { text: '【' + e.name + '】\n' + e.content, owners: [] }; wbList.push(seen[k]); }
-      if (seen[k].owners.indexOf(c) < 0) seen[k].owners.push(c);
+      if (c === g) seen[k].owners = members.slice();
+      else if (seen[k].owners.indexOf(c) < 0) seen[k].owners.push(c);
     });
   });
   var wbGroups = {}, wbOrder = [];
@@ -113,21 +115,38 @@ function buildGroupMsgs(g, history) {
   var fileSys = typeof filesContextFor === 'function' ? filesContextFor(hist) : null;
   return msgs.concat(fileSys ? [fileSys] : [], out);
 }
+function groupReplyN(g) { var n = GROUP_REPLY_N[groupCfgOf(g).replyN] || GROUP_REPLY_N.mid; return n[0] + '～' + n[1]; }
+function groupActionOn(g) { return !!(g.chatCfg && g.chatCfg.actionOn); }
+// 有管理员时才告诉 TA 们能禁言（只能禁普通成员）
+function groupModRule(g) {
+  var admins = groupAdmins(g).map(function(id) { return charList[findCharIdx(id)]; }).filter(Boolean).map(groupLabel);
+  if (!admins.length) return '';
+  return '\n群管理员（' + admins.join('、') + '）真的有必要时（有人刷屏、吵过头）可以禁言普通成员，不能禁言群主和别的管理员：在 TA 那一行里写 <禁言 对象="名字" 分钟="30"/>，解除写 <解除禁言 对象="名字"/>。很少用，开玩笑也别随便禁。';
+}
+function groupModTag(g, actorId, kind, attrs) {
+  var who = (String(attrs).match(/对象\s*=\s*["“「]([^"”」]+)/) || [])[1];
+  var target = who && groupMembers(g).filter(function(c) { return [c.charAlias, c.charName, groupLabel(c)].indexOf(who.trim()) >= 0; })[0];
+  if (!target) return;
+  if (kind === '禁言') groupSetMute(g, actorId, target.id, Math.min(30 * 1440, Math.max(1, parseInt((String(attrs).match(/分钟\s*=\s*["“「]?(\d+)/) || [])[1], 10) || 10)));
+  else groupSetMute(g, actorId, target.id, 0);
+}
 function groupFormatRules(g) {
-  var names = groupMembers(g).map(groupLabel);
+  var names = groupSpeakers(g).map(groupLabel);   // 被禁言的不能说话
   return [{ role: 'system', content: groupFill(g,
-    '【群聊回复格式】接着群里的聊天往下说：不是每个人每次都要开口，谁会接这个话题谁就说，一共 2～8 条，像真的群聊一样有来有回、有人插话。' +
+    '【群聊回复格式】接着群里的聊天往下说：不是每个人每次都要开口，谁会接这个话题谁就说，一共 ' + groupReplyN(g) + ' 条，像真的群聊一样有来有回、有人插话。' +
     '每条单独一行，开头写说话人的名字和冒号（名字只能是：' + names.join('、') + '），比如：\n' +
     names.slice(0, 2).map(function(n, i) { return n + '：' + (i ? '我在我在！' : '在吗。'); }).join('\n') +
-    '\n' + (typeof gpTagRule === 'function' ? gpTagRule() : '') + '\n同一个人连着说几句可以写在一行里，每句照常写标点，小手机会按句子分成气泡。像平时发微信一样说话，口语、短句；不写旁白、动作描写和括号说明，不替{{user}}说话。') }];
+    '\n' + (typeof gpTagRule === 'function' ? gpTagRule() : '') + groupModRule(g) + '\n同一个人连着说几句可以写在一行里，每句照常写标点，小手机会按句子分成气泡。像平时发微信一样说话，口语、短句；' + (groupActionOn(g) ? '想写动作、神态时用 *星号* 包起来放在那个人那一行里（会显示成灰色小字），不写旁白和括号说明' : '不写旁白、动作描写和括号说明') + '，不替{{user}}说话。') }];
 }
 
 // ---------- 收到回复：按「名字：」拆给每个成员 ----------
 function groupCommitReply(g, hist, raw, list) {
   raw = typeof takeThink === 'function' ? takeThink(raw).text : String(raw || '');
   // 投票 / 红包 / 抽奖的标签先换成占位，免得下面被当成别的标签去掉（js/chat/group-play.js）
-  var plays = [];
+  var plays = [], mods = [];
   if (typeof GP_TAG_RE !== 'undefined') raw = raw.replace(GP_TAG_RE, function(_, kind, attrs, body) { plays.push([kind, attrs, body]); return '\u0001P' + (plays.length - 1) + '\u0001'; });
+  // 管理员禁言 / 解除禁言普通成员：<禁言 对象="名字" 分钟="30"/>、<解除禁言 对象="名字"/>，也先换成占位，谁写的就算谁动手
+  raw = raw.replace(/<(禁言|解除禁言)([^>]*?)\/?>(\s*<\/\1>)?/g, function(_, kind, attrs) { plays.push(['@' + kind, attrs, '']); return '\u0001P' + (plays.length - 1) + '\u0001'; });
   raw = raw.replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<([一-鿿A-Za-z]+)[^>]*>[\s\S]*?<\/\1>/g, '').replace(/<[一-鿿]+[^>]*\/>/g, '');
   var members = groupMembers(g), byName = {};
   members.forEach(function(c) {
@@ -138,10 +157,11 @@ function groupCommitReply(g, hist, raw, list) {
   raw.split('\n').forEach(function(line) {
     var m = line.match(/^\s*[【\[]?\s*@?([^：:\]】\n]{1,20}?)\s*[\]】]?\s*[：:]\s*(.*)$/);
     var name = m && m[1].trim();
+    if (m && byName[name] && groupMuteUntil(g, byName[name])) { skip = true; cur = null; return; }   // 被禁言的人说的不要
     if (m && byName[name]) { cur = { id: byName[name], text: m[2] }; segs.push(cur); skip = false; return; }
     if (m && (name === userName || name === '{{user}}' || name === '用户')) { skip = true; cur = null; return; }   // 替用户说的话不要
     if (skip || !line.trim()) return;
-    if (!cur) { cur = { id: members[0] && members[0].id, text: '' }; segs.push(cur); }
+    if (!cur) { var sp0 = groupSpeakers(g)[0]; if (!sp0) return; cur = { id: sp0.id, text: '' }; segs.push(cur); }
     cur.text += (cur.text ? '\n' : '') + line;
   });
   var now = Date.now(), added = [];
@@ -149,11 +169,13 @@ function groupCommitReply(g, hist, raw, list) {
     if (!s.id || !s.text.trim()) return;
     s.text.split(/\u0001P(\d+)\u0001/).forEach(function(piece, k) {
       if (k % 2) {   // 占位：这个人发起的投票 / 红包 / 抽奖
-        var t = plays[+piece], play = t && gpFromTag(t[0], t[1], t[2], g, s.id);
+        var t = plays[+piece];
+        if (t && t[0].charAt(0) === '@') { mods.push([s.id, t[0].slice(1), t[1]]); return; }   // 管理员动手：等这轮的话都发出来再生效
+        var play = t && gpFromTag(t[0], t[1], t[2], g, s.id);
         if (play) added.push({ role: 'assistant', content: '[' + GP_NAMES[play.kind] + '] ' + (play.q || play.prize || play.wish), play: play, speaker: s.id, time: now });
         return;
       }
-      var text = piece.replace(actionRe(), '').replace(/[ \t]{2,}/g, ' ').trim();
+      var text = (groupActionOn(g) ? piece : piece.replace(actionRe(), '')).replace(/[ \t]{2,}/g, ' ').trim();   // 动作描写看群设置
       if (!text) return;
       chatSplitLines([text]).forEach(function(p) {
         if (typeof p !== 'string' || !p.trim() || CHAT_MARK_RE.test(p.trim())) return;
@@ -163,6 +185,7 @@ function groupCommitReply(g, hist, raw, list) {
   });
   added.forEach(function(m) { hist.push(m); if (list) renderHistMsg(m, list, null); });
   added.forEach(function(m) { if (m.play && typeof gpAfterAdd === 'function') gpAfterAdd(g, m); });
+  mods.forEach(function(x) { groupModTag(g, x[0], x[1], x[2]); });
   return added;
 }
 
@@ -222,7 +245,7 @@ function openNewGroup() {
     var name = ov.querySelector('[data-f="name"]').value.trim();
     var g = { id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), isGroup: true, members: picked.slice(),
               charName: name || picked.map(function(id) { return groupLabel(charList[findCharIdx(id)]); }).join('、').slice(0, 20),
-              charAlias: '', inChat: true, chatTouchedAt: Date.now(), groupCfg: { knows: {}, autoOn: false, autoGapH: 1 } };
+              charAlias: '', inChat: true, chatTouchedAt: Date.now(), chatCfg: { quickBar: true }, groupCfg: { knows: {}, autoOn: false, autoGapH: 1 } };
     charList.push(g);
     saveCharList();
     ov.remove();
@@ -243,12 +266,12 @@ var appGroupSetting = document.getElementById('appGroupSetting');
 var grpEdit = null;   // 正在改的：{ g, picked, knows, avImg, gap }
 function grpPaintAv() {
   var e = grpEdit;
-  paintCharAvatar(document.getElementById('grpAvatarBox'), Object.assign({}, e.g, { members: e.picked, charAvatar: e.avImg }));
+  paintCharAvatar(document.getElementById('grpAvatarBox'), Object.assign({}, e.g, { charAvatar: e.avImg }));
 }
 function grpPaintKnows() {
   var e = grpEdit, box = document.getElementById('grpKnows');
   box.innerHTML = '';
-  e.picked.forEach(function(id) {
+  (e.g.members || []).forEach(function(id) {
     var c = charList[findCharIdx(id)];
     if (!c) return;
     var chip = document.createElement('span');
@@ -272,13 +295,238 @@ function grpPaintGap() {
 }
 function openGroupSetting(g) {
   var cfg = groupCfgOf(g);
-  grpEdit = { g: g, picked: (g.members || []).slice(), knows: Object.assign({}, cfg.knows), avImg: g.charAvatar || '', gap: cfg.autoGapH };
+  grpEdit = { g: g, picked: (g.members || []).slice(), knows: Object.assign({}, cfg.knows), avImg: g.charAvatar || '', gap: cfg.autoGapH,
+              replyN: cfg.replyN || 'mid',
+              bg: Object.assign({}, DEFAULT_CHAT_BG, g.chatBg || {}), bubble: Object.assign({}, DEFAULT_BUBBLE, g.bubble || {}) };
   document.getElementById('grpName').value = g.charName || '';
   document.getElementById('grpAutoOn').checked = !!cfg.autoOn;
-  groupMemberChips(document.getElementById('grpMembers'), grpEdit.picked, function() { grpPaintKnows(); grpPaintAv(); });
-  grpPaintKnows(); grpPaintAv(); grpPaintGap();
+  document.getElementById('grpActionOn').checked = !!(g.chatCfg && g.chatCfg.actionOn);
+  document.getElementById('grpQuickBar').checked = !!(g.chatCfg && g.chatCfg.quickBar);
+  document.getElementById('grpShowAv').checked = !(g.look && g.look.showAvatar === false);
+  document.getElementById('grpCss').value = g.customCss || '';
+  document.getElementById('grpOpacity').value = grpEdit.bubble.opacity;
+  grpPaintMembers(); grpPaintKnows(); grpPaintAv(); grpPaintGap(); grpPaintBasic(); grpPaintLook();
+  grpGoPage(0, false);
   appGroupSetting.querySelector('.settings-content').scrollTop = 0;
   appGroupSetting.classList.add('active');
+}
+// 一排小选项（选一个）
+function grpOptRow(box, opts, cur, onPick) {
+  box.innerHTML = '';
+  opts.forEach(function(o) {
+    var b = document.createElement('button');
+    b.className = 'pf-radio-btn' + (o[0] === cur ? ' selected' : '');
+    b.textContent = o[1];
+    b.addEventListener('click', function() { onPick(o[0]); });
+    box.appendChild(b);
+  });
+}
+var GROUP_REPLY_N = { few: [2, 4, '少一点'], mid: [3, 6, '适中'], many: [5, 10, '热闹'] };
+function grpPaintBasic() {
+  var e = grpEdit;
+  grpOptRow(document.getElementById('grpReplyN'), Object.keys(GROUP_REPLY_N).map(function(k) { var n = GROUP_REPLY_N[k]; return [k, n[2] + '（' + n[0] + '～' + n[1] + '）']; }), e.replyN, function(v) { e.replyN = v; grpPaintBasic(); });
+}
+var GROUP_BG_COLORS = ['#FFF0F5', '#F3F0FF', '#EEF5FF', '#F2FAF5', '#FFFFFF', '#F2F2F2'];
+function grpPaintLook() {
+  var e = grpEdit;
+  var prev = document.getElementById('grpBgPrev');
+  prev.style.background = e.bg.image ? 'url(' + e.bg.image + ') center / cover' : (e.bg.color || DEFAULT_CHAT_BG.color);
+  var colors = document.getElementById('grpBgColors');
+  colors.innerHTML = '';
+  GROUP_BG_COLORS.forEach(function(c) {
+    var d = document.createElement('span');
+    d.className = 'grp-dot' + (!e.bg.image && e.bg.color === c ? ' on' : '');
+    d.style.background = c;
+    d.addEventListener('click', function() { e.bg = { color: c, image: '' }; grpPaintLook(); });
+    colors.appendChild(d);
+  });
+  var bc = document.getElementById('grpBubbleColors');
+  bc.innerHTML = '';
+  BUBBLE_PRESETS.forEach(function(pair, i) {
+    var d = document.createElement('span');
+    d.className = 'grp-pair' + (e.bubble.preset === i ? ' on' : '');
+    d.innerHTML = '<i></i><i></i>';
+    d.children[0].style.background = pair[0]; d.children[1].style.background = pair[1];
+    d.addEventListener('click', function() { e.bubble.preset = i; grpPaintLook(); });
+    bc.appendChild(d);
+  });
+  grpOptRow(document.getElementById('grpBubbleTpl'), BUBBLE_TPLS.filter(function(t) { return t.id === 'plain' || t.chat; }).map(function(t) { return [t.id, t.name]; }), e.bubble.tpl || 'plain', function(v) { e.bubble.tpl = v; grpPaintLook(); });
+  document.getElementById('grpOpacityVal').textContent = e.bubble.opacity + '%';
+}
+document.getElementById('grpOpacity').addEventListener('input', function() { if (grpEdit) { grpEdit.bubble.opacity = parseInt(this.value, 10); grpPaintLook(); } });
+document.getElementById('grpBgImg').addEventListener('click', function() {
+  if (!grpEdit) return;
+  openImgPicker(function(src) { grpEdit.bg = { color: grpEdit.bg.color, image: src }; grpPaintLook(); },
+    { onReset: function() { grpEdit.bg = Object.assign({}, DEFAULT_CHAT_BG); grpPaintLook(); } });
+});
+// ---------- 三页：群资料 / 聊天 / 美化（和角色设置一样，点标签或左右滑） ----------
+var grpPages = document.getElementById('grpPages'), grpSlider = document.getElementById('grpToggleSlider');
+function grpSetTab(pos, animate) {
+  document.querySelectorAll('#grpTabs .cs-tab').forEach(function(t) { t.classList.toggle('active', +t.dataset.page === Math.round(pos)); });
+  var w = (document.querySelector('#grpTabs .cs-tab') || {}).offsetWidth || 52;
+  grpSlider.style.transition = animate ? 'transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none';
+  grpSlider.style.transform = 'translateX(' + (pos * w) + 'px)';
+}
+function grpGoPage(i, smooth) {
+  if (smooth === false) { grpPages.style.scrollBehavior = 'auto'; grpPages.scrollLeft = i * grpPages.clientWidth; grpPages.style.scrollBehavior = ''; }
+  else grpPages.scrollTo({ left: i * grpPages.clientWidth, behavior: 'smooth' });
+  grpSetTab(i, smooth !== false);
+}
+document.querySelectorAll('#grpTabs .cs-tab').forEach(function(t) { t.addEventListener('click', function() { grpGoPage(+this.dataset.page); }); });
+grpPages.addEventListener('scroll', function() { grpSetTab(grpPages.scrollLeft / Math.max(1, grpPages.clientWidth), false); });
+
+// ---------- 群成员：头像 + 名字一格格，最后一个 +；点或长按一个人：设管理员 / 禁言 / 踢出群聊（用户要的，马上生效） ----------
+function groupAdmins(g) { return (g.groupCfg && g.groupCfg.admins) || []; }
+function groupMuteUntil(g, id) { var t = g.groupCfg && g.groupCfg.mutes && g.groupCfg.mutes[id]; return t && t > Date.now() ? t : 0; }
+function groupSpeakers(g) { return groupMembers(g).filter(function(c) { return !groupMuteUntil(g, c.id); }); }   // 没被禁言、能说话的
+// 群里冒一行小字提示（和拍一拍一样居中），AI 也看得到
+function groupNote(g, text, ai) {
+  var m = { role: 'user', content: '', note: text, noteAI: '（' + (ai || text) + '）', time: Date.now() };
+  var hist = chatHistories[g.id] = chatHistories[g.id] || [];
+  hist.push(m);
+  if (appChatRoom.classList.contains('active') && charList[openingChatCharIdx] === g && currentCrSubView !== 'contacts') renderHistMsg(m, document.getElementById('chatMsgList'), document.getElementById('chatRoomEmpty'));
+  saveHistories();
+}
+function grpSaveCfg(g, patch) { g.groupCfg = Object.assign({}, g.groupCfg || {}, patch); saveCharList(); }
+function grpPaintMembers() {
+  var e = grpEdit, g = e.g, box = document.getElementById('grpMembers');
+  box.innerHTML = '';
+  var tile = function(av, name, tag, onTap) {
+    var t = document.createElement('div');
+    t.className = 'grp-mem';
+    t.appendChild(av);
+    var n = document.createElement('div'); n.className = 'grp-mem-name'; n.textContent = name; t.appendChild(n);
+    if (tag) { var b = document.createElement('i'); b.className = 'grp-mem-tag'; b.textContent = tag; t.appendChild(b); }
+    if (onTap) { if (typeof bindPress === 'function') bindPress(t, onTap, onTap); else t.addEventListener('click', onTap); }
+    box.appendChild(t);
+    return t;
+  };
+  var meAv = document.createElement('div'); meAv.className = 'chat-char-card-avatar grp-mem-av';
+  var acc = resolveCharAccount(g); paintAvatar(meAv, acc && acc.avatar, '');
+  tile(meAv, '我', '群主');
+  groupMembers(g).forEach(function(c) {
+    var av = document.createElement('div'); av.className = 'chat-char-card-avatar grp-mem-av';
+    paintCharAvatar(av, c);
+    var mute = groupMuteUntil(g, c.id), admin = groupAdmins(g).indexOf(c.id) >= 0;
+    var t = tile(av, groupLabel(c), mute ? '禁言中' : admin ? '管理员' : '', function() { grpMemberMenu(g, c); });
+    if (mute) t.classList.add('muted');
+  });
+  var add = document.createElement('div'); add.className = 'grp-mem-av grp-mem-add'; add.textContent = '+';
+  tile(add, '邀请', '', function() { grpInvite(g); });
+}
+function grpInvite(g) {
+  var out = charList.filter(function(c) { return !c.isGroup && (g.members || []).indexOf(c.id) < 0; });
+  if (!out.length) { showToast('角色们都在群里啦', 'plain'); return; }
+  var picked = [];
+  var ov = groupModal('<div class="mine-acc-title">邀请进群</div><div class="feed-visible-list grp-chips"></div>' +
+    '<div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" data-act="cancel">取消</button><button class="mine-acc-btn mine-acc-btn-add" data-act="ok">邀请</button></div>');
+  var chips = ov.querySelector('.grp-chips');
+  out.forEach(function(c) {
+    var chip = document.createElement('span');
+    chip.className = 'feed-visible-chip';
+    chip.textContent = groupLabel(c);
+    chip.addEventListener('click', function() { var k = picked.indexOf(c.id); if (k >= 0) picked.splice(k, 1); else picked.push(c.id); chip.classList.toggle('on', k < 0); });
+    chips.appendChild(chip);
+  });
+  ov.querySelector('[data-act="cancel"]').addEventListener('click', function() { ov.remove(); });
+  ov.querySelector('[data-act="ok"]').addEventListener('click', function() {
+    if (!picked.length) { shakeEl(chips); return; }
+    ov.remove();
+    g.members = (g.members || []).concat(picked);
+    saveCharList();
+    var names = picked.map(function(id) { return groupLabel(charList[findCharIdx(id)]); }).join('、');
+    groupNote(g, '你邀请「' + names + '」加入了群聊', '{{user}}邀请' + names + '加入了群聊');
+    grpAfterMemberChange(g);
+  });
+}
+// 禁言多久：自己填数字 + 选单位，下面几个常用的点一下填好
+var GROUP_MUTE_UNITS = [[1, '分钟'], [60, '小时'], [1440, '天']];
+function groupMuteLeft(until) { return durText(Math.max(60000, until - Date.now())); }
+function grpMuteTime(g, c) {
+  var unit = 1;
+  var ov = groupModal('<div class="mine-acc-title"></div>' +
+    '<div class="grp-mute-row"><input class="pet-edit-input" type="number" min="1" step="1" value="10" data-f="n"><div class="grp-opts" data-f="unit"></div></div>' +
+    '<div class="grp-opts" data-f="quick"></div>' +
+    '<div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" data-act="cancel">取消</button><button class="mine-acc-btn mine-acc-btn-add" data-act="ok">禁言</button></div>');
+  ov.querySelector('.mine-acc-title').textContent = '禁言「' + groupLabel(c) + '」多久';
+  var nIn = ov.querySelector('[data-f="n"]');
+  var paint = function() { grpOptRow(ov.querySelector('[data-f="unit"]'), GROUP_MUTE_UNITS, unit, function(v) { unit = v; paint(); }); };
+  paint();
+  grpOptRow(ov.querySelector('[data-f="quick"]'), [[10, '10 分钟'], [60, '1 小时'], [720, '12 小时'], [1440, '1 天']], -1, function(v) {
+    unit = v >= 1440 ? 1440 : v >= 60 ? 60 : 1; nIn.value = v / unit; paint();
+  });
+  ov.querySelector('[data-act="cancel"]').addEventListener('click', function() { ov.remove(); });
+  ov.querySelector('[data-act="ok"]').addEventListener('click', function() {
+    var min = Math.round(parseFloat(nIn.value) * unit);
+    if (!(min >= 1) || min > 30 * 1440) { shakeEl(nIn); showToast('写 1 分钟到 30 天之间', 'error'); return; }
+    ov.remove();
+    groupSetMute(g, null, c.id, min);
+  });
+}
+// 群里的管理权限（用户要的细节）：群主（你）能禁言所有人；管理员只能禁言 / 解除普通成员，不能动群主和别的管理员。
+// actorId 为 null 是你（群主）；是角色 id 时就是那位管理员在群里动手（回复里的 <禁言> 标签）
+function groupCanMute(g, actorId, targetId) {
+  if (!actorId) return true;
+  var admins = groupAdmins(g);
+  return admins.indexOf(actorId) >= 0 && admins.indexOf(targetId) < 0 && targetId !== actorId && (g.members || []).indexOf(targetId) >= 0;
+}
+function groupSetMute(g, actorId, targetId, minutes) {
+  if (!groupCanMute(g, actorId, targetId)) return false;
+  var who = actorId ? '「' + groupLabel(charList[findCharIdx(actorId)] || {}) + '」' : '你', whoAI = actorId ? groupLabel(charList[findCharIdx(actorId)] || {}) : '{{user}}';
+  var name = groupLabel(charList[findCharIdx(targetId)] || {});
+  var mutes = Object.assign({}, (g.groupCfg && g.groupCfg.mutes) || {});
+  if (minutes > 0) {
+    mutes[targetId] = Date.now() + minutes * 60000;
+    var len = durText(minutes * 60000);
+    groupNote(g, who + '把「' + name + '」禁言了 ' + len, whoAI + '把' + name + '禁言了' + len + '，这段时间' + name + '不能在群里发言');
+  } else {
+    if (!mutes[targetId]) return false;
+    delete mutes[targetId];
+    groupNote(g, who + '解除了「' + name + '」的禁言', whoAI + '解除了' + name + '的禁言，' + name + '现在可以说话了');
+  }
+  grpSaveCfg(g, { mutes: mutes });
+  grpAfterMemberChange(g);
+  return true;
+}
+function grpMemberMenu(g, c) {
+  var name = groupLabel(c), admin = groupAdmins(g).indexOf(c.id) >= 0, mute = groupMuteUntil(g, c.id);
+  var ov = groupModal('<div class="mine-acc-title"></div><div class="grp-menu"></div>' +
+    '<div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" data-act="cancel">取消</button></div>');
+  ov.querySelector('.mine-acc-title').textContent = name;
+  var menu = ov.querySelector('.grp-menu');
+  var item = function(text, fn, danger) {
+    var b = document.createElement('button');
+    b.className = 'grp-menu-item' + (danger ? ' danger' : '');
+    b.textContent = text;
+    b.addEventListener('click', function() { ov.remove(); fn(); });
+    menu.appendChild(b);
+  };
+  item(admin ? '取消管理员' : '设为管理员', function() {
+    var list = groupAdmins(g).filter(function(id) { return id !== c.id; });
+    if (!admin) list.push(c.id);
+    grpSaveCfg(g, { admins: list });
+    groupNote(g, admin ? '你取消了「' + name + '」的管理员' : '你把「' + name + '」设为了管理员', admin ? '{{user}}取消了' + name + '的群管理员' : '{{user}}把' + name + '设为了群管理员');
+    grpAfterMemberChange(g);
+  });
+  // 一个「禁言」按钮，时间自己定；只有正在被禁言的人才显示「解除禁言」（用户要的）。你是群主，谁都能禁
+  if (mute) item('解除禁言（还剩 ' + groupMuteLeft(mute) + '）', function() { groupSetMute(g, null, c.id, 0); });
+  else item('禁言', function() { grpMuteTime(g, c); });
+  item('踢出群聊', function() {
+    if ((g.members || []).length <= 2) { showToast('群里至少要留两个角色', 'error'); return; }
+    openConfirm('把「' + name + '」踢出群聊？', function() {
+      g.members = (g.members || []).filter(function(id) { return id !== c.id; });
+      var cfg = g.groupCfg || {};
+      grpSaveCfg(g, { admins: (cfg.admins || []).filter(function(id) { return id !== c.id; }) });
+      groupNote(g, '你把「' + name + '」移出了群聊', '{{user}}把' + name + '移出了群聊，' + name + '已经不在群里了');
+      grpAfterMemberChange(g);
+    }, { okText: '踢出' });
+  }, true);
+  ov.querySelector('[data-act="cancel"]').addEventListener('click', function() { ov.remove(); });
+}
+function grpAfterMemberChange(g) {
+  if (grpEdit && grpEdit.g === g) { grpPaintMembers(); grpPaintKnows(); grpPaintAv(); }
+  if (charList[openingChatCharIdx] === g) { chatRoomTitle.textContent = groupTitle(g); paintChatSubTitle(g); }
+  renderChatCharList();
 }
 function closeGroupSetting() { appGroupSetting.classList.remove('active'); grpEdit = null; }
 document.getElementById('backGroupSetting').addEventListener('click', closeGroupSetting);
@@ -291,17 +539,20 @@ document.getElementById('groupSaveBtn').addEventListener('click', function() {
   var e = grpEdit;
   if (!e) return;
   var nameIn = document.getElementById('grpName');
-  if (e.picked.length < 2) { shakeEl(document.getElementById('grpMembers')); showToast('群里至少要有两个角色', 'error'); return; }
   if (!nameIn.value.trim()) { shakeEl(nameIn); return; }
   var g = e.g;
   g.charName = nameIn.value.trim().slice(0, 20);
-  g.members = e.picked.slice();
   g.charAvatar = e.avImg;
-  Object.keys(e.knows).forEach(function(id) { if (e.picked.indexOf(id) < 0) delete e.knows[id]; });
-  g.groupCfg = { knows: e.knows, autoOn: document.getElementById('grpAutoOn').checked, autoGapH: e.gap };
+  Object.keys(e.knows).forEach(function(id) { if ((g.members || []).indexOf(id) < 0) delete e.knows[id]; });
+  g.groupCfg = Object.assign({}, g.groupCfg || {}, { knows: e.knows, autoOn: document.getElementById('grpAutoOn').checked, autoGapH: e.gap, replyN: e.replyN });   // 管理员、禁言是马上生效的，不覆盖
+  g.chatCfg = Object.assign({}, g.chatCfg || {}, { actionOn: document.getElementById('grpActionOn').checked, quickBar: document.getElementById('grpQuickBar').checked });
+  g.chatBg = e.bg;
+  g.bubble = e.bubble;
+  g.look = Object.assign({}, g.look || {}, { showAvatar: document.getElementById('grpShowAv').checked });
+  g.customCss = document.getElementById('grpCss').value;
   saveCharList();
   closeGroupSetting();
-  if (charList[openingChatCharIdx] === g) { chatRoomTitle.textContent = groupTitle(g); paintChatSubTitle(g); }
+  if (charList[openingChatCharIdx] === g) { chatRoomTitle.textContent = groupTitle(g); applyChatRoomStyle(g); renderRoomLists(openingChatCharIdx); }
   renderChatCharList();
   showToast('✓ 群设置已保存', 'success');
 });

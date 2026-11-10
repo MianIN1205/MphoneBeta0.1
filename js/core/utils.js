@@ -335,3 +335,24 @@ function showToast(msg, type) {
     setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 320);
   }, 1700);
 }
+
+// iPhone 键盘弹出时，整页被往上推，顶栏跑到屏幕外面（用户要固定住）：全屏模式下键盘开着时，小手机贴在键盘上面那块看得见的地方。
+// 安卓 Chrome 键盘会直接把页面变矮，用不到这个
+(function() {
+  var vv = window.visualViewport;
+  if (!vv) return;
+  var probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:0;left:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
+  document.body.appendChild(probe);
+  function fit() {
+    var ph = document.querySelector('.phone');
+    if (!ph) return;
+    var kb = ph.classList.contains('fullscreen') && window.innerHeight - vv.height > 120;
+    if (!kb) { ph.style.removeProperty('top'); ph.style.removeProperty('height'); return; }
+    var st = parseFloat(getComputedStyle(probe).paddingTop) || 0;
+    ph.style.setProperty('top', (vv.offsetTop + st) + 'px', 'important');
+    ph.style.setProperty('height', Math.max(200, vv.height - st) + 'px', 'important');
+  }
+  vv.addEventListener('resize', fit);
+  vv.addEventListener('scroll', fit);
+})();

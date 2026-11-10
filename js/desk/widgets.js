@@ -160,7 +160,19 @@ function buildWidget(w) {
 }
 
 // ---------- 网格排布 ----------
-function deskCell() { return deskGrid.clientWidth / DESK_COLS || 75; }
+// 格子大小：按宽度算；但屏幕矮的时候（iPhone 加到主屏、小屏手机）按高度缩一点，让所有图标和下面的程序坞都放得下
+// （以前默认桌面 6～7 行，矮屏上把程序坞挤出了屏幕，用户的朋友 iPhone 上遇到过）
+function deskCell() {
+  var w = deskGrid.clientWidth / DESK_COLS || 75;
+  var room = deskEl.getBoundingClientRect().bottom - deskGrid.getBoundingClientRect().top - 8;
+  var need = 6;
+  Object.keys(deskLayout || {}).forEach(function(id) {
+    var p = deskLayout[id], h = 1;
+    if (id.indexOf('w:') === 0) { var wd = deskWidgets.filter(function(x) { return 'w:' + x.id === id; })[0]; if (wd) h = widgetSize(wd).h; }
+    need = Math.max(need, p.y + h);
+  });
+  return room > 100 ? Math.min(w, Math.max(58, room / need)) : w;
+}
 // 能放多少行：铺满时钟卡片到桌面底部之间
 function deskRows() {
   var cell = deskCell();
@@ -251,7 +263,7 @@ function saveDeskSnap() {
     var w = Array.prototype.map.call(deskGrid.querySelectorAll(':scope > .desk-widget'), function(el) {
       return el.outerHTML.replace(/data:image\/[^"')\s&]{60000,}/g, '');
     });
-    var snap = JSON.stringify({ pos: pos, w: w, noLabels: document.querySelector('.phone').classList.contains('hide-dock-labels') });
+    var snap = JSON.stringify({ pos: pos, w: w, cell: deskGrid.style.getPropertyValue('--desk-cell'), noLabels: document.querySelector('.phone').classList.contains('hide-dock-labels') });
     if (snap.length > 1500000) snap = JSON.stringify({ pos: pos, w: [] });
     if (snap === deskSnapLast) return;
     deskSnapLast = snap;

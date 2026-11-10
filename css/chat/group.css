@@ -10,7 +10,6 @@
 
 /* 聊天里：换了一个人说话时头像上方写名字 */
 .cr-speaker { font-size: 11px; color: #a88a98; margin: 4px 0 -4px 40px; line-height: 1.3; }
-#appChatRoom.is-group #crQuickBar { display: none; }
 
 /* 新建群聊（小窗口）；群设置是整页（index.html 的 #appGroupSetting） */
 .grp-modal { width: 310px; }
@@ -59,3 +58,33 @@
 .gp-hb-list > div { display: flex; justify-content: space-between; padding: 5px 12px; font-size: 12px; border-top: 1px solid rgba(0, 0, 0, 0.04); }
 .gp-hb-list b { font-weight: 500; color: #e8573a; }
 .gp-opt-inputs { display: flex; flex-direction: column; gap: 6px; }
+
+/* 群设置：基础、美化 */
+.grp-field { display: flex; flex-direction: column; gap: 7px; padding: 8px 0; }
+.grp-field-l { font-size: 13.5px; color: #555; }
+.grp-field-l b { font-weight: 500; color: #c0587a; margin-left: 4px; }
+.grp-opts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.grp-bg-prev { width: 34px; height: 46px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); flex-shrink: 0; }
+.grp-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.12); cursor: pointer; box-sizing: border-box; }
+.grp-dot.on, .grp-pair.on { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #E58FA3; }
+.grp-pair { display: inline-flex; gap: 3px; padding: 4px; border-radius: 12px; background: #fff; border: 1px solid rgba(0,0,0,0.08); cursor: pointer; }
+.grp-pair i { width: 18px; height: 14px; border-radius: 7px; display: block; }
+.grp-range { width: 100%; accent-color: #E58FA3; }
+.grp-css { min-height: 70px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.grp-opts .pf-radio-btn { flex: none; white-space: nowrap; padding: 5px 11px; }
+
+/* 群设置：成员一格格（头像 + 名字 + 小标签），最后一个 + 邀请；点 / 长按一个人弹菜单 */
+.grp-member-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 6px; }
+.grp-mem { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.grp-mem-av { width: 46px; height: 46px; border-radius: 12px; }
+.grp-mem.muted .grp-mem-av { opacity: 0.5; }
+.grp-mem-name { font-size: 11px; color: #666; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grp-mem-tag { position: absolute; top: -5px; right: 0; font-style: normal; font-size: 9px; padding: 1px 4px; border-radius: 6px; background: #f3a9c0; color: #fff; }
+.grp-mem.muted .grp-mem-tag { background: #b9a6bf; }
+.grp-mem-add { display: flex; align-items: center; justify-content: center; border: 1.5px dashed rgba(208, 140, 160, 0.55); color: #d08aa0; font-size: 24px; box-sizing: border-box; }
+.grp-menu { display: flex; flex-direction: column; gap: 6px; }
+.grp-menu-item { padding: 10px; border: none; border-radius: 12px; background: rgba(255, 255, 255, 0.85); font-size: 14px; color: #555; cursor: pointer; font-family: inherit; }
+.grp-menu-item.danger { color: #c0586a; }
+#appGroupSetting .cs-page { overflow-y: auto; }
+.grp-mute-row { display: flex; gap: 8px; align-items: center; }
+.grp-mute-row .pet-edit-input { width: 90px; flex: none; }

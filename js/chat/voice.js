@@ -294,7 +294,10 @@ function transcribeVoiceMsg(m, el) {
     return text;
   }).catch(function(err) {
     if (el) el.textContent = '';
-    if (el) el.setAttribute('data-placeholder', '转写失败：' + err.message + '（可手动输入）');
+    var why = /请先配置|404|Not Found|not found|model/i.test(String(err && err.message)) ? '语音识别接口没配好（设置 →「语音识别（转文字）」，可以填硅基流动）' : err.message;
+    if (liveSttErr === 'network') why = '手机自带的识别要连谷歌，现在连不上；' + why;
+    else if (/not-allowed|service-not-allowed/.test(liveSttErr)) why = '手机自带的识别没有权限；' + why;
+    if (el) el.setAttribute('data-placeholder', '转写失败：' + why + '（可手动输入）');
     throw err;
   }).then(function(t) { delete m._transcribing; return t; }, function(e) { delete m._transcribing; throw e; });
 }
@@ -341,7 +344,8 @@ new MutationObserver(function() {
 
 function startRecOverlay() {
   voicePop.classList.add('recording');
-  voiceHintText('松手发送');
+  voiceHintText('松手发送，滑到 ✕ 取消');
+  if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) {} }   // 开始录了：轻轻震一下（手感）
   var t = 0;
   _recTimerEl.textContent = '0:00';
   _recTimerInt = setInterval(function() {
@@ -366,7 +370,7 @@ function stopRecOverlay() {
 // · 设置 → 识图与语音 →「录音时用手机自带的识别」可以关（mediaCfg.liveStt）
 // · 有的浏览器没有这个功能，或者要连谷歌的服务器（国内网络可能用不了）：识别不到就退回原来的语音识别接口
 var VoiceSR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-var _liveSR = null, _liveText = '', _liveInterim = '', _liveDone = null;
+var _liveSR = null, _liveText = '', _liveInterim = '', _liveDone = null, liveSttErr = '';   // liveSttErr：自带识别上次为什么没用上（转写失败时告诉用户）
 function liveSttOn() { return !!VoiceSR && mediaCfg.liveStt !== false; }
 function startLiveStt() {
   _liveText = ''; _liveInterim = ''; _liveDone = null; _liveSR = null;
@@ -384,7 +388,7 @@ function startLiveStt() {
       }
       _liveText = fin; _liveInterim = mid;
     };
-    sr.onerror = function(ev) { console.warn('[Mphone] 自带语音识别没用上:', ev && ev.error); };
+    sr.onerror = function(ev) { liveSttErr = ev && ev.error; console.warn('[Mphone] 自带语音识别没用上:', liveSttErr); };
     _liveDone = new Promise(function(res) { sr.onend = function() { res(); }; });
     sr.start();
     _liveSR = sr;
@@ -408,6 +412,7 @@ function abortLiveStt() {
 // 按住 🎙：开始录音
 voiceRecBtn.addEventListener('pointerdown', function(e) {
   e.preventDefault();
+  voiceRecBtn.classList.add('pressing');   // 按下去一沉
   // 捕获指针：手指滑出按钮（比如滑到 ✕ 上）也能收到松手
   try { voiceRecBtn.setPointerCapture(e.pointerId); } catch (_) {}
   _micHolding = false;
@@ -444,11 +449,11 @@ voiceRecBtn.addEventListener('pointermove', function(e) {
   if (on === _voiceArmed) return;
   _voiceArmed = on;
   voiceCancel.classList.toggle('armed', on);
-  voiceHintText(on ? '松手取消' : '松手发送');
+  voiceHintText(on ? '松手取消' : '松手发送，滑到 ✕ 取消');
   if (on && navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
 });
-voiceRecBtn.addEventListener('pointerup', function() { finishRecording(!_voiceArmed); });
-voiceRecBtn.addEventListener('pointercancel', function() { finishRecording(false); abortLiveStt(); });
+voiceRecBtn.addEventListener('pointerup', function() { voiceRecBtn.classList.remove('pressing'); finishRecording(!_voiceArmed); });
+voiceRecBtn.addEventListener('pointercancel', function() { voiceRecBtn.classList.remove('pressing'); finishRecording(false); abortLiveStt(); });
 voiceRecBtn.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
 // 结束录音：send = true 发出去，false 丢掉

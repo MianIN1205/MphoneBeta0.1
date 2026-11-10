@@ -167,40 +167,48 @@
 }
 .voice-transcript:empty::before { content: attr(data-placeholder); color: #bbb; }
 
-/* 录音小条：点麦克风后在输入栏上方淡入（js/chat/voice.js） */
+/* 录音小条：点麦克风后在输入栏上方淡入（js/chat/voice.js）。上面一行时长、波纹、提示；下面录音键在正中间、✕ 在左边（用户要的） */
 .voice-pop {
-  position: absolute; left: 10px; bottom: calc(100% + 8px); z-index: 6;
-  display: flex; align-items: center; gap: 9px;
-  padding: 7px 14px 7px 7px; border-radius: 30px;
+  position: absolute; left: 10px; right: 10px; bottom: calc(100% + 8px); z-index: 6;
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+  padding: 10px 14px 14px; border-radius: 26px;
   background: rgba(255,248,252,0.96);
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.9);
   box-shadow: 0 6px 24px rgba(120,70,80,0.16), 0 2px 6px rgba(0,0,0,0.06);
-  opacity: 0; transform: scale(0.96); transform-origin: left bottom; pointer-events: none;
+  opacity: 0; transform: scale(0.97); transform-origin: center bottom; pointer-events: none;
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 .voice-pop.open { opacity: 1; transform: none; pointer-events: auto; }
 .voice-pop button { border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
 .voice-pop svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.voice-top { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 30px; }
+.voice-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
 .voice-cancel {
-  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  justify-self: center; width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
   background: rgba(224,90,100,0.13); color: #e05a64;
   visibility: hidden; transition: background 0.15s, color 0.15s, transform 0.15s;
 }
-.voice-cancel svg { width: 15px; height: 15px; }
+.voice-cancel svg { width: 17px; height: 17px; }
 .voice-pop.recording .voice-cancel { visibility: visible; }
 .voice-cancel.armed { background: #e05a64; color: #fff; transform: scale(1.12); }
 .voice-rec-btn {
-  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  position: relative; width: 68px; height: 68px; border-radius: 50%; flex-shrink: 0;
   background: rgba(208,88,88,0.12); color: #d05858;
+  box-shadow: 0 3px 10px rgba(208,88,88,0.16);
   touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, transform 0.12s ease, box-shadow 0.15s;
 }
-.voice-rec-btn svg { width: 21px; height: 21px; }
-.voice-pop.recording .voice-rec-btn { background: #d05858; color: #fff; }
-#recTimer { font-size: 14px; font-weight: 600; color: rgba(190,60,90,0.88); font-variant-numeric: tabular-nums; min-width: 32px; }
-#recLiveCanvas { display: block; width: 96px; height: 30px; }
-.voice-hint { font-size: 11.5px; color: #a8909c; white-space: nowrap; }
+.voice-rec-btn svg { width: 28px; height: 28px; }
+/* 手感：按下去轻轻一沉；录音时变红，外面一圈淡淡的光往外散 */
+.voice-rec-btn:active, .voice-rec-btn.pressing { transform: scale(0.92); }
+.voice-pop.recording .voice-rec-btn { background: #d05858; color: #fff; box-shadow: 0 4px 14px rgba(208,88,88,0.35); }
+.voice-pop.recording .voice-rec-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(208,88,88,0.35); animation: voiceRing 1.4s ease-out infinite; pointer-events: none; }
+@keyframes voiceRing { from { transform: scale(0.92); opacity: 0.9; } to { transform: scale(1.22); opacity: 0; } }
+#recTimer { display: none; font-size: 14px; font-weight: 600; color: rgba(190,60,90,0.88); font-variant-numeric: tabular-nums; min-width: 32px; }
+#recLiveCanvas { display: none; width: 96px; height: 30px; }
+.voice-pop.recording #recTimer, .voice-pop.recording #recLiveCanvas { display: block; }
+.voice-hint { font-size: 12px; color: #a8909c; white-space: nowrap; }
 .voice-pop.recording .voice-hint { color: #c06070; }
 .cr-icon-btn#crMicBtn.active svg { stroke: #d05858; }
 

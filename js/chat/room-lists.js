@@ -15,39 +15,78 @@
       else { crAlbumFileInput.value = ''; crAlbumFileInput.click(); }
     });
 
-    crAlbumFileInput.addEventListener('change', function() { sendPickedImage(this.files && this.files[0]); });
+    crAlbumFileInput.addEventListener('change', function() { sendPickedImage(this.files); });   // 能多选
   }
 })();
-// 选好（或拍好）的照片压一下发出去（和回车一样，只发自己的，不叫 AI）
-function confirmPickedImage(src, onSend) {
+// 选好（或拍好）的照片：先在小手机里看一眼再发（用户要的）；相册能多选（最多 9 张），预览里点一张取消 / 选上，长按看大图
+// 和回车一样，只发自己的，不叫 AI
+var PICK_MAX = 9;
+function confirmPickedImage(srcs, onSend) {
+  if (typeof srcs === 'string') srcs = [srcs];
+  var on = srcs.map(function() { return true; });
   var ov = document.createElement('div');
   ov.className = 'mine-acc-overlay open';
   ov.style.zIndex = '2600';
-  ov.innerHTML = '<div class="mine-acc-modal" style="padding:14px;"><img alt="" style="display:block;max-width:100%;max-height:55vh;margin:0 auto 12px;border-radius:12px;object-fit:contain;">' +
+  var one = srcs.length === 1;
+  ov.innerHTML = '<div class="mine-acc-modal pick-modal">' + (one ? '' : '<div class="mine-acc-title pick-title"></div>') +
+    '<div class="' + (one ? 'pick-one' : 'pick-grid') + '"></div>' +
     '<div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close">取消</button><button class="mine-acc-btn mine-acc-btn-add">发送</button></div></div>';
-  ov.querySelector('img').src = src;
+  var grid = ov.querySelector(one ? '.pick-one' : '.pick-grid'), sendBtn = ov.querySelector('.mine-acc-btn-add');
+  var sync = function() {
+    var n = on.filter(Boolean).length;
+    if (!one) ov.querySelector('.pick-title').textContent = '选了 ' + n + ' 张' + (srcs.length > n ? '（共 ' + srcs.length + ' 张）' : '');
+    sendBtn.textContent = one ? '发送' : '发送（' + n + '）';
+    sendBtn.disabled = !n;
+  };
+  srcs.forEach(function(src, i) {
+    var cell = document.createElement('div');
+    cell.className = 'pick-cell on';
+    var img = document.createElement('img');
+    img.src = src; img.alt = '';
+    cell.appendChild(img);
+    if (!one) {
+      var mark = document.createElement('i');
+      cell.appendChild(mark);
+      var big = function() { if (typeof openImgViewer === 'function') openImgViewer(src); };
+      if (typeof bindPress === 'function') bindPress(cell, function() { on[i] = !on[i]; cell.classList.toggle('on', on[i]); sync(); }, big);
+      else cell.addEventListener('click', function() { on[i] = !on[i]; cell.classList.toggle('on', on[i]); sync(); });
+    }
+    grid.appendChild(cell);
+  });
+  sync();
   var close = function() { ov.remove(); };
   ov.querySelector('.mine-acc-btn-close').addEventListener('click', close);
-  ov.querySelector('.mine-acc-btn-add').addEventListener('click', function() { close(); onSend(); });
+  sendBtn.addEventListener('click', function() { close(); onSend(srcs.filter(function(_, i) { return on[i]; })); });
   ov.addEventListener('click', function(e) { if (e.target === ov) close(); });
   (document.querySelector('.phone') || document.body).appendChild(ov);
 }
-function sendPickedImage(file) {
-  if (!file || openingChatCharIdx === -1) return;
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    compressImage(ev.target.result, 1024, function(dataUrl) {
-      // 先看一眼大图再发（用户要的：以前点了就直接发出去了）
-      confirmPickedImage(dataUrl, function() {
-        var im = { role: 'user', content: '[图片消息]', imgSrc: dataUrl, time: Date.now() };
-        if (pendingQuote) { im.quote = pendingQuote; clearQuote(); }
-        getActiveHistory(openingChatCharIdx).push(im);
+function sendPickedImage(files) {
+  if (!files || openingChatCharIdx === -1) return;
+  var list = Array.prototype.slice.call(files.length !== undefined ? files : [files], 0, PICK_MAX);
+  if (!list.length) return;
+  if (files.length > PICK_MAX) showToast('一次最多选 ' + PICK_MAX + ' 张，先发前 ' + PICK_MAX + ' 张', 'plain');
+  var srcs = [], left = list.length;
+  var finish = function() {
+    if (--left) return;
+    var got = srcs.filter(Boolean);
+    if (!got.length) { showToast('图片读不出来', 'error'); return; }
+    confirmPickedImage(got, function(chosen) {
+      var hist = getActiveHistory(openingChatCharIdx), now = Date.now();
+      chosen.forEach(function(src, k) {
+        var im = { role: 'user', content: '[图片消息]', imgSrc: src, time: now + k };
+        if (k === 0 && pendingQuote) { im.quote = pendingQuote; clearQuote(); }
+        hist.push(im);
         renderHistMsg(im);
-        saveHistories();
       });
+      saveHistories();
     });
   };
-  reader.readAsDataURL(file);
+  list.forEach(function(file, i) {
+    var reader = new FileReader();
+    reader.onload = function(ev) { compressImage(ev.target.result, 1024, function(dataUrl) { srcs[i] = dataUrl; finish(); }); };
+    reader.onerror = finish;
+    reader.readAsDataURL(file);
+  });
 }
 (function() {
   var crAlbumFileInput = document.getElementById('crAlbumFileInput');

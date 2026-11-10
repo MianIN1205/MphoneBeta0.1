@@ -291,7 +291,7 @@ var COT_DRAMA = '【回复前先想一想】在回复最开头，用 <thinking><
   '- {{char}}按人设和此刻的心情会怎么反应：说什么、做什么、心里想什么\n' +
   '- 这一轮怎么往下推进，哪些细节要和前文对上；不要替{{user}}决定行动和结果';
 function cotRules(isDrama, char) {
-  if (isDrama || (char && char.isGroup)) return [];   // 思维链只给聊天窗口；剧情的思考交给预设（用户定的）
+  if (isDrama) return [];   // 思维链只给聊天窗口；剧情的思考交给预设（用户定的）
   var on = typeof cotModeFor === 'function' ? cotModeFor(char, false) === 'mine' : (typeof cotModeNow === 'function' && cotModeNow() === 'mine');
   return on ? [{ role: 'system', content: COT_CHAT }] : [];
 }

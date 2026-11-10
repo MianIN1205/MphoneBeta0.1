@@ -2,7 +2,7 @@
 
 /* 桌面 */
 .desktop {
-  flex: 1; display: flex;
+  flex: 1; display: flex; min-height: 0;   /* 内容再多也不把下面的程序坞挤出屏幕 */
   flex-direction: column;
   padding: 62px 20px 20px;
 }
@@ -55,7 +55,7 @@
 
 /* 程序坞 */
 .dock {
-  margin: 0 14px 34px;
+  margin: 0 14px 34px; flex-shrink: 0;
   background: rgba(255,255,255,0.13);
   backdrop-filter: blur(36px);
   -webkit-backdrop-filter: blur(36px);

@@ -47,3 +47,15 @@
 .cr-css-mini { position: relative; width: 230px; max-width: 100%; overflow: hidden; border-radius: 12px; margin: 4px 0 6px; background: rgba(0, 0, 0, 0.03); box-shadow: inset 0 0 0 1px rgba(210, 180, 190, 0.35); pointer-events: none; }
 .cr-css-mini iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
 .cr-action-code-btn { border: none; background: none; padding: 2px 0; font-size: 11.5px; color: #b08a9a; font-family: inherit; cursor: pointer; }
+
+/* 选好的照片先在小手机里看一眼（js/chat/room-lists.js 的 confirmPickedImage）：一张就大图，多张是格子，点一张取消 / 选上，长按看大图 */
+.pick-modal { width: 320px; padding: 14px; }
+.pick-one img { display: block; max-width: 100%; max-height: 55vh; margin: 0 auto; border-radius: 12px; object-fit: contain; }
+.pick-title { font-size: 14px; }
+.pick-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; max-height: 55vh; overflow-y: auto; }
+.pick-cell { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; cursor: pointer; }
+.pick-cell img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.15s; }
+.pick-cell:not(.on) img { opacity: 0.4; }
+.pick-cell i { position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #fff; background: rgba(0, 0, 0, 0.18); box-sizing: border-box; }
+.pick-cell.on i { background: #E58FA3; }
+.pick-cell.on i::after { content: ''; position: absolute; left: 6px; top: 2px; width: 4px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }

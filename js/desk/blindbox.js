@@ -205,26 +205,32 @@ function bbDraw(s, i) {
   if (s.price > 0) walletAdd(-s.price, '盲盒 · ' + s.name, uid);
   slot.open = true;
   saveBB();
-  var a = assetAddCyber(s, it);
   bbSel = -1;
   renderBBBox(s);
   if (typeof refreshMineEntries === 'function') refreshMineEntries();
-  bbReveal(s, it, a.count);
+  bbReveal(s, it, assetOwnedCount(s.id, it.id) + 1);
 }
 function bbReveal(s, it, count) {
   var ov = document.createElement('div');
   ov.className = 'mine-acc-overlay open';
   ov.innerHTML = '<div class="mine-acc-modal bb-reveal r-' + it.r + '"><div class="bb-reveal-tag"></div><div class="bb-reveal-body"></div>' +
-    '<div class="bb-reveal-name"></div><div class="bb-reveal-sub"></div><div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-add">收下</button></div></div>';
+    '<div class="bb-reveal-name"></div><div class="bb-reveal-sub"></div><div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" data-act="no">不要</button><button class="mine-acc-btn mine-acc-btn-add" data-act="ok">收下</button></div></div>';
   ov.querySelector('.bb-reveal-tag').textContent = it.r === 'h' ? '★ 隐藏款 ★' : it.r === 'r' ? '✦ 稀有款' : '普通款';
   var body = ov.querySelector('.bb-reveal-body');
   if (s.kind === 'text') { var p = document.createElement('div'); p.className = 'bb-note-paper'; p.textContent = it.text; body.appendChild(p); }
   else body.appendChild(bbIconEl(it, 'bb-reveal-ic'));
   ov.querySelector('.bb-reveal-name').textContent = it.name || '';
-  ov.querySelector('.bb-reveal-sub').textContent = count > 1 ? '这是第 ' + count + ' 个了，放进了资产' : '第一次抽到！放进了「我的 → 资产」';
-  var close = function() { ov.remove(); };
-  ov.querySelector('button').addEventListener('click', close);
-  ov.addEventListener('click', function(e) { if (e.target === ov) close(); });
+  ov.querySelector('.bb-reveal-sub').textContent = count > 1 ? '这是第 ' + count + ' 个了' : '第一次抽到！';
+  // 收下才放进「我的 → 资产」；不要就不留（用户要的）。点外面算收下
+  var done = false, keep = function(yes) {
+    if (done) return;
+    done = true;
+    ov.remove();
+    if (yes) { assetAddCyber(s, it); showToast('放进了「我的 → 资产」', 'success'); renderBBBox(s); }
+  };
+  ov.querySelector('[data-act="ok"]').addEventListener('click', function() { keep(true); });
+  ov.querySelector('[data-act="no"]').addEventListener('click', function() { keep(false); });
+  ov.addEventListener('click', function(e) { if (e.target === ov) keep(true); });
   (document.querySelector('.phone') || document.body).appendChild(ov);
 }
 

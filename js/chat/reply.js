@@ -97,9 +97,14 @@ function crBubbleGap(t) { return 350 + Math.min(String(t || '').length * 30, 900
 function crRevealOneByOne(list, mark, shown) {
   var els = [], el = mark ? mark.nextSibling : list.firstChild;
   for (; el; el = el.nextSibling) els.push(el);
-  var groups = [], g = null;
+  // 一组 = 一条消息连同它前面的动作小字（还有群里的名字、时间分隔）和后面的小字、小时间；
+  // 以前前面的动作小字被分进了上一条，会先冒出来、气泡隔一会儿才跟上，看着不自然（用户说的）
+  var groups = [], g = null, lead = false;
+  var isLead = function(e) { return e.classList && (e.classList.contains('cr-speaker') || e.classList.contains('cr-time-sep') || (e.classList.contains('cr-action-note') && e.classList.contains('before'))); };
   els.forEach(function(e) {
-    if (e.classList && e.classList.contains('chat-msg-row') || !g) { g = []; groups.push(g); }
+    var row = e.classList && e.classList.contains('chat-msg-row');
+    if (!g || (isLead(e) && !lead) || (row && !lead)) { g = []; groups.push(g); }
+    lead = isLead(e);
     g.push(e);
   });
   var from = Math.max(1, shown || 0);
@@ -118,7 +123,7 @@ function crRevealOneByOne(list, mark, shown) {
       crStick(list);
       i++;
       if (i >= groups.length) dots.remove(); else next();
-    }, i === from && shown ? 300 : crBubbleGap(groups[i - 1][0].textContent));
+    }, i === from && shown ? 300 : crBubbleGap(groups[i - 1].map(function(e) { return e.classList && e.classList.contains('chat-msg-row') ? e.textContent : ''; }).join('')));
   })();
 }
 function chatLineDone(s) {
@@ -408,8 +413,7 @@ function sendMsg(userText, requestOnly, onDone) {
   var mcpTools = (!isGrp && typeof mcpActiveTools === 'function') ? mcpActiveTools() : [];
   // 开了向量记忆时先算好这次对话的向量（失败就用本地相似度）
   (!isGrp && typeof memPrepare === 'function' ? memPrepare(replyChar, hist) : Promise.resolve()).then(function() {
-    if (isGrp) cfg.cot = 'off';
-    else if (typeof cotModeFor === 'function') cfg.cot = cotModeFor(replyChar, !isChatView);   // 这个角色这个窗口的思考方式（llm.js 的 llmThinkOff 看它）
+    if (typeof cotModeFor === 'function') cfg.cot = cotModeFor(replyChar, !isChatView);   // 这个角色这个窗口的思考方式（llm.js 的 llmThinkOff 看它）
     return llmRequest(buildMsgs(replyCharIdx).concat(isChatView ? chatFormatRules(charList[replyCharIdx]) : dramaFormatRules(charList[replyCharIdx]), cotRules(!isChatView, replyChar)), {
     stream: true,
     signal: ctrl.signal,

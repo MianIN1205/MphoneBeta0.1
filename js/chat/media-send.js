@@ -42,6 +42,31 @@ document.getElementById('sttSaveBtn').addEventListener('click', function() {
   mphoneStore.save('mphone_stt_cfg', sttCfg);
   showToast('✓ 语音识别设置已保存', 'success');
 });
+// 一键填硅基流动（国内不用梯子能连，有免费的语音识别模型），密钥要自己去 cloud.siliconflow.cn 拿
+document.getElementById('sttPresetSf').addEventListener('click', function() {
+  document.getElementById('sttUrl').value = 'https://api.siliconflow.cn/v1';
+  document.getElementById('sttModel').value = 'FunAudioLLM/SenseVoiceSmall';
+  var k = document.getElementById('sttKey');
+  if (!k.value) { k.focus(); showToast('填好了，再把硅基流动的 API 密钥贴进来，点保存', 'plain'); }
+});
+// 测一下：送一小段静音过去，接口有回应（哪怕说没识别出文字）就算连上了
+document.getElementById('sttTestBtn').addEventListener('click', function() {
+  var hint = document.getElementById('sttTestHint'), btn = this;
+  var saved = sttCfg;
+  sttCfg = { url: document.getElementById('sttUrl').value.trim(), key: document.getElementById('sttKey').value.trim(), model: document.getElementById('sttModel').value.trim() };
+  var sr = 16000, n = sr / 2, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  var w = function(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  var bin = ''; new Uint8Array(buf).forEach(function(x) { bin += String.fromCharCode(x); });
+  btn.disabled = true; hint.style.display = ''; hint.textContent = '正在连…';
+  var done = function(t, ok) { hint.textContent = t; hint.style.color = ok ? '#4a9a6a' : '#c0586a'; btn.disabled = false; sttCfg = saved; };
+  sttTranscribeWhisper('data:audio/wav;base64,' + btoa(bin)).then(function() { done('✓ 连上了，可以用', true); }, function(err) {
+    var msg = String((err && err.message) || err);
+    if (/没有识别出文字/.test(msg)) done('✓ 连上了（测试用的是一段静音，所以没有文字），可以用', true);
+    else done('✗ 连不上：' + msg.slice(0, 120), false);
+  });
+});
 
 // 语音识别用的接口：自己填的优先，留空就用主 API
 function sttEndpoint() {
