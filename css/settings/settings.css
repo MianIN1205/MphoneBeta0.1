@@ -512,3 +512,27 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
 
 .settings-subpanel { display: none; }
 .settings-subpanel.active { display: block; }
+
+/* 预设抽屉（js/core/utils.js 的 mountPresetDrawer）：状态栏预设、CSS 预设，放在要填的东西前面 */
+.pd-box { margin: 4px 0 12px; }
+.pd-bar { display: flex; align-items: center; gap: 6px; }
+.pd-head {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  border: none; background: rgba(0, 0, 0, 0.045); border-radius: 10px;
+  padding: 8px 10px 8px 12px; font: inherit; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pd-label { font-size: 12px; color: #aaa; flex: none; }
+.pd-cur { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pd-chev { width: 15px; height: 15px; flex: none; stroke: #aaa; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; transition: transform 0.25s ease; }
+.pd-box.open .pd-chev { transform: rotate(180deg); }
+.pd-btn {
+  flex: none; border: none; border-radius: 10px; padding: 8px 12px; font: inherit; font-size: 12px; font-weight: 600;
+  background: rgba(208, 88, 120, 0.09); color: #C05070; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.pd-btn[data-act="del"] { background: rgba(0, 0, 0, 0.045); color: #999; }
+.pd-btn:active { transform: scale(0.95); }
+.pd-list { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+.pd-box.open .pd-list { max-height: 240px; overflow-y: auto; margin-top: 6px; }
+.pd-item { padding: 9px 12px; border-radius: 8px; font-size: 13px; color: #444; cursor: pointer; }
+.pd-item:active, .pd-item.selected { background: rgba(208, 88, 120, 0.1); color: #C05070; font-weight: 600; }

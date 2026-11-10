@@ -1,58 +1,26 @@
 // 眠花糖机 — 美化的导出 / 导入（聊天窗口、剧情窗口、状态栏，分开勾），和 CSS 预设（角色美化页、外观的全局样式都能存、能套用）
 
 // =============================================
-// CSS 预设：mphone_css_presets = [{ id, name, css }]，几个 CSS 框共用；点一下填进框里，长按删除
+// CSS 预设：mphone_css_presets = [{ id, name, css }]，几个 CSS 框共用；框上面一个预设抽屉（js/core/utils.js 的 mountPresetDrawer），点开选一个填进框里，右边保存 / 删除
 // =============================================
 var cssPresets = mphoneStore.load('mphone_css_presets', []) || [];
 var cssPresetBoxes = [];
-function saveCssPresets() { mphoneStore.save('mphone_css_presets', cssPresets); cssPresetBoxes.forEach(function(f) { f(); }); }
-function mountCssPresets(textareaId, afterId, onApply) {
-  var ta = document.getElementById(textareaId), after = document.getElementById(afterId);
-  var box = document.createElement('div');
-  box.className = 'css-preset-box';
-  box.innerHTML = '<div class="bubble-section-label" style="margin:12px 0 6px;">CSS 预设</div>' +
-    '<div class="auto-hint" style="margin:0 0 6px;">点一下填进上面的框（会替换掉框里原来的），长按删除</div>' +
-    '<div class="feed-visible-list css-preset-chips"></div>' +
-    '<div class="auto-row" style="margin-top:8px;"><input class="field-input css-preset-name" type="text" maxlength="16" placeholder="给现在这段 CSS 起个名字">' +
-    '<button class="mine-acc-btn mine-acc-btn-add css-preset-save" style="flex:none;padding:8px 14px;">存为预设</button></div>';
-  after.parentNode.insertBefore(box, after.nextSibling);
-  var chips = box.querySelector('.css-preset-chips'), name = box.querySelector('.css-preset-name');
-  function render() {
-    chips.innerHTML = '';
-    if (!cssPresets.length) { chips.innerHTML = '<span class="auto-hint" style="margin:0;">还没有存过</span>'; return; }
-    cssPresets.forEach(function(p) {
-      var chip = document.createElement('span');
-      chip.className = 'feed-visible-chip';
-      chip.textContent = p.name;
-      bindPress(chip, function() {
-        ta.value = p.css;
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
-        if (onApply) onApply();
-        showToast('已套用「' + p.name + '」', 'plain');
-      }, function() {
-        openConfirm('删除 CSS 预设「' + p.name + '」？', function() {
-          cssPresets = cssPresets.filter(function(x) { return x !== p; });
-          saveCssPresets();
-        });
-      });
-      chips.appendChild(chip);
-    });
-  }
-  box.querySelector('.css-preset-save').addEventListener('click', function(e) {
-    e.stopPropagation();
-    var n = name.value.trim();
-    if (!n) { shakeEl(name); return; }
-    if (!ta.value.trim()) { showToast('上面的框是空的', 'error'); return; }
-    cssPresets = cssPresets.filter(function(x) { return x.name !== n; }).concat([{ id: 'cp' + Date.now().toString(36), name: n, css: ta.value }]);
-    saveCssPresets();
-    name.value = '';
-    showToast('✓ 已存为「' + n + '」', 'success');
+function saveCssPresets() { mphoneStore.save('mphone_css_presets', cssPresets); cssPresetBoxes.forEach(function(b) { b.refresh(); }); }
+function mountCssPresets(textareaId, onApply) {
+  var ta = document.getElementById(textareaId);
+  var box = mountPresetDrawer(ta.previousElementSibling, {
+    list: function() { return cssPresets; },
+    apply: function(p) { ta.value = p.css; ta.dispatchEvent(new Event('input', { bubbles: true })); if (onApply) onApply(); },
+    save: function(n) { if (!ta.value.trim()) { showToast('框里还是空的', 'error'); return false; } cssPresets = cssPresets.filter(function(x) { return x.name !== n; }).concat([{ id: 'cp' + Date.now().toString(36), name: n, css: ta.value }]); saveCssPresets(); },
+    del: function(p) { cssPresets = cssPresets.filter(function(x) { return x.id !== p.id; }); saveCssPresets(); },
+    match: function() { return ta.value.trim() ? cssPresets.filter(function(x) { return x.css === ta.value; })[0] || null : null; }
   });
-  cssPresetBoxes.push(render);
-  render();
+  cssPresetBoxes.push(box);
+  ta.addEventListener('input', box.refresh);   // 框里的字和哪个预设一样，抽屉上就写哪个
+  return box;
 }
-mountCssPresets('customCssInput', 'customCssApplyBtn');
-mountCssPresets('globalCssInput', 'globalCssApplyBtn', function() { document.getElementById('globalCssApplyBtn').click(); });
+var customCssPresetBox = mountCssPresets('customCssInput');
+mountCssPresets('globalCssInput', function() { document.getElementById('globalCssApplyBtn').click(); });
 
 // =============================================
 // 美化的导出 / 导入：{ app: 'mphone', type: 'look', chat, drama, status }，勾哪几样就导出 / 套用哪几样

@@ -79,7 +79,7 @@ function renderWbList() {
       renBtn.textContent = '重命名';
       renBtn.addEventListener('click', function(e) {
         e.stopPropagation();
-        askWbFolderName('重命名文件夹', g.name, function(n) {
+        askName('重命名文件夹', g.name, function(n) {
           wbFolders.forEach(function(f) { if (f.id === g.id) f.name = n; });
           saveWbEntries();
           renderWbList();
@@ -176,7 +176,8 @@ function askDelWbFolder(g) {
 
 // 文件夹命名：复用「备注名称」弹窗
 var _wbFolderNameCb = null;
-function askWbFolderName(title, value, cb) {
+// 问一个名字（文件夹、预设都用这个弹窗）
+function askName(title, value, cb) {
   presetModalMode = 'wbFolder';
   _wbFolderNameCb = cb;
   document.querySelector('#presetModal .modal-title').textContent = title;
@@ -187,7 +188,7 @@ function askWbFolderName(title, value, cb) {
 
 document.getElementById('wbAddFolderBtn').addEventListener('click', function(e) {
   e.stopPropagation();
-  askWbFolderName('新建文件夹', '', function(n) {
+  askName('新建文件夹', '', function(n) {
     var f = { id: genWbId('wf'), name: n };
     wbFolders.push(f);
     wbOpenFolders[f.id] = true;

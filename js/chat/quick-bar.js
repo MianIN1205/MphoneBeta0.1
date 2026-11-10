@@ -108,48 +108,35 @@ function setQuickField(key, value) {
   renderQuickBar();
 }
 
-// 角色设置「美化 → 状态栏」里的预设小标签：点一下套用到表单，长按删除
-function renderStatusPresetChips() {
-  var box = document.getElementById('statusPresetChips');
-  if (!box) return;
-  box.innerHTML = '';
-  [statusBuiltin()].concat(statusPresets).forEach(function(p) {
-    var chip = document.createElement('span');
-    chip.className = 'feed-visible-chip';
-    chip.textContent = p.name;
-    bindPress(chip, function() {
-      document.getElementById('statusOn').checked = true;
-      document.getElementById('statusSub').classList.add('open');
-      document.getElementById('statusFields').value = p.fields || DEFAULT_LOOK.statusFields;
-      document.getElementById('statusTpl').value = p.tpl || '';
-      document.getElementById('statusCss').value = p.css || '';
-      document.getElementById('statusFind').value = p.find || '';
-      document.getElementById('statusRules').value = p.rules || '';
-      syncStatusRegexForm(true);
-      showToast('已套用「' + p.name + '」，点保存生效', 'plain');
-    }, p.id ? function() {
-      openConfirm('删除状态栏预设「' + p.name + '」？', function() {
-        statusPresets = statusPresets.filter(function(x) { return x !== p; });
-        saveStatusPresets();
-        renderStatusPresetChips();
-      });
-    } : function() {});
-    box.appendChild(chip);
-  });
+// 角色设置「美化 → 状态栏」最上面的预设抽屉（js/core/utils.js 的 mountPresetDrawer）：点开选一个套用到表单，右边保存 / 删除
+var statusImportName = '';   // 刚导入的酒馆正则的名字，存预设时默认用它
+function statusFormPreset() {
+  var v = function(id) { return document.getElementById(id).value; };
+  return { fields: v('statusFields').trim() || DEFAULT_LOOK.statusFields, tpl: v('statusTpl').trim(), css: v('statusCss'), find: v('statusFind').trim(), rules: v('statusRules').trim() };
 }
-document.getElementById('statusPresetSave').addEventListener('click', function() {
-  var name = document.getElementById('statusPresetName').value.trim();
-  if (!name) { shakeEl(document.getElementById('statusPresetName')); return; }
-  var p = { id: 'sp' + Date.now().toString(36), name: name, fields: document.getElementById('statusFields').value.trim() || DEFAULT_LOOK.statusFields,
-    tpl: document.getElementById('statusTpl').value.trim(), css: document.getElementById('statusCss').value,
-    find: document.getElementById('statusFind').value.trim(), rules: document.getElementById('statusRules').value.trim() };
-  statusPresets = statusPresets.filter(function(x) { return x.name !== name; }).concat([p]);
-  saveStatusPresets();
-  document.getElementById('statusPresetName').value = '';
-  renderStatusPresetChips();
-  showToast('✓ 已存为「' + name + '」', 'success');
+var statusPresetBox = mountPresetDrawer(document.getElementById('statusImportBtn'), {
+  list: function() { return [Object.assign(statusBuiltin(), { builtin: true })].concat(statusPresets); },
+  apply: function(p) {
+    document.getElementById('statusOn').checked = true;
+    document.getElementById('statusSub').classList.add('open');
+    document.getElementById('statusFields').value = p.fields || DEFAULT_LOOK.statusFields;
+    document.getElementById('statusTpl').value = p.tpl || '';
+    document.getElementById('statusCss').value = p.css || '';
+    document.getElementById('statusFind').value = p.find || '';
+    document.getElementById('statusRules').value = p.rules || '';
+    syncStatusRegexForm(true);
+  },
+  save: function(name) {
+    statusPresets = statusPresets.filter(function(x) { return x.name !== name; }).concat([Object.assign({ id: 'sp' + Date.now().toString(36), name: name }, statusFormPreset())]);
+    saveStatusPresets();
+  },
+  del: function(p) { statusPresets = statusPresets.filter(function(x) { return x.id !== p.id; }); saveStatusPresets(); },
+  match: function() {
+    var mine = statusFormPreset(), key = JSON.stringify(statusPresetSpec(mine));
+    return this.list().filter(function(p) { return JSON.stringify(statusPresetSpec(p)) === key && (p.css || '') === (mine.css || ''); })[0] || null;
+  },
+  suggest: function() { return statusImportName; }
 });
-renderStatusPresetChips();
 
 // 导入酒馆正则状态栏（regex JSON，单个、数组、或者藏在预设 / 角色卡里的都认）：正则 + 美化 HTML 原样放进来，规则让用户自己贴
 // 状态栏只有一种写法：生成规则 + 匹配正则 + 美化 HTML。fold = true：刚填好表单（打开设置、套用预设、导入）时，
@@ -206,7 +193,7 @@ document.getElementById('statusImportFile').addEventListener('change', function(
     document.getElementById('statusSub').classList.add('open');
     document.getElementById('statusTpl').value = pick.replaceString.trim();
     document.getElementById('statusFind').value = pick.findRegex;
-    if (pick.scriptName) document.getElementById('statusPresetName').value = String(pick.scriptName).slice(0, 16);
+    statusImportName = String(pick.scriptName || '').slice(0, 16);
     // 之前贴的规则留着（重新导入改好的正则时不用再贴）；小手机自己换算出来的那种清掉，换成酒馆的要贴的
     if (/^每次回复的最后另起一行，按下面的格式写你此刻的状态/.test(document.getElementById('statusRules').value)) document.getElementById('statusRules').value = '';
     syncStatusRegexForm(true);

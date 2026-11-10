@@ -457,6 +457,7 @@ function setLookForm(l) {
   document.getElementById('statusRules').value = l.statusRules || '';
   if (typeof syncStatusRegexForm === 'function') syncStatusRegexForm(true);
   document.getElementById('statusSub').classList.toggle('open', l.statusOn);
+  if (typeof statusPresetBox !== 'undefined') statusPresetBox.refresh();   // 预设抽屉上写现在用的是哪个
 }
 
 function readLookForm() {
@@ -487,7 +488,10 @@ var csLookParts = { chat: {}, drama: {} };
 function lookPartsOf(char) {
   // 两边各拷一份，互不牵连；剧情窗口没单独设置过时只借聊天窗口的背景和颜色（viewLookPart，不带聊天的 CSS 和聊天专用的气泡模板）
   var cp = function(x) { var o = JSON.parse(JSON.stringify(x)); delete o._borrowed; o.customCss = o.customCss || ''; return o; };
-  return { chat: cp(viewLookPart(char, false)), drama: cp(viewLookPart(char, true)) };
+  var parts = { chat: cp(viewLookPart(char, false)), drama: cp(viewLookPart(char, true)) };
+  // 新角色默认打开状态栏（自带的「默认」文字状态栏，用户要的）；存过的照存的，小梦和群不加
+  if (!(char && char.look && 'statusOn' in char.look) && !(char && (char.builtinAssistant || char.isGroup))) parts.chat.look = Object.assign({}, parts.chat.look, { statusOn: true });
+  return parts;
 }
 function readLookPartForm() {
   return {
@@ -503,6 +507,7 @@ function setLookPartForm(view) {
   setBubbleForm(p.bubble);
   setLookForm(p.look);
   customCssInput.value = p.customCss || '';
+  if (typeof customCssPresetBox !== 'undefined') customCssPresetBox.refresh();
   document.getElementById('csStatusWrap').style.display = view === 'chat' ? '' : 'none';
   document.querySelectorAll('#csLookViewRow .pf-radio-btn').forEach(function(b) {
     b.classList.toggle('selected', b.dataset.view === view);

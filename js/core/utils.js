@@ -356,3 +356,47 @@ function showToast(msg, type) {
   vv.addEventListener('resize', fit);
   vv.addEventListener('scroll', fit);
 })();
+
+// 预设抽屉（状态栏预设、CSS 预设共用，用户要的：放在要填的东西前面，点开是一列预设，右边「保存」「删除」，像 API 预设那样）
+// o = { list() → [{ name, builtin }], apply(p), save(名字)（返回 false = 不存）, del(p), match() → 现在填的和哪个一样（可选）, suggest() → 存的时候默认的名字（可选） }
+function mountPresetDrawer(before, o) {
+  var box = document.createElement('div');
+  box.className = 'pd-box';
+  box.innerHTML = '<div class="pd-bar"><button class="pd-head"><span class="pd-label">预设</span><span class="pd-cur"></span>' +
+    '<svg class="pd-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></button>' +
+    '<button class="pd-btn" data-act="save">保存</button><button class="pd-btn" data-act="del">删除</button></div><div class="pd-list"></div>';
+  before.parentNode.insertBefore(box, before);
+  var cur = null, listEl = box.querySelector('.pd-list');
+  function paint() {
+    var all = o.list();
+    if (cur) cur = all.filter(function(p) { return p.name === cur.name; })[0] || null;
+    box.querySelector('.pd-cur').textContent = cur ? cur.name : (all.length ? '点开选一个' : '还没有存过');
+    listEl.innerHTML = '';
+    all.forEach(function(p) {
+      var it = document.createElement('div');
+      it.className = 'pd-item' + (cur && p.name === cur.name ? ' selected' : '');
+      it.textContent = p.name + (p.builtin ? '（自带）' : '');
+      it.addEventListener('click', function() {
+        cur = p; o.apply(p); box.classList.remove('open'); paint();
+        showToast('已套用「' + p.name + '」', 'plain');
+      });
+      listEl.appendChild(it);
+    });
+  }
+  box.querySelector('.pd-head').addEventListener('click', function() { box.classList.toggle('open'); });
+  box.querySelector('[data-act="save"]').addEventListener('click', function() {
+    var def = cur && !cur.builtin ? cur.name : (o.suggest ? o.suggest() : '') || '';
+    askName('存为预设（同名的会被换掉）', def, function(n) {
+      n = n.slice(0, 16); if (o.save(n) === false) return; cur = { name: n }; paint();
+      showToast('✓ 已存为「' + n + '」', 'success');
+    });
+  });
+  box.querySelector('[data-act="del"]').addEventListener('click', function() {
+    if (!cur || cur.builtin) { showToast(cur ? '自带的删不掉' : '先点开选一个', 'plain'); box.classList.add('open'); return; }
+    var p = cur;
+    openConfirm('删除预设「' + p.name + '」？', function() { o.del(p); cur = null; paint(); });
+  });
+  box.refresh = function() { if (o.match) cur = o.match(); paint(); };   // 表单换了内容（打开另一个角色、别处删了预设）时
+  box.refresh();
+  return box;
+}
