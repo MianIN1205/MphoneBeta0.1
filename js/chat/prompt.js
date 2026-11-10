@@ -457,7 +457,8 @@ function msgTextForAI(m) {
   if (m.narr) return '【旁白 · 剧情开场】（这是中立的旁白，交代场景，不是用户说的话）\n' + (m.content || '');
   if (m.action && typeof actionTextForAI === 'function') return actionTextForAI(m.action);
   if (m.cal && typeof calTextForAI === 'function') return calTextForAI(m.cal);
-  if (m.play && typeof playTextForAI === 'function') return playTextForAI(m);   // 群里的投票 / 抽奖 / 红包
+  if (m.play && typeof playTextForAI === 'function') return playTextForAI(m);
+  if (m.whisperChat && typeof whisperTextForAI === 'function') return whisperTextForAI(m);   // 群里的悄悄话   // 群里的投票 / 抽奖 / 红包
   var c = (m.file && typeof fileTextForAI === 'function') ? fileTextForAI(m)
         : m.textImg ? (m.illus ? '（这一幕的配图）' : m.role === 'assistant' ? '[你发了一张照片：' + m.textImg + ']' : '[发来一张照片（用文字描述的画面）：' + m.textImg + ']')
         : m.voice ? ('[语音消息]' + (m.transcript ? '：' + m.transcript : '')) : (m.content || (m.imgSrc ? '[图片消息]' : ''));
@@ -483,7 +484,7 @@ function msgContentForAI(m, rich, char) {
   }
   // 「发送音频」模式，或「转成文字」但还没转出文字（比如接口不支持语音识别）时，直接把录音发过去：
   // 文字部分不带转写，让能听的模型自己听；转写放在音频块上，模型听不了时（js/core/llm.js 的 llmPrepare）换成转写文字
-  if (m.voice && (mediaCfg.voiceMode === 'audio' || !m.transcript)) {
+  if (m.voice && m.voice.src && (mediaCfg.voiceMode === 'audio' || !m.transcript)) {   // 打字发的语音没有录音，只给文字
     var head = msgTextForAI(Object.assign({}, m, { transcript: '' }));
     return [{ type: 'text', text: head }, { type: 'input_audio', _voiceSrc: m.voice.src, _transcript: m.transcript || '' }];
   }

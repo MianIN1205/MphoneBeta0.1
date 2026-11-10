@@ -150,7 +150,7 @@ function createVoiceBubble(m, list, empty) {
   var mins   = Math.floor(durationSec / 60);
   var secs   = Math.round(durationSec % 60);
   var durStr = mins + ':' + String(secs).padStart(2, '0');
-  var audio  = new Audio(m.voice.src);
+  var audio  = new Audio(m.voice.src || '');
 
   // 气泡宽度按时长自适应（短语音 120px … ≥18s→220px）
   var bubbleW = Math.min(220, Math.max(120, 92 + durationSec * 7));
@@ -181,7 +181,7 @@ function createVoiceBubble(m, list, empty) {
   durEl.className = 'voice-duration';
   durEl.textContent = durStr;
 
-  inner.appendChild(playBtn);
+  if (m.voice.src) inner.appendChild(playBtn);   // 打字发的语音没有录音，不显示播放键
   inner.appendChild(cvs);
   inner.appendChild(durEl);
   bubble.appendChild(inner);
@@ -209,7 +209,7 @@ function createVoiceBubble(m, list, empty) {
   function drawStaticWave() {
     if (_decoded) drawWaveform(cvs, _decoded); else drawFlatWaveform(cvs);
   }
-  decodeAudioBytes(dataUrlToBytes(m.voice.src))
+  (m.voice.src ? decodeAudioBytes(dataUrlToBytes(m.voice.src)) : Promise.reject())
     .then(function(decoded) { _decoded = decoded; drawWaveform(cvs, decoded); })
     .catch(function() { drawFlatWaveform(cvs); });
 
@@ -268,7 +268,7 @@ function createVoiceBubble(m, list, empty) {
     if (e.target === playBtn || playBtn.contains(e.target)) return;
     var open = !transcriptWrap.classList.contains('open');
     transcriptWrap.classList.toggle('open', open);
-    if (open && !m.transcript && !m._transcribing) {
+    if (open && !m.transcript && !m._transcribing && m.voice.src) {
       transcribeVoiceMsg(m, transcriptEl);
     }
     list.scrollTop = list.scrollHeight;

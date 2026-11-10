@@ -241,6 +241,7 @@ function renderHistMsg(m, list, empty) {
   var thinkBar = m.think && m.role === 'assistant' ? renderThinkBar(m, list) : null;
   if (m.recalled && !m._flash) return renderRecallNotice(m, list, empty);
   if (m.pat || m.note) return renderPatNotice(m, list, empty);
+  if (m.whisperChat && typeof renderWhisperNotice === 'function') return renderWhisperNotice(m, list, empty);   // 群里的悄悄话：居中一行，点开看（js/chat/group.js）
   if (m.narr) return renderNarration(m, list, empty);
   if (m.action && typeof renderActionCard === 'function') return renderActionCard(m, list, empty);
   if (m.cal && typeof renderCalCard === 'function') return renderCalCard(m, list, empty);
@@ -268,7 +269,7 @@ function renderHistMsg(m, list, empty) {
       var spk = charList[findCharIdx(m.speaker)];
       var nameEl = document.createElement('div');
       nameEl.className = 'cr-speaker';
-      nameEl.textContent = spk ? groupLabel(spk) : '';
+      nameEl.textContent = spk ? (typeof groupNick === 'function' ? groupNick(charList[openingChatCharIdx], spk) : groupLabel(spk)) : '';   // 群里显示群昵称
       list.insertBefore(nameEl, r.row);
       r.row._extras.push(nameEl);
     }

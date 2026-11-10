@@ -5,6 +5,8 @@
 
 function isGroupChar(c) { return !!(c && c.isGroup); }
 function groupLabel(c) { return c.charAlias || c.charName || (c.builtinAssistant && typeof MIANIN_NAME !== 'undefined' ? MIANIN_NAME : '角色'); }
+// 群昵称（参考别的小手机，用户同意的）：同一个角色在这个群里叫什么；没改过就是平时的名字
+function groupNick(g, c) { return (g && g.groupCfg && g.groupCfg.nicks && g.groupCfg.nicks[c.id]) || groupLabel(c); }
 function groupMembers(g) {
   return (g.members || []).map(function(id) { return charList[findCharIdx(id)]; }).filter(function(c) { return c && !c.isGroup; });
 }
@@ -37,6 +39,7 @@ paintCharAvatar = function(el, char) {
 var _msgPreviewTextOne = msgPreviewText;
 msgPreviewText = function(m) {
   var t = _msgPreviewTextOne(m);
+  if (m && m.whisperChat) return '[悄悄话]';
   if (m && m.speaker && m.role === 'assistant' && !m.recalled) {
     var c = charList[findCharIdx(m.speaker)];
     if (c) t = groupLabel(c) + '：' + t;
@@ -59,7 +62,8 @@ function buildGroupMsgs(g, history) {
   var roster = members.map(function(c) {
     var persona = c.builtinAssistant && typeof MIANIN_PERSONA !== 'undefined' ? MIANIN_PERSONA : c.charPersona;
     var tags = (groupAdmins(g).indexOf(c.id) >= 0 ? '（群管理员）' : '') + (groupMuteUntil(g, c.id) ? '（正在被禁言，' + new Date(groupMuteUntil(g, c.id)).getHours() + ':' + pad(new Date(groupMuteUntil(g, c.id)).getMinutes()) + ' 以前不能发言）' : '');
-    var s = '【' + groupLabel(c) + '】' + tags + '\n' + (persona ? fillMacros(persona, c) : '（没有写人设）');
+    var nick = groupNick(g, c) !== groupLabel(c) ? '（群昵称：' + groupNick(g, c) + '）' : '';
+    var s = '【' + groupLabel(c) + '】' + nick + tags + '\n' + (persona ? fillMacros(persona, c) : '（没有写人设）');
     if ((c.selfFacts || []).length) s += '\n聊天里补充过的设定：' + c.selfFacts.join('；');
     if (c.userNickname) s += '\nTA 对{{user}}的称呼：' + c.userNickname;
     var imp = typeof impressionFor === 'function' ? impressionFor(c.userImpressions, acc.uid) : '';
@@ -98,6 +102,8 @@ function buildGroupMsgs(g, history) {
                    : '【大家都知道的背景】\n\n';
     msgs.push({ role: 'system', content: groupFill(g, WB_WRAP + '\n\n' + head + wbGroups[key].join('\n\n')) });
   });
+  var notice = (g.groupCfg && g.groupCfg.notice || '').trim();
+  if (notice) msgs.push({ role: 'system', content: groupFill(g, '【群公告】（置顶在群里，所有人都看过、都知道，大家照着它来）\n' + notice) });
   msgs.push({ role: 'system', content: '【现在】' + groupNowText() + '。心里有数就好，不用主动报时间。' });
   // 记录：最近的，按 token 裁掉更早的；角色的话写成「名字：内容」，同一轮连着的合在一起
   var hist = history.slice(-80), total = 0, from = hist.length;
@@ -107,7 +113,7 @@ function buildGroupMsgs(g, history) {
   hist.forEach(function(m, i) {
     if (m.role === 'assistant') {
       var who = m.speaker ? charList[findCharIdx(m.speaker)] : null;
-      var line = (who ? groupLabel(who) : names[0] || '群友') + '：' + msgTextForAI(m);
+      var line = m.whisperChat ? msgTextForAI(m) : (who ? groupLabel(who) : names[0] || '群友') + '：' + msgTextForAI(m);
       var last = out[out.length - 1];
       if (last && last.role === 'assistant') last.content += '\n' + line; else out.push({ role: 'assistant', content: line });
     } else out.push({ role: 'user', content: msgContentForAI(m, i >= richFrom, g) });
@@ -117,6 +123,49 @@ function buildGroupMsgs(g, history) {
 }
 function groupReplyN(g) { var n = GROUP_REPLY_N[groupCfgOf(g).replyN] || GROUP_REPLY_N.mid; return n[0] + '～' + n[1]; }
 function groupActionOn(g) { return !!(g.chatCfg && g.chatCfg.actionOn); }
+// 悄悄话的样子（用户要的）：聊天中间居中一行小字（和拍一拍一样），点开是一个小窗口，里面是 TA 们俩的对话
+function whisperNames(m) { var g = charList[openingChatCharIdx], w = m.whisperChat, n = function(id) { var c = charList[findCharIdx(id)]; return c ? groupNick(g && g.isGroup ? g : null, c) : '群友'; }; return [n(w.a), n(w.b)]; }
+function renderWhisperNotice(m, list, empty) {
+  if (empty) empty.style.display = 'none';
+  var el = document.createElement('div');
+  el.className = 'cr-recall-notice cr-pat-notice cr-whisper-notice';
+  var nm = whisperNames(m);
+  el.textContent = '🤫 ' + nm[0] + ' 和 ' + nm[1] + ' 说了几句悄悄话 ›';
+  el.addEventListener('click', function(e) { e.stopPropagation(); openWhisperChat(m); });
+  el._msg = m; el._extras = [];
+  list.appendChild(el);
+  crStick(list);
+  return el;
+}
+function openWhisperChat(m) {
+  var w = m.whisperChat, nm = whisperNames(m);
+  var ov = groupModal('<div class="mine-acc-title"></div><div class="wsp-hint">TA 们以为别人看不到</div><div class="wsp-list"></div>' +
+    '<div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-add" data-act="ok">知道了</button></div>');
+  ov.querySelector('.mine-acc-title').textContent = nm[0] + ' 和 ' + nm[1] + ' 的悄悄话';
+  var box = ov.querySelector('.wsp-list');
+  w.lines.forEach(function(l) {
+    var row = document.createElement('div');
+    row.className = 'wsp-row' + (l.who === w.b ? ' right' : '');
+    var av = document.createElement('div');
+    av.className = 'chat-char-card-avatar wsp-av';
+    paintCharAvatar(av, charList[findCharIdx(l.who)]);
+    var b = document.createElement('div');
+    b.className = 'wsp-bubble';
+    b.textContent = l.text;
+    row.appendChild(av); row.appendChild(b);
+    box.appendChild(row);
+  });
+  ov.querySelector('[data-act="ok"]').addEventListener('click', function() { ov.remove(); });
+}
+function whisperTextForAI(m) {
+  var w = m.whisperChat, n = function(id) { var c = charList[findCharIdx(id)]; return c ? groupLabel(c) : '群友'; };
+  return '（' + n(w.a) + '和' + n(w.b) + '私下说了悄悄话，别人看不到：' + w.lines.map(function(l) { return n(l.who) + '：' + l.text; }).join('；') + '）';
+}
+// 悄悄话（群设置里开）：两个成员私下说几句，用户看得到
+function groupWhisperRule(g) {
+  if (!groupCfgOf(g).whisper) return '';
+  return '\n偶尔（很少，真有私下想说的话时）两个成员会说悄悄话（TA 们以为别人看不到，其实{{user}}看得到）：单独一行写 <悄悄话 从="说话的人" 给="听的人">内容</悄悄话>，不要每次都写。';
+}
 // 有管理员时才告诉 TA 们能禁言（只能禁普通成员）
 function groupModRule(g) {
   var admins = groupAdmins(g).map(function(id) { return charList[findCharIdx(id)]; }).filter(Boolean).map(groupLabel);
@@ -136,21 +185,55 @@ function groupFormatRules(g) {
     '【群聊回复格式】接着群里的聊天往下说：不是每个人每次都要开口，谁会接这个话题谁就说，一共 ' + groupReplyN(g) + ' 条，像真的群聊一样有来有回、有人插话。' +
     '每条单独一行，开头写说话人的名字和冒号（名字只能是：' + names.join('、') + '），比如：\n' +
     names.slice(0, 2).map(function(n, i) { return n + '：' + (i ? '我在我在！' : '在吗。'); }).join('\n') +
-    '\n' + (typeof gpTagRule === 'function' ? gpTagRule() : '') + groupModRule(g) + '\n同一个人连着说几句可以写在一行里，每句照常写标点，小手机会按句子分成气泡。像平时发微信一样说话，口语、短句；' + (groupActionOn(g) ? '想写动作、神态时用 *星号* 包起来放在那个人那一行里（会显示成灰色小字），不写旁白和括号说明' : '不写旁白、动作描写和括号说明') + '，不替{{user}}说话。') }];
+    '\n' + (typeof gpTagRule === 'function' ? gpTagRule() : '') + groupModRule(g) + groupWhisperRule(g) + '\n同一个人连着说几句可以写在一行里，每句照常写标点，小手机会按句子分成气泡。像平时发微信一样说话，口语、短句；' + (groupActionOn(g) ? '想写动作、神态时用 *星号* 包起来放在那个人那一行里（会显示成灰色小字），不写旁白和括号说明' : '不写旁白、动作描写和括号说明') + '，不替{{user}}说话。') }];
+}
+
+// ---------- 成员各用自己的模型（群设置里开，参考别的小手机）：一个个人单独问一遍，后面的人看得到前面的人刚说了什么 ----------
+function groupSoloOn(g) { return !!groupCfgOf(g).solo; }
+function groupSoloText(g, hist, signal) {
+  var who = groupSpeakers(g).slice().sort(function() { return Math.random() - 0.5; }).slice(0, 6), acc = '', lastErr = null;
+  var others = groupMembers(g);
+  return who.reduce(function(p, c) {
+    return p.then(function() {
+      if (signal && signal.aborted) throw Object.assign(new Error('已停止'), { name: 'AbortError' });
+      var cfg = getApiCfg(c);
+      if (!cfg.url || !cfg.key || !cfg.model) cfg = getApiCfg(g);
+      cfg.cot = 'off';
+      var name = groupLabel(c);
+      var msgs = buildGroupMsgs(g, hist).concat(groupFormatRules(g));
+      if (acc) msgs.push({ role: 'assistant', content: acc.trim() });
+      msgs.push(activityAsk('这一次只写「' + name + '」一个人在群里要说的话（接着上面大家刚说的往下），每行以「' + name + '：」开头，0～3 条；按 TA 自己的性格来，觉得不用开口就只输出一个字：无。'));
+      return llmRequest(msgs, { stream: false, signal: signal, cfg: cfg }).then(function(text) {
+        text = typeof takeThink === 'function' ? takeThink(text).text : String(text || '');
+        if (/^\s*[（(]?\s*无\s*[)）]?[。.]?\s*$/.test(text)) return;
+        // 只要 TA 自己的话：没写名字的补上；写成别人说的丢掉
+        text.split('\n').forEach(function(line) {
+          if (!line.trim()) return;
+          var m = line.match(/^\s*@?([^：:\n]{1,20}?)\s*[：:]/), other = m && others.filter(function(o) { return o !== c && [o.charAlias, o.charName, groupLabel(o), groupNick(g, o)].indexOf(m[1].trim()) >= 0; })[0];
+          if (other) return;
+          acc += '\n' + (m && [c.charAlias, c.charName, name, groupNick(g, c)].indexOf(m[1].trim()) >= 0 ? line : name + '：' + line.trim());
+        });
+      }, function(err) { if (err && err.name === 'AbortError') throw err; lastErr = err; });
+    });
+  }, Promise.resolve()).then(function() {
+    if (!acc.trim() && lastErr) throw lastErr;
+    return acc.trim();
+  });
 }
 
 // ---------- 收到回复：按「名字：」拆给每个成员 ----------
 function groupCommitReply(g, hist, raw, list) {
   raw = typeof takeThink === 'function' ? takeThink(raw).text : String(raw || '');
   // 投票 / 红包 / 抽奖的标签先换成占位，免得下面被当成别的标签去掉（js/chat/group-play.js）
-  var plays = [], mods = [];
+  var plays = [], mods = [], whispers = {}, whisperOrder = [];
   if (typeof GP_TAG_RE !== 'undefined') raw = raw.replace(GP_TAG_RE, function(_, kind, attrs, body) { plays.push([kind, attrs, body]); return '\u0001P' + (plays.length - 1) + '\u0001'; });
   // 管理员禁言 / 解除禁言普通成员：<禁言 对象="名字" 分钟="30"/>、<解除禁言 对象="名字"/>，也先换成占位，谁写的就算谁动手
+  raw = raw.replace(/<悄悄话([^>]*)>([\s\S]*?)<\/悄悄话>/g, function(_, attrs, body) { plays.push(['%悄悄话', attrs, body]); return '\u0001P' + (plays.length - 1) + '\u0001'; });
   raw = raw.replace(/<(禁言|解除禁言)([^>]*?)\/?>(\s*<\/\1>)?/g, function(_, kind, attrs) { plays.push(['@' + kind, attrs, '']); return '\u0001P' + (plays.length - 1) + '\u0001'; });
   raw = raw.replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<([一-鿿A-Za-z]+)[^>]*>[\s\S]*?<\/\1>/g, '').replace(/<[一-鿿]+[^>]*\/>/g, '');
   var members = groupMembers(g), byName = {};
   members.forEach(function(c) {
-    [c.charAlias, c.charName, groupLabel(c)].concat(c.builtinAssistant && typeof MIANIN_NAME !== 'undefined' ? [MIANIN_NAME] : []).forEach(function(n) { if (n) byName[String(n).trim()] = c.id; });
+    [c.charAlias, c.charName, groupLabel(c), groupNick(g, c)].concat(c.builtinAssistant && typeof MIANIN_NAME !== 'undefined' ? [MIANIN_NAME] : []).forEach(function(n) { if (n) byName[String(n).trim()] = c.id; });
   });
   var userName = resolveCharAccount(g).nickname || '';
   var segs = [], cur = null, skip = false;
@@ -170,7 +253,17 @@ function groupCommitReply(g, hist, raw, list) {
     s.text.split(/\u0001P(\d+)\u0001/).forEach(function(piece, k) {
       if (k % 2) {   // 占位：这个人发起的投票 / 红包 / 抽奖
         var t = plays[+piece];
-        if (t && t[0].charAt(0) === '@') { mods.push([s.id, t[0].slice(1), t[1]]); return; }   // 管理员动手：等这轮的话都发出来再生效
+        if (t && t[0].charAt(0) === '@') { mods.push([s.id, t[0].slice(1), t[1]]); return; }
+        if (t && t[0].charAt(0) === '%') {   // 悄悄话：谁说、对谁说看标签上写的
+          var att = function(n) { var mm = String(t[1]).match(new RegExp(n + '\\s*=\\s*["“「]([^"”」]+)')); return mm ? byName[mm[1].trim()] : null; };
+          var wf = att('从') || s.id, wt = att('给'), body = String(t[2] || '').replace(/\s+/g, ' ').trim();
+          if (!wt || wt === wf || !body || groupMuteUntil(g, wf)) return;
+          // 同一对人这一轮的悄悄话合成一段（谁先说谁是 a）
+          var key = [wf, wt].sort().join('|');
+          if (!whispers[key]) { whispers[key] = { a: wf, b: wt, lines: [] }; whisperOrder.push(key); }
+          whispers[key].lines.push({ who: wf, text: body });
+          return;
+        }   // 管理员动手：等这轮的话都发出来再生效
         var play = t && gpFromTag(t[0], t[1], t[2], g, s.id);
         if (play) added.push({ role: 'assistant', content: '[' + GP_NAMES[play.kind] + '] ' + (play.q || play.prize || play.wish), play: play, speaker: s.id, time: now });
         return;
@@ -183,6 +276,7 @@ function groupCommitReply(g, hist, raw, list) {
       });
     });
   });
+  whisperOrder.forEach(function(k) { var w = whispers[k]; added.push({ role: 'assistant', content: '', speaker: w.a, whisperChat: w, time: now }); });
   added.forEach(function(m) { hist.push(m); if (list) renderHistMsg(m, list, null); });
   added.forEach(function(m) { if (m.play && typeof gpAfterAdd === 'function') gpAfterAdd(g, m); });
   mods.forEach(function(x) { groupModTag(g, x[0], x[1], x[2]); });
@@ -195,7 +289,7 @@ function groupContextLine(char) {
   var out = [];
   groupsOf(char).forEach(function(g) {
     if (groupCfgOf(g).knows[char.id] === false) return;
-    var h = (chatHistories[g.id] || []).filter(function(m) { return !m.pat && !m.action && !m.cal && Date.now() - (m.time || 0) < 3 * 86400000; }).slice(-12);
+    var h = (chatHistories[g.id] || []).filter(function(m) { return !m.pat && !m.action && !m.cal && Date.now() - (m.time || 0) < 3 * 86400000 && (!m.whisperChat || m.whisperChat.a === char.id || m.whisperChat.b === char.id); }).slice(-12);   // 别人的悄悄话不知道
     if (!h.length) return;
     var userName = resolveCharAccount(g).nickname || '{{user}}';
     out.push('【群聊「' + (g.charName || '群聊') + '」】你也在这个群里（群里还有' + groupMembers(g).filter(function(c) { return c !== char; }).map(groupLabel).join('、') + '），最近群里聊了：\n' +
@@ -299,9 +393,12 @@ function openGroupSetting(g) {
               replyN: cfg.replyN || 'mid',
               bg: Object.assign({}, DEFAULT_CHAT_BG, g.chatBg || {}), bubble: Object.assign({}, DEFAULT_BUBBLE, g.bubble || {}) };
   document.getElementById('grpName').value = g.charName || '';
+  document.getElementById('grpNotice').value = cfg.notice || '';
   document.getElementById('grpAutoOn').checked = !!cfg.autoOn;
   document.getElementById('grpActionOn').checked = !!(g.chatCfg && g.chatCfg.actionOn);
   document.getElementById('grpQuickBar').checked = !!(g.chatCfg && g.chatCfg.quickBar);
+  document.getElementById('grpWhisper').checked = !!cfg.whisper;
+  document.getElementById('grpSolo').checked = !!cfg.solo;
   document.getElementById('grpShowAv').checked = !(g.look && g.look.showAvatar === false);
   document.getElementById('grpCss').value = g.customCss || '';
   document.getElementById('grpOpacity').value = grpEdit.bubble.opacity;
@@ -397,7 +494,7 @@ function grpPaintMembers() {
     t.appendChild(av);
     var n = document.createElement('div'); n.className = 'grp-mem-name'; n.textContent = name; t.appendChild(n);
     if (tag) { var b = document.createElement('i'); b.className = 'grp-mem-tag'; b.textContent = tag; t.appendChild(b); }
-    if (onTap) { if (typeof bindPress === 'function') bindPress(t, onTap, onTap); else t.addEventListener('click', onTap); }
+    if (onTap) t.addEventListener('click', onTap);   // 点一下就是全部操作的列表（用户要的，不分点和长按）
     box.appendChild(t);
     return t;
   };
@@ -408,7 +505,7 @@ function grpPaintMembers() {
     var av = document.createElement('div'); av.className = 'chat-char-card-avatar grp-mem-av';
     paintCharAvatar(av, c);
     var mute = groupMuteUntil(g, c.id), admin = groupAdmins(g).indexOf(c.id) >= 0;
-    var t = tile(av, groupLabel(c), mute ? '禁言中' : admin ? '管理员' : '', function() { grpMemberMenu(g, c); });
+    var t = tile(av, groupNick(g, c), mute ? '禁言中' : admin ? '管理员' : '', function() { grpMemberMenu(g, c); });
     if (mute) t.classList.add('muted');
   });
   var add = document.createElement('div'); add.className = 'grp-mem-av grp-mem-add'; add.textContent = '+';
@@ -501,6 +598,10 @@ function grpMemberMenu(g, c) {
     b.addEventListener('click', function() { ov.remove(); fn(); });
     menu.appendChild(b);
   };
+  item('去私聊', function() {
+    closeGroupSetting();
+    if (typeof openFromNotification === 'function') openFromNotification({ open: 'chat', charId: c.id });
+  });
   item(admin ? '取消管理员' : '设为管理员', function() {
     var list = groupAdmins(g).filter(function(id) { return id !== c.id; });
     if (!admin) list.push(c.id);
@@ -511,6 +612,23 @@ function grpMemberMenu(g, c) {
   // 一个「禁言」按钮，时间自己定；只有正在被禁言的人才显示「解除禁言」（用户要的）。你是群主，谁都能禁
   if (mute) item('解除禁言（还剩 ' + groupMuteLeft(mute) + '）', function() { groupSetMute(g, null, c.id, 0); });
   else item('禁言', function() { grpMuteTime(g, c); });
+  item('改群昵称', function() {
+    var ov2 = groupModal('<div class="mine-acc-title"></div><input class="pet-edit-input" maxlength="12" placeholder="空着就用平时的名字">' +
+      '<div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" data-act="cancel">取消</button><button class="mine-acc-btn mine-acc-btn-add" data-act="ok">好了</button></div>');
+    ov2.querySelector('.mine-acc-title').textContent = '「' + name + '」在群里叫什么';
+    var inp = ov2.querySelector('input');
+    inp.value = (g.groupCfg && g.groupCfg.nicks && g.groupCfg.nicks[c.id]) || '';
+    ov2.querySelector('[data-act="cancel"]').addEventListener('click', function() { ov2.remove(); });
+    ov2.querySelector('[data-act="ok"]').addEventListener('click', function() {
+      var v = inp.value.trim().slice(0, 12), nicks = Object.assign({}, (g.groupCfg && g.groupCfg.nicks) || {});
+      if (v && v !== name) nicks[c.id] = v; else delete nicks[c.id];
+      ov2.remove();
+      grpSaveCfg(g, { nicks: nicks });
+      groupNote(g, '「' + name + '」的群昵称改成了「' + groupNick(g, c) + '」', '{{user}}把' + name + '的群昵称改成了' + groupNick(g, c));
+      grpAfterMemberChange(g);
+    });
+    setTimeout(function() { inp.focus(); }, 50);
+  });
   item('踢出群聊', function() {
     if ((g.members || []).length <= 2) { showToast('群里至少要留两个角色', 'error'); return; }
     openConfirm('把「' + name + '」踢出群聊？', function() {
@@ -544,7 +662,9 @@ document.getElementById('groupSaveBtn').addEventListener('click', function() {
   g.charName = nameIn.value.trim().slice(0, 20);
   g.charAvatar = e.avImg;
   Object.keys(e.knows).forEach(function(id) { if ((g.members || []).indexOf(id) < 0) delete e.knows[id]; });
-  g.groupCfg = Object.assign({}, g.groupCfg || {}, { knows: e.knows, autoOn: document.getElementById('grpAutoOn').checked, autoGapH: e.gap, replyN: e.replyN });   // 管理员、禁言是马上生效的，不覆盖
+  var notice = document.getElementById('grpNotice').value.trim().slice(0, 500), oldNotice = ((g.groupCfg && g.groupCfg.notice) || '').trim();
+  if (notice !== oldNotice) groupNote(g, notice ? '你修改了群公告' : '你清空了群公告', notice ? '{{user}}修改了群公告，新的群公告是：' + notice : '{{user}}清空了群公告');
+  g.groupCfg = Object.assign({}, g.groupCfg || {}, { whisper: document.getElementById('grpWhisper').checked, solo: document.getElementById('grpSolo').checked, notice: notice, knows: e.knows, autoOn: document.getElementById('grpAutoOn').checked, autoGapH: e.gap, replyN: e.replyN });   // 管理员、禁言是马上生效的，不覆盖
   g.chatCfg = Object.assign({}, g.chatCfg || {}, { actionOn: document.getElementById('grpActionOn').checked, quickBar: document.getElementById('grpQuickBar').checked });
   g.chatBg = e.bg;
   g.bubble = e.bubble;
