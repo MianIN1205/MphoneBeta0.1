@@ -42,9 +42,16 @@ function crPillPaint(list) {
   var list = document.getElementById(id);
   if (!list) return;
   list.addEventListener('scroll', function() {
+    if (list.clientHeight !== list._h) return;   // 列表刚变高 / 变矮（键盘、抽屉），交给下面的 ResizeObserver
     list._away = list.scrollHeight - list.scrollTop - list.clientHeight > 150;
     if (!list._away) crPillReset(list);
   });
+  // 键盘弹出、抽屉打开时列表变矮：本来在最底下就接着贴在最底下（用户反馈过要手动往下滑才看得到最新的）
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(function() {
+    if (list.clientHeight === list._h) return;
+    list._h = list.clientHeight;
+    if (!list._away) list.scrollTop = list.scrollHeight;
+  }).observe(list);
   // 翻上去的时候新来的消息（正在输入的小点不算）记下来，数出有几条
   new MutationObserver(function(ms) {
     if (!list._away) return;
