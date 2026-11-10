@@ -1,5 +1,6 @@
 // 眠花糖机 — 书架里的书：导入小说（txt / md / Word / epub / PDF），阅读器（分页、目录、字号、记住读到哪）；
-// 和角色「一起看」：聊天加号抽屉里选一本书，角色聊天时知道你们在看哪本、你看到哪一页（mphone_books、mphone_book_<id>、mphone_together）
+// 和角色「一起看」：先挑书进去（书架，或者聊天加号抽屉里选一本），看的时候点下面小栏的「一起看」才开始（用户要的）；
+// 一起看时角色聊天时知道你们在看哪本、你看到哪一页（mphone_books、mphone_book_<id>、mphone_together）
 
 var BOOK_MAX_CHARS = 3000000;   // 一本最多存多少字
 var BOOK_PAGE_CHARS = 700;      // 一页大约多少字（在换行处断开）
@@ -147,7 +148,10 @@ var readerFont = mphoneStore.load('mphone_reader_font', 16) || 16;
 function openReader(id, opts) {
   var meta = bookMeta(id);
   if (!meta) { showToast('这本书找不到了', 'error'); return; }
-  readerState = { id: id, page: bookPageOf(id, meta.pos || 0), charId: (opts && opts.charId) || '' };
+  var cid = (opts && opts.charId) || '';
+  // 从书架打开时：有角色正和你一起看这本，就接着和 TA 看
+  if (!cid) Object.keys(bookTogether).forEach(function(k) { if (bookTogether[k].bookId === id && findCharIdx(k) >= 0) cid = k; });
+  readerState = { id: id, page: bookPageOf(id, meta.pos || 0), charId: cid };
   appReader.classList.add('active');
   renderReader();
 }
@@ -165,18 +169,33 @@ function renderReader() {
   document.getElementById('readerPrev').disabled = page === 0;
   document.getElementById('readerNext').disabled = page >= pages.length - 1;
   if (meta.pos !== pages[page]) { meta.pos = pages[page]; meta.readAt = Date.now(); saveBookMetas(); }
-  // 一起看：下面一条小栏，TA 的头像 + 「聊这一页」「不看了」
-  var bar = document.getElementById('readerTogether'), c = readerTogetherChar();
-  bar.style.display = c ? '' : 'none';
-  if (c) {
-    paintCharAvatar(bar.querySelector('.reader-tg-av'), c);
-    bar.querySelector('.reader-tg-name').textContent = '和「' + (c.charAlias || c.charName || 'TA') + '」一起看';
-  }
+  // 下面一条小栏：一起看时 TA 的头像 +「聊天」「不看了」；还没一起看时「一起看」（从聊天里点进来的是那个角色，从书架进来的先选人）
+  var bar = document.getElementById('readerTogether'), c = readerTogetherChar(), pc = c || readerPendingChar();
+  bar.style.display = '';
+  bar.classList.toggle('pending', !c);
+  bar.querySelector('.reader-tg-av').style.display = pc ? '' : 'none';
+  if (pc) paintCharAvatar(bar.querySelector('.reader-tg-av'), pc);
+  var nm = pc ? (pc.charAlias || pc.charName || 'TA') : '';
+  bar.querySelector('.reader-tg-name').textContent = c ? '和「' + nm + '」一起看' : pc ? '叫「' + nm + '」一起看？' : '一个人在看';
 }
 function readerTogetherChar() {
   var cid = readerState.charId;
   if (!cid || !bookTogether[cid] || bookTogether[cid].bookId !== readerState.id) return null;
   return charList.filter(function(c) { return c.id === cid; })[0] || null;
+}
+function readerPendingChar() {
+  var cid = readerState.charId, c = cid && charList.filter(function(x) { return x.id === cid; })[0];
+  return c && !c.isGroup ? c : null;
+}
+// 开始一起看这本：记下来、聊天里冒一行提示
+function startTogether(char) {
+  var meta = bookMeta(readerState.id);
+  if (!meta || !char) return;
+  bookTogether[char.id] = { bookId: meta.id, at: Date.now() };
+  saveBookTogether();
+  readerState.charId = char.id;
+  togetherNote(char, '📖 和「' + (char.charAlias || char.charName || 'TA') + '」一起翻开了《' + meta.title + '》', '（用户邀请你一起看《' + meta.title + '》，现在你们在一起看这本书）');
+  renderReader();
 }
 function readerGo(d) {
   var n = bookPages(readerState.id).length, p = readerState.page + d;
@@ -250,6 +269,7 @@ function openTogether(idx) {
   var cur = bookTogether[char.id];
   if (cur && bookMeta(cur.bookId)) { openReader(cur.bookId, { charId: char.id }); return; }   // 已经在一起看了：直接接着看
   if (!bookMetas.length) { showToast('书架里还没有书，先去书架右上角「导入图书」', 'plain'); return; }
+  document.getElementById('togetherPickTitle').textContent = '看哪本书';
   var list = document.getElementById('togetherPickList');
   list.innerHTML = '';
   bookMetas.slice().sort(function(a, b) { return (b.readAt || b.addedAt) - (a.readAt || a.addedAt); }).forEach(function(meta) {
@@ -262,10 +282,7 @@ function openTogether(idx) {
     row.querySelector('small').textContent = meta.pos ? '看到 ' + Math.floor((bookPageOf(meta.id, meta.pos) + 1) / pages.length * 100) + '%' : '还没开始看 · ' + pages.length + ' 页';
     row.addEventListener('click', function() {
       document.getElementById('togetherPickOverlay').classList.remove('open');
-      bookTogether[char.id] = { bookId: meta.id, at: Date.now() };
-      saveBookTogether();
-      togetherNote(char, '📖 和「' + (char.charAlias || char.charName || 'TA') + '」一起翻开了《' + meta.title + '》', '（用户邀请你一起看《' + meta.title + '》，现在你们在一起看这本书）');
-      openReader(meta.id, { charId: char.id });
+      openReader(meta.id, { charId: char.id });   // 先进去看，想一起看了再点下面的「一起看」
     });
     list.appendChild(row);
   });
@@ -273,6 +290,26 @@ function openTogether(idx) {
 }
 closeOnBackdrop(document.getElementById('togetherPickOverlay'));
 document.getElementById('togetherPickCancel').addEventListener('click', function() { document.getElementById('togetherPickOverlay').classList.remove('open'); });
+// 阅读器下面的「一起看」：知道是谁就直接开始，从书架进来的先选和谁一起看
+document.getElementById('readerTgStart').addEventListener('click', function() {
+  var pc = readerPendingChar();
+  if (pc) { startTogether(pc); return; }
+  var chars = charList.filter(function(c) { return c.inChat && !c.isGroup; });
+  if (!chars.length) { showToast('还没有可以一起看的角色', 'plain'); return; }
+  document.getElementById('togetherPickTitle').textContent = '和谁一起看';
+  var list = document.getElementById('togetherPickList');
+  list.innerHTML = '';
+  chars.forEach(function(c) {
+    var row = document.createElement('div');
+    row.className = 'together-book';
+    row.innerHTML = '<span class="together-book-cover together-av"></span><span class="together-book-info"><b></b></span>';
+    paintCharAvatar(row.querySelector('.together-av'), c);
+    row.querySelector('b').textContent = c.charAlias || c.charName || '未命名';
+    row.addEventListener('click', function() { document.getElementById('togetherPickOverlay').classList.remove('open'); startTogether(c); });
+    list.appendChild(row);
+  });
+  document.getElementById('togetherPickOverlay').classList.add('open');
+});
 // ---------- 边看边聊（用户要的：以前要退出去发消息、再点一起看回来，很别扭） ----------
 // 下面小栏点「聊天」展开一个小聊天面板：最近的聊天记录、输入框（回车发出去，和聊天窗口一样不叫 TA）、❄️ 请 TA 回（生成中变 ⏹）、📖 带上这一页。
 // 发的就是聊天窗口里的消息：走聊天室那一套（appendUserMsg / sendMsg），面板只是照着聊天记录画一份；聊天窗口那边有变化（新消息、正在输入的预览）就跟着重画
@@ -284,6 +321,8 @@ function readerChatEnsureRoom(c) {
   if (idx < 0) return false;
   if (!(appChatRoom.classList.contains('active') && openingChatCharIdx === idx)) {
     openingChatCharIdx = idx;
+    chatRoomTitle.textContent = c.charAlias || c.charName || '未命名';
+    applyChatRoomStyle(c);   // 以前没套这个角色的美化，回到聊天时状态栏、主题都是默认的
     renderRoomLists(idx);
     appChatRoom.classList.add('active');
   }
@@ -385,67 +424,29 @@ document.getElementById('readerTgStop').addEventListener('click', function() {
 });
 
 // 角色知道你们在一起看哪本、你看到哪一页（聊天窗口的现实感知里带一段）
+// 正在阅读器里和这个角色一起看（在书里发消息、点 ❄️）：只有这时才带书页内容，也先不要状态栏（用户要的）；在聊天窗口时角色只知道在看哪本、看到哪
+function readerOpenWith(char) { return !!char && appReader.classList.contains('active') && readerTogetherChar() === char; }
 function togetherContextLine(char) {
   var t = char && bookTogether[char.id], meta = t && bookMeta(t.bookId);
   if (!meta) return '';
   var pages = bookPages(meta.id), page = bookPageOf(meta.id, meta.pos || 0);
+  if (!readerOpenWith(char)) return '【一起看书】你和{{user}}最近在一起看《' + meta.title + '》，看到第 ' + (page + 1) + ' / ' + pages.length + ' 页。{{user}}现在没在看书、在聊天窗口和你聊天，书里的内容等一起看的时候再聊，不用主动提。';
   return '【一起看书】你和{{user}}正在一起看《' + meta.title + '》，{{user}}现在看到第 ' + (page + 1) + ' / ' + pages.length + ' 页（约 ' + Math.floor((page + 1) / pages.length * 100) + '%）。这一页写的是：\n「' + bookPageText(meta.id, page) + '」\n' +
     '聊天时可以自然地聊这一页的内容、人物和你的感受，像坐在一起看书的人；不用每次都提，不要整段复述，也不要说出后面还没看到的情节。';
 }
 
-// 换封面（目录弹窗里）：书架上那本也跟着换
-document.getElementById('readerCoverBtn').addEventListener('click', function() {
-  var meta = bookMeta(readerState.id);
-  if (!meta) return;
-  document.getElementById('bookEditOverlay').classList.remove('open');
-  var book = Array.from(document.querySelectorAll('.notes-shelf-area .book')).filter(function(b) { return b._novel === meta.id; })[0];
-  openImgPicker(function(src) {
-    meta.cover = src; saveBookMetas();
-    if (book) {
-      applyBookCover(book, book._color, src);
-      var t = book.querySelector('.book-title'); if (t) t.classList.add('on-img');
-      syncShelves();
-    }
-    showToast('✓ 封面换好了', 'success');
-  }, meta.cover ? { onReset: function() {
-    meta.cover = ''; saveBookMetas();
-    if (book) { book.style.backgroundImage = ''; applyBookCover(book, book._color, ''); var t = book.querySelector('.book-title'); if (t) t.classList.remove('on-img'); syncShelves(); }
-  } } : null);
-});
-
-// 改书名（用户要的：导入的文件名有时候很长）：阅读器右上角 ✎ →「改书名」；书架上那本跟着改
-function openBookRename() {
-  var meta = bookMeta(readerState.id);
-  if (!meta) return;
-  document.getElementById('bookEditOverlay').classList.remove('open');
-  var inp = document.getElementById('bookRenameInput');
-  inp.value = meta.title;
-  document.getElementById('bookRenameOverlay').classList.add('open');
-  setTimeout(function() { inp.focus(); inp.select(); }, 50);
+// 阅读器右上角 ✎：和书架上长按 →「编辑」是同一个（bookshelf.js 的 openBookEdit）
+function shelfSlotOfNovel(id) { var b = Array.from(document.querySelectorAll('.notes-shelf-area .book')).filter(function(x) { return x._novel === id; })[0]; return b ? b.closest('.book-slot') : null; }
+document.getElementById('readerEditBtn').addEventListener('click', function() { var s = shelfSlotOfNovel(readerState.id); if (s) openBookEdit(s); });
+// 长按卡片上备注下面那行小字：导入的书写看到哪、和谁一起看；笔记本写几页
+function bookInfoLine(book) {
+  if (book._sys) return book._sys === 'diary' ? '角色写的日记都在这里' : '聊天、动态、收藏里的图片都在这里';
+  var meta = book._novel && bookMeta(book._novel);
+  if (!meta) return '笔记本 · ' + ((book._bvPages || []).length || 1) + ' 页';
+  var pages = bookPages(meta.id), p = bookPageOf(meta.id, meta.pos || 0);
+  var who = Object.keys(bookTogether).filter(function(k) { return bookTogether[k].bookId === meta.id; }).map(function(k) { var c = charList[findCharIdx(k)]; return c ? (c.charAlias || c.charName) : ''; }).filter(Boolean);
+  return (meta.pos ? '看到 ' + Math.floor((p + 1) / pages.length * 100) + '%' : '还没开始看') + ' · 共 ' + pages.length + ' 页' + (who.length ? ' · 和「' + who.join('」「') + '」一起看' : '');
 }
-function doBookRename() {
-  var meta = bookMeta(readerState.id), n = document.getElementById('bookRenameInput').value.trim().slice(0, 40);
-  if (!meta) return;
-  if (!n) { shakeEl(document.getElementById('bookRenameInput')); return; }
-  meta.title = n; saveBookMetas();
-  Array.prototype.forEach.call(document.querySelectorAll('.notes-shelf-area .book'), function(b) {
-    if (b._novel !== meta.id) return;
-    var t = b.querySelector('.book-title'); if (t) t.textContent = n;
-    var l = b.parentNode && b.parentNode.querySelector('.book-label'); if (l) l.textContent = n;
-  });
-  if (typeof saveShelves === 'function') saveShelves();
-  document.getElementById('bookRenameOverlay').classList.remove('open');
-  renderReader();
-  showToast('✓ 改好了', 'success');
-}
-document.getElementById('readerRenameBtn').addEventListener('click', openBookRename);
-document.getElementById('readerEditBtn').addEventListener('click', function() { document.getElementById('bookEditOverlay').classList.add('open'); });
-document.getElementById('bookEditClose').addEventListener('click', function() { document.getElementById('bookEditOverlay').classList.remove('open'); });
-closeOnBackdrop(document.getElementById('bookEditOverlay'));
-document.getElementById('bookRenameOk').addEventListener('click', doBookRename);
-document.getElementById('bookRenameInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doBookRename(); } });
-document.getElementById('bookRenameCancel').addEventListener('click', function() { document.getElementById('bookRenameOverlay').classList.remove('open'); });
-closeOnBackdrop(document.getElementById('bookRenameOverlay'));
 
 // ---------- 一起看时聊的，回到聊天窗口用虚线框圈起来（用户要的） ----------
 // 在阅读器里发的消息、在阅读器里点 ❄️ 回的消息记 m.tg = 书的 id；聊天列表里连着的这几条外面画一个虚线框，左上角写「一起看《书名》时聊的」

@@ -169,47 +169,56 @@
 
 /* 录音小条：点麦克风后在输入栏上方淡入（js/chat/voice.js）。上面一行时长、波纹、提示；下面录音键在正中间、✕ 在左边（用户要的） */
 .voice-pop {
-  position: absolute; left: 10px; right: 10px; bottom: calc(100% + 8px); z-index: 6;
-  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
-  padding: 10px 14px 14px; border-radius: 26px;
+  position: absolute; left: 50%; width: min(240px, calc(100% - 20px)); box-sizing: border-box; bottom: calc(100% + 8px); z-index: 6;   /* 居中一小块，不再横跨整条（用户说太空） */
+  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+  padding: 6px 12px 8px; border-radius: 22px;   /* 收紧一点：以前按钮太大、留白太多（用户说太空） */
   background: rgba(255,248,252,0.96);
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.9);
   box-shadow: 0 6px 24px rgba(120,70,80,0.16), 0 2px 6px rgba(0,0,0,0.06);
-  opacity: 0; transform: scale(0.97); transform-origin: center bottom; pointer-events: none;
+  opacity: 0; transform: translateX(-50%) scale(0.97); transform-origin: center bottom; pointer-events: none;
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
-.voice-pop.open { opacity: 1; transform: none; pointer-events: auto; }
+.voice-pop.open { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
 .voice-pop button { border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
 .voice-pop svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.voice-top { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 30px; }
+/* 时长在正中间，波纹在它右边，提示单独一行（用户说时间要居中） */
+.voice-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 8px; row-gap: 2px; min-height: 24px; }
+#recTimer { grid-column: 2; }
+#recLiveCanvas { grid-column: 3; justify-self: start; }
+.voice-hint { grid-column: 1 / -1; text-align: center; }
 .voice-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
 .voice-cancel {
-  justify-self: center; width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  justify-self: center; width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
   background: rgba(224,90,100,0.13); color: #e05a64;
   visibility: hidden; transition: background 0.15s, color 0.15s, transform 0.15s;
 }
-.voice-cancel svg { width: 17px; height: 17px; }
+.voice-cancel svg { width: 15px; height: 15px; }
 .voice-pop.recording .voice-cancel { visibility: visible; }
 .voice-cancel.armed { background: #e05a64; color: #fff; transform: scale(1.12); }
+/* 右边「文」：滑过去松手 = 转成文字发出去（用户要的） */
+.voice-to-text { font-size: 14px; font-weight: 600; background: rgba(120,140,220,0.14); color: #6a7fd0; }
+.voice-to-text.armed { background: #6a7fd0; color: #fff; }
+.voice-cap { font-size: 10.5px; color: #b5a2aa; text-align: center; line-height: 1.4; }
+.voice-cap:empty { display: none; }
 .voice-rec-btn {
-  position: relative; width: 68px; height: 68px; border-radius: 50%; flex-shrink: 0;
+  position: relative; width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
   background: rgba(208,88,88,0.12); color: #d05858;
   box-shadow: 0 3px 10px rgba(208,88,88,0.16);
   touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   transition: background 0.15s, color 0.15s, transform 0.12s ease, box-shadow 0.15s;
 }
-.voice-rec-btn svg { width: 28px; height: 28px; }
+.voice-rec-btn svg { width: 22px; height: 22px; }
 /* 手感：按下去轻轻一沉；录音时变红，外面一圈淡淡的光往外散 */
 .voice-rec-btn:active, .voice-rec-btn.pressing { transform: scale(0.92); }
 .voice-pop.recording .voice-rec-btn { background: #d05858; color: #fff; box-shadow: 0 4px 14px rgba(208,88,88,0.35); }
 .voice-pop.recording .voice-rec-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(208,88,88,0.35); animation: voiceRing 1.4s ease-out infinite; pointer-events: none; }
 @keyframes voiceRing { from { transform: scale(0.92); opacity: 0.9; } to { transform: scale(1.22); opacity: 0; } }
 #recTimer { display: none; font-size: 14px; font-weight: 600; color: rgba(190,60,90,0.88); font-variant-numeric: tabular-nums; min-width: 32px; }
-#recLiveCanvas { display: none; width: 96px; height: 30px; }
+#recLiveCanvas { display: none; width: 64px; height: 24px; }
 .voice-pop.recording #recTimer, .voice-pop.recording #recLiveCanvas { display: block; }
 .voice-hint { font-size: 12px; color: #a8909c; white-space: nowrap; }
-.voice-pop.recording .voice-hint { color: #c06070; }
+.voice-pop.recording .voice-hint { color: #c06070; font-size: 11px; }
 .cr-icon-btn#crMicBtn.active svg { stroke: #d05858; }
 
 /* chat-msg-row 需要 position:relative */

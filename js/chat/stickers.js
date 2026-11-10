@@ -18,7 +18,7 @@ function stkCatByName(name) { return stkData.cats.filter(function(c) { return c.
 function stkItemsOf(catId) { return stkData.items.filter(function(s) { return s.cat === catId; }); }
 
 function stickerText(name) { return '[表情包：' + name + ']'; }
-var STK_RE = /\[表情包[：:]\s*([^\]\n]{1,40}?)\s*\]/g;
+var STK_RE = /\[表情包[：:]\s*([^\]\n]{1,40}?)\s*(?:\]|$)/g;   // 忘了写后半个括号、写在一条最后的也认
 
 // 按名字找表情包：不分大小写，带不带 .jpg / .gif 这类后缀都算同一个
 function stkKey(name) { return String(name || '').trim().toLowerCase().replace(/\.(jpe?g|png|gif|webp|bmp)$/, ''); }
@@ -282,22 +282,27 @@ function stickerSplitParts(parts, char) {
     segs.push(p.slice(last));
     segs.forEach(function(x) {
       if (typeof x !== 'string') out.push(x);
-      else if (x.trim()) out.push(x.trim());
+      else if (x.trim() && !/^[\]］]$/.test(x.trim())) out.push(x.trim());   // 单独剩下的半个括号不要
     });
   });
   return out;
 }
 
 // 告诉角色能用哪些表情包（只在聊天窗口，这个角色打开了才有）
+var STK_PROMPT_MAX = 300;
 function stickerPrompt(char) {
   var cfg = stkCharCfg(char);
   if (!stkCharItems(char).length) return '';
-  var lines = [], left = 150;
-  stkData.cats.forEach(function(c) {
-    if (left <= 0 || cfg.cats.indexOf(c.id) < 0) return;
-    var names = stkItemsOf(c.id).slice(0, left).map(function(s) { return s.name; });
-    left -= names.length;
-    if (names.length) lines.push(c.name + '：' + names.join('、'));
+  // 最多列 STK_PROMPT_MAX 个：多了每个分类按比例分名额、每次随机挑（以前按顺序取前 150 个，后面的分类永远轮不到）
+  var cats = stkData.cats.filter(function(c) { return cfg.cats.indexOf(c.id) >= 0; });
+  var total = cats.reduce(function(n, c) { return n + stkItemsOf(c.id).length; }, 0), lines = [];
+  cats.forEach(function(c) {
+    var items = stkItemsOf(c.id).slice();
+    if (total > STK_PROMPT_MAX) {
+      for (var i = items.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = items[i]; items[i] = items[j]; items[j] = t; }
+      items = items.slice(0, Math.max(3, Math.round(items.length * STK_PROMPT_MAX / total)));
+    }
+    if (items.length) lines.push(c.name + '：' + items.map(function(s) { return s.name; }).join('、'));
   });
   return '【表情包】你也可以像{{user}}一样发表情包：想发的时候单独发一条，只写「[表情包：名字]」，名字只能从下面挑，不要自己编。' +
     '看心情偶尔发，不用每次都发。\n' + lines.join('\n');

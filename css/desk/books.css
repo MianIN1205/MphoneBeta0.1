@@ -74,10 +74,28 @@
 .cr-tg-layer { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; }
 .cr-tg-box { position: absolute; left: 6px; right: 6px; border: 1.5px dashed rgba(214, 130, 160, 0.55); border-radius: 16px; }
 .cr-tg-label { position: absolute; top: 3px; left: 10px; font-size: 10.5px; color: rgba(190, 110, 140, 0.85); max-width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* 一起看中途回到聊天：聊天窗口顶上的「继续看」小条 */
-.cr-together-chip { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 15; display: none; max-width: 86%;
+/* 一起看中途回到聊天：输入框上面的「继续看」小条（以前在顶上，用户说放下面更显眼） */
+.cr-together-chip { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 15; display: none; max-width: 86%;
   border: none; border-radius: 16px; padding: 6px 14px; font-family: inherit; font-size: 12.5px; color: #b0607a;
   background: rgba(255,250,252,0.94); box-shadow: 0 3px 12px rgba(150,100,120,0.18); cursor: pointer;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cr-together-chip.show { display: block; }
-.cr-view.has-tg-chip .chat-msg-list { padding-top: 48px; }
+.cr-view.has-tg-chip .chat-msg-list { padding-bottom: 48px; }
+.cr-view.has-tg-chip .cr-new-pill { bottom: 52px; }
+#appChatRoom:has(.voice-pop.open) .cr-together-chip { display: none; }   /* 录音条打开时让开 */
+/* 还没一起看：只有「一起看」按钮；一起看时只有「聊天」「不看了」 */
+#readerTgStart, .reader-together.pending #readerTgChat, .reader-together.pending #readerTgStop { display: none; }
+.reader-together.pending #readerTgStart { display: inline-block; }
+.reader-together.pending .reader-tg-name { color: #b39aa2; }
+.together-book-cover.together-av { width: 34px; height: 34px; border-radius: 50%; background: #eee center / cover no-repeat; box-shadow: none; }
+/* 长按书的小卡片：左边封面，右边名字、备注、一行小字 */
+.book-card .book-card-cover { display: flex; align-items: center; justify-content: center; font-size: 26px; transform: none !important; }
+.book-card-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
+.book-card-info b { font-size: 15px; color: #444; word-break: break-all; }
+.book-card-note { font-size: 13px; color: #6b5a60; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 7.5em; overflow-y: auto; }
+.book-card-note.empty { color: #bbb; }
+.book-card-info small { font-size: 11px; color: #aaa; }
+.book-new-note { resize: none; line-height: 1.4; }
+/* 封面没换图片时书名直接印在封面上，不要后面的白签（用户要的）；换了图片还是白签托着，看得清 */
+.book-title:not(.on-img) { background: none; box-shadow: none; }
+.book-title:not(.on-img)::before, .book-title:not(.on-img)::after { display: none; }

@@ -132,7 +132,7 @@ function chatLineDone(s) {
   return !/[一-鿿A-Za-z0-9，、,；;：:（(「『“‘《【]$/.test(s);   // 以字、逗号、前括号结尾 = 这句还没说完
 }
 function chatSentences(seg) {
-  var out = [], buf = '', depth = 0, spans = actionSpans(seg), OPEN = '「『“‘（(【《', CLOSE = '」』”’）)】》';
+  var out = [], buf = '', depth = 0, spans = actionSpans(seg), OPEN = '「『“‘（(【《[［', CLOSE = '」』”’）)】》]］';   // [表情包：好耶！] 里的感叹号不断开（以前断开后剩半个括号，表情包发不出来）
   for (var i = 0; i < seg.length; i++) {
     var ch = seg[i];
     buf += ch;

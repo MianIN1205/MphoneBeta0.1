@@ -79,7 +79,7 @@ function chatFormatRules(char) {
              '它会显示在聊天界面你名字的下面，像微信状态一样（比如「在赶地铁」「有点困了」）。现在显示的是「' +
              (char.headStatus || CHAT_SUB_DEFAULT) + '」，没变就不用写。');
   // 状态栏：照「生成规则」写，小手机用正则认出来画成卡片（statusSpec，见 js/char/settings.js）
-  if (look.statusOn) {
+  if (look.statusOn && !(typeof readerOpenWith === 'function' && readerOpenWith(char))) {   // 在书里一起看时先不要状态栏
     var spec = statusSpec(look);
     if (spec) {
       // 和酒馆的正则状态栏一样：照「生成规则」写，格式、外层标签都照规则来；没写规则就照正则的格式

@@ -311,15 +311,26 @@ var voicePop    = document.getElementById('voicePop');
 var voiceRecBtn = document.getElementById('voiceRecBtn');
 var voiceCancel = document.getElementById('voiceCancel');
 var voiceHint   = document.getElementById('voiceHint');
-var VOICE_HOLD_MS = 200;   // 按住这么久才开始录，免得轻点一下就录
-var _voiceArmed = false;   // 手指在 ✕ 上
+var VOICE_HOLD_MS = 80;    // 按住这么久才开始录，免得轻点一下就录（以前 200，用户嫌前摇长）
+var _voiceZone = '';   // 录音时手指停在哪：'cancel' 左边 ✕ / 'text' 右边「文」
 
 function voiceHintText(t) { if (voiceHint) voiceHint.textContent = t; }
+var voiceToText = document.getElementById('voiceToText');
+// 小条最下面一行小字：现在的模型能不能直接听语音（用户要的：听不了就滑到「文」发文字）
+function voiceCapPaint() {
+  var el = document.getElementById('voiceCap'), c = charList[openingChatCharIdx];
+  var cfg = c && typeof getApiCfg === 'function' ? getApiCfg(c) : null;
+  if (!cfg || !cfg.model) { el.textContent = ''; return; }
+  var can = typeof llmCaps === 'function' && llmCaps(cfg).audio;
+  el.textContent = !can ? '这个模型听不了语音，滑到「文」发文字' : mediaCfg.voiceMode === 'audio' ? '这个模型能直接听语音' : '设置里选了转成文字，TA 看的是转写';
+}
 function openVoicePop() {
   if (typeof closeCrPlusPanel === 'function') closeCrPlusPanel();
   voicePop.classList.add('open');
   crMicBtn.classList.add('active');
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) getMicStream().catch(function() {});   // 先把麦克风准备好，按下去马上就能录（第一次会在这里问权限）
   voiceHintText('按住说话');
+  voiceCapPaint();
   _recTimerEl.textContent = '0:00';
   var c = _recLiveCanvas.getContext('2d'); c.clearRect(0, 0, _recLiveCanvas.width, _recLiveCanvas.height);
 }
@@ -344,7 +355,7 @@ new MutationObserver(function() {
 
 function startRecOverlay() {
   voicePop.classList.add('recording');
-  voiceHintText('松手发送，滑到 ✕ 取消');
+  voiceHintText(VOICE_HINT);
   if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) {} }   // 开始录了：轻轻震一下（手感）
   var t = 0;
   _recTimerEl.textContent = '0:00';
@@ -357,7 +368,8 @@ function startRecOverlay() {
 function stopRecOverlay() {
   voicePop.classList.remove('recording');
   voiceCancel.classList.remove('armed');
-  _voiceArmed = false;
+  voiceToText.classList.remove('armed');
+  _voiceZone = '';
   voiceHintText('按住说话');
   clearInterval(_recTimerInt);
   cancelAnimationFrame(_recAnimFrame);
@@ -441,23 +453,25 @@ voiceRecBtn.addEventListener('pointerdown', function(e) {
       });
   }, VOICE_HOLD_MS);
 });
-// 录音时手指在不在 ✕ 上
+// 录音时手指在 ✕ 上（取消）还是「文」上（转成文字发）
+var VOICE_HINT = '松手发送，左滑取消，右滑转文字';
 voiceRecBtn.addEventListener('pointermove', function(e) {
   if (!_micHolding) return;
-  var r = voiceCancel.getBoundingClientRect(), pad = 12;
-  var on = e.clientX >= r.left - pad && e.clientX <= r.right + pad && e.clientY >= r.top - pad && e.clientY <= r.bottom + pad;
-  if (on === _voiceArmed) return;
-  _voiceArmed = on;
-  voiceCancel.classList.toggle('armed', on);
-  voiceHintText(on ? '松手取消' : '松手发送，滑到 ✕ 取消');
-  if (on && navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
+  var over = function(el) { var r = el.getBoundingClientRect(), pad = 12; return e.clientX >= r.left - pad && e.clientX <= r.right + pad && e.clientY >= r.top - pad && e.clientY <= r.bottom + pad; };
+  var z = over(voiceCancel) ? 'cancel' : over(voiceToText) ? 'text' : '';
+  if (z === _voiceZone) return;
+  _voiceZone = z;
+  voiceCancel.classList.toggle('armed', z === 'cancel');
+  voiceToText.classList.toggle('armed', z === 'text');
+  voiceHintText(z === 'cancel' ? '松手取消' : z === 'text' ? '松手转成文字发出去' : VOICE_HINT);
+  if (z && navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
 });
-voiceRecBtn.addEventListener('pointerup', function() { voiceRecBtn.classList.remove('pressing'); finishRecording(!_voiceArmed); });
+voiceRecBtn.addEventListener('pointerup', function() { voiceRecBtn.classList.remove('pressing'); finishRecording(_voiceZone !== 'cancel', _voiceZone === 'text'); });
 voiceRecBtn.addEventListener('pointercancel', function() { voiceRecBtn.classList.remove('pressing'); finishRecording(false); abortLiveStt(); });
 voiceRecBtn.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
-// 结束录音：send = true 发出去，false 丢掉
-function finishRecording(send) {
+// 结束录音：send = true 发出去，false 丢掉；asText = 转成文字、当普通消息发（转不出来就还是发语音）
+function finishRecording(send, asText) {
   clearTimeout(_micTimer);
   stopRecOverlay();
   if (!_micHolding || !_mediaRecorder || _mediaRecorder.state === 'inactive') {
@@ -476,6 +490,16 @@ function finishRecording(send) {
     if (openingChatCharIdx === -1) return;
     var reader = new FileReader();
     reader.onload = function() {
+      if (asText) {
+        var src = reader.result, sendVoice = this.onload.bind(this);
+        liveP.then(function(t) { return t || (sttReady() ? sttTranscribe(src) : ''); }).catch(function() { return ''; }).then(function(t) {
+          t = String(t || '').trim();
+          if (t) { appendUserMsg(t); return; }
+          showToast('没转出文字，先发成语音了', 'plain');
+          asText = false; liveP = Promise.resolve(''); sendVoice();
+        });
+        return;
+      }
       var m = { role: 'user', content: '[语音消息]', voice: { src: reader.result, dur: Math.round(duration * 10) / 10 }, time: Date.now() };
       if (pendingQuote) { m.quote = pendingQuote; clearQuote(); }
       getChatHistory(openingChatCharIdx).push(m);

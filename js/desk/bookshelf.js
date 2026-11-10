@@ -146,7 +146,11 @@ function setCoverExpand(state) {
 document.getElementById('notesBtnNew').addEventListener('click', function(e) {
   e.stopPropagation();
   notesPopup.classList.remove('open');
+  bookEditSlot = null;
+  document.getElementById('bookNewTitle').textContent = '新建笔记';
+  bookNewName.maxLength = 10;
   bookNewName.value = '';
+  document.getElementById('bookNewNote').value = '';
   selectedBookColor = '#FFEBCD';
   selectedBookCover = '';
   bookNewPreview.style.background = selectedBookColor;
@@ -186,9 +190,43 @@ document.getElementById('bookNewCancel').addEventListener('click', function() {
 
 closeOnBackdrop(bookNewOverlay);
 
+// 编辑一本书（长按卡片「编辑」、阅读器右上角 ✎）：用新建笔记的那个弹窗，名字、备注、封面都能改；导入的书连书单里的书名、封面一起改
+var bookEditSlot = null;
+function openBookEdit(slot) {
+  var book = slot.querySelector('.book');
+  bookEditSlot = slot;
+  document.getElementById('bookNewTitle').textContent = '编辑';
+  bookNewName.maxLength = 40;
+  bookNewName.value = slot.querySelector('.book-label').textContent;
+  document.getElementById('bookNewNote').value = book._note || '';
+  selectedBookColor = book._color || '#FFEBCD';
+  selectedBookCover = book._cover || '';
+  bookNewPreview.style.cssText = '';
+  applyBookCover(bookNewPreview, selectedBookColor, selectedBookCover);
+  coverExpandState = null;
+  bookColorSwatches.classList.remove('active');
+  bookUploadBtns.classList.remove('active');
+  document.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.toggle('selected', !selectedBookCover && s.dataset.color === selectedBookColor); });
+  bookNewOverlay.classList.add('open');
+}
+function saveBookEdit(slot, name) {
+  var book = slot.querySelector('.book'), meta = book._novel && typeof bookMeta === 'function' ? bookMeta(book._novel) : null;
+  slot.querySelector('.book-label').textContent = name;
+  var tt = book.querySelector('.book-title');
+  if (tt) { tt.textContent = name; tt.classList.toggle('on-img', !!selectedBookCover); }
+  book.style.backgroundImage = '';
+  applyBookCover(book, selectedBookColor, selectedBookCover);
+  book._note = document.getElementById('bookNewNote').value.trim();
+  if (meta) { meta.title = name; meta.cover = selectedBookCover; meta.color = selectedBookColor; saveBookMetas(); }
+  syncShelves();
+  if (meta && appReader.classList.contains('active')) renderReader();
+  showToast('✓ 改好了', 'success');
+}
+
 document.getElementById('bookNewSave').addEventListener('click', function() {
   var name  = bookNewName.value.trim() || '-不知名-';
   var color = selectedBookColor;
+  if (bookEditSlot) { saveBookEdit(bookEditSlot, name.slice(0, 40)); bookEditSlot = null; bookNewOverlay.classList.remove('open'); return; }
 
   var shelfArea = document.querySelector('.notes-shelf-area');
   var shelves   = Array.from(shelfArea.querySelectorAll('.bookshelf'));
@@ -202,7 +240,7 @@ document.getElementById('bookNewSave').addEventListener('click', function() {
     return;
   }
 
-  var slot = createBookSlot({ name: name, color: color, cover: selectedBookCover });
+  var slot = createBookSlot({ name: name, color: color, cover: selectedBookCover, note: document.getElementById('bookNewNote').value.trim() });
   var book = slot.querySelector('.book');
 
   // 找第一个未满的书架
@@ -241,6 +279,7 @@ function createBookSlot(data) {
   applyBookCover(book, data.color, data.cover);
   if (Array.isArray(data.pages)) book._bvPages = data.pages;
   if (data.novel) book._novel = data.novel;   // 导入的书（js/desk/books.js）
+  book._note = data.note || '';
   // 精装书的样子（用户选的）：封面一圈细边框、书名横着印在封面上、底下垂一根小书签丝带
   var deco = document.createElement('span');
   deco.className = 'book-frame';
@@ -281,7 +320,8 @@ function saveShelves() {
         cover: book._cover || '',
         pages: book._bvPages || [{}],
         sys:   book._sys || undefined,
-        novel: book._novel || undefined
+        novel: book._novel || undefined,
+        note:  book._note || undefined
       };
     });
   });
@@ -437,9 +477,10 @@ function bindBookPointer(book) {
     var self = this;
     var pid  = e.pointerId;
     var sx   = e.clientX, sy = e.clientY;
-    var holdTimer = null;
+    var holdTimer = null, dragMoved = false;   // 长按后没挪动 = 松手弹菜单（信息 / 编辑 / 删除，用户要的）；挪动了 = 拖去换位置
 
     holdTimer = setTimeout(function() {
+      if (navigator.vibrate) navigator.vibrate(12);
       holdTimer = null;
       _heldBook = self;
       _heldSlot = self.closest('.book-slot');
@@ -484,6 +525,7 @@ function bindBookPointer(book) {
         return;
       }
       if (!_heldBook) return;
+      if (!dragMoved && (ev.clientX - sx) * (ev.clientX - sx) + (ev.clientY - sy) * (ev.clientY - sy) > MOVE_CANCEL_SQ) dragMoved = true;
 
       // 漂浮副本跟随指针
       if (_dragGhost) {
@@ -520,8 +562,9 @@ function bindBookPointer(book) {
         return;
       }
       clearTimeout(holdTimer); holdTimer = null;
+      var menuSlot = !dragMoved && !isDeleteMode && _heldSlot;
 
-      if (_heldBook && _heldSlot) {
+      if (_heldBook && _heldSlot && dragMoved) {
         if (_overSlot && _overSlot !== _heldSlot) {
           // 两个槽互换：用注释节点占位
           var hParent = _heldSlot.parentNode;
@@ -550,6 +593,7 @@ function bindBookPointer(book) {
 
       syncShelves();
       finish();
+      if (menuSlot) { swallowNextClick(); openBookCard(menuSlot); }
     }
 
     function finish() {
@@ -725,3 +769,32 @@ document.getElementById('bvAddBtn').addEventListener('click', function(e) {
   // 下一帧再滑入
   requestAnimationFrame(function() { goToPage(newIndex, true); });
 });
+
+// 长按一本书松手（用户要的）：一张小卡片，左边封面，右边名字、备注、一行小字（看到哪 / 几页），下面「编辑」「删除」；日记、相册只能看
+function openBookCard(slot) {
+  var book = slot.querySelector('.book');
+  var ov = document.createElement('div');
+  ov.className = 'mine-acc-overlay open';
+  ov.innerHTML = '<div class="mine-acc-modal book-card"><div class="book-new-body"><div class="book-new-preview book-card-cover"></div>' +
+    '<div class="book-card-info"><b></b><div class="book-card-note"></div><small></small></div></div>' +
+    '<div class="mine-acc-actions"></div></div>';
+  var cv = ov.querySelector('.book-card-cover');
+  cv.style.cssText = book.style.cssText;
+  cv.style.opacity = '';
+  if (book._sys) cv.textContent = SYS_BOOK_EMBLEM[book._sys] || '';
+  ov.querySelector('b').textContent = slot.querySelector('.book-label').textContent;
+  var note = ov.querySelector('.book-card-note');
+  note.textContent = book._sys ? '系统自带的书' : (book._note || '还没有备注');
+  note.classList.toggle('empty', !book._note && !book._sys);
+  ov.querySelector('small').textContent = typeof bookInfoLine === 'function' ? bookInfoLine(book) : '';
+  var acts = ov.querySelector('.mine-acc-actions'), close = function() { ov.remove(); };
+  (book._sys ? [['关闭', 'close', close]] : [['删除', 'close', function() { close(); openDelConfirm(slot); }], ['编辑', 'add', function() { close(); openBookEdit(slot); }]]).forEach(function(b) {
+    var btn = document.createElement('button');
+    btn.className = 'mine-acc-btn mine-acc-btn-' + b[1];
+    btn.textContent = b[0];
+    btn.addEventListener('click', b[2]);
+    acts.appendChild(btn);
+  });
+  closeOnBackdrop(ov, close);
+  (document.querySelector('.phone') || document.body).appendChild(ov);
+}
