@@ -13,7 +13,9 @@ function mountCssPresets(textareaId, onApply) {
     apply: function(p) { ta.value = p.css; ta.dispatchEvent(new Event('input', { bubbles: true })); if (onApply) onApply(); },
     save: function(n) { if (!ta.value.trim()) { showToast('框里还是空的', 'error'); return false; } cssPresets = cssPresets.filter(function(x) { return x.name !== n; }).concat([{ id: 'cp' + Date.now().toString(36), name: n, css: ta.value }]); saveCssPresets(); },
     del: function(p) { cssPresets = cssPresets.filter(function(x) { return x.id !== p.id; }); saveCssPresets(); },
-    match: function() { return ta.value.trim() ? cssPresets.filter(function(x) { return x.css === ta.value; })[0] || null : null; }
+    match: function() { return ta.value.trim() ? cssPresets.filter(function(x) { return x.css === ta.value; })[0] || null : null; },
+    share: { type: 'css-presets', file: 'CSS 预设', items: function() { return cssPresets; },
+      add: function(list) { var n = 0; list.forEach(function(p) { if (!p || !p.name || typeof p.css !== 'string') return; cssPresets = cssPresets.filter(function(x) { return x.name !== p.name; }).concat([{ id: 'cp' + Date.now().toString(36) + n, name: p.name, css: p.css }]); n++; }); saveCssPresets(); return n; } }
   });
   cssPresetBoxes.push(box);
   ta.addEventListener('input', box.refresh);   // 框里的字和哪个预设一样，抽屉上就写哪个
@@ -26,7 +28,7 @@ mountCssPresets('globalCssInput', function() { document.getElementById('globalCs
 // 美化的导出 / 导入：{ app: 'mphone', type: 'look', chat, drama, status }，勾哪几样就导出 / 套用哪几样
 // 导入后改到这个角色的美化页上（和手动改一样立刻生效）
 // =============================================
-var LOOK_STATUS_KEYS = ['statusOn', 'statusFields', 'statusTpl', 'statusCss', 'statusFind', 'statusRules'];
+var LOOK_STATUS_KEYS = ['statusOn', 'statusDrama', 'statusFields', 'statusTpl', 'statusCss', 'statusFind', 'statusRules'];
 var lookShareOverlay = document.getElementById('lookShareOverlay');
 var lookShareMode = 'export', lookShareData = null;
 function lookShareCurrent() {

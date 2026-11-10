@@ -289,7 +289,7 @@ function readDiaryCfgForm() {
 document.getElementById('diaryAutoOn').addEventListener('change', function() {
   document.getElementById('diaryAutoSub').classList.toggle('open', this.checked);
 });
-var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', boxLayout: 'side', boxStyle: 'soft', boxMeta: true, boxActs: true, statusOn: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '', statusFind: '', statusRules: '' };
+var DEFAULT_LOOK = { showAvatar: true, headAvatar: false, headAlign: 'center', format: 'bubble', boxLayout: 'side', boxStyle: 'soft', boxMeta: true, boxActs: true, statusOn: false, statusDrama: false, statusFields: '心情,位置,在做什么,好感度', statusTpl: DEFAULT_STATUS_TPL, statusCss: '', statusFind: '', statusRules: '' };
 
 // 表单里暂存的 USER 账号选择与各账号印象（切换账号时不丢）
 // csAccUid 为 '' 表示跟随主账号（「我的」里当前使用的账号）
@@ -450,6 +450,7 @@ function setLookForm(l) {
   document.getElementById('dramaBoxMeta').checked = l.boxMeta !== false;
   document.getElementById('dramaBoxActs').checked = l.boxActs !== false;
   document.getElementById('statusOn').checked = l.statusOn;
+  document.getElementById('statusDrama').checked = !!l.statusDrama;
   document.getElementById('statusFields').value = l.statusFields;
   document.getElementById('statusTpl').value = statusTplOf(l);
   document.getElementById('statusCss').value = l.statusCss;
@@ -473,6 +474,7 @@ function readLookForm() {
     boxMeta:      document.getElementById('dramaBoxMeta').checked,
     boxActs:      document.getElementById('dramaBoxActs').checked,
     statusOn:     document.getElementById('statusOn').checked,
+    statusDrama:  document.getElementById('statusDrama').checked,
     statusFields: document.getElementById('statusFields').value.trim() || DEFAULT_LOOK.statusFields,
     statusTpl:    document.getElementById('statusTpl').value.trim(),
     statusCss:    document.getElementById('statusCss').value,

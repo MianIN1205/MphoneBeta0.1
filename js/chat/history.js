@@ -9,7 +9,7 @@ function getChatHistory(idx) { var k = charKey(idx); if (!chatHistories[k]) chat
 function getDramaHistory(idx) { var k = charKey(idx); if (!dramaHistories[k]) dramaHistories[k] = []; return dramaHistories[k]; }
 // 一条消息要保存的字段；alts 是「重新生成」留下的多个版本（每个版本是一组消息）
 function stripMsg(m) {
-  var o = { role: m.role, content: m.content, imgSrc: m.imgSrc, sticker: m.sticker, status: m.status, time: m.time,
+  var o = { role: m.role, content: m.content, imgSrc: m.imgSrc, sticker: m.sticker, status: m.status, statusHtml: m.statusHtml, statusLined: m.statusLined, time: m.time,
             quote: m.quote, recalled: m.recalled, recalledText: m.recalledText, recalledBy: m.recalledBy,
             voice: m.voice, transcript: m.transcript, action: m.action, recap: m.recap, pat: m.pat, patSuffix: m.patSuffix, cal: m.cal,
             narr: m.narr, note: m.note, noteAI: m.noteAI, think: m.think, errs: m.errs, file: m.file, textImg: m.textImg, photo: m.photo, illus: m.illus, tg: m.tg, speaker: m.speaker, play: m.play, whisperChat: m.whisperChat };

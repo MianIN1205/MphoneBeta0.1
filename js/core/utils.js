@@ -357,8 +357,22 @@ function showToast(msg, type) {
   vv.addEventListener('scroll', fit);
 })();
 
+// 分类导出 / 导入（用户要的：能自定义的东西都能按分类单独导出、导入，方便备份和分享）：文件是 { app: 'mphone', type, version, … }
+function mphoneExportFile(type, data, name) {
+  var obj = Object.assign({ app: 'mphone', type: type, version: 1, exportedAt: Date.now() }, data);
+  return shareOrDownload(new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' }), String(name).replace(/[\\/:*?"<>|]/g, '_') + '.json');
+}
+function mphoneImportFile(type, cb) {
+  pickFile('.json,.txt,application/json,text/plain', function(f) {
+    f.text().then(function(t) {
+      var o = JSON.parse(t.replace(/^\uFEFF/, ''));
+      if (!o || o.app !== 'mphone' || o.type !== type) throw new Error('type');
+      cb(o);
+    }).catch(function() { showToast('✗ 不是眠花糖机导出的这类文件', 'error'); });
+  });
+}
 // 预设抽屉（状态栏预设、CSS 预设共用，用户要的：放在要填的东西前面，点开是一列预设，右边「保存」「删除」，像 API 预设那样）
-// o = { list() → [{ name, builtin }], apply(p), save(名字)（返回 false = 不存）, del(p), match() → 现在填的和哪个一样（可选）, suggest() → 存的时候默认的名字（可选） }
+// o = { list() → [{ name, builtin }], apply(p), save(名字)（返回 false = 不存）, del(p), share: { type, items(), add(list) }（列表最下面「导出全部 / 导入」，可选）, match() → 现在填的和哪个一样（可选）, suggest() → 存的时候默认的名字（可选） }
 function mountPresetDrawer(before, o) {
   var box = document.createElement('div');
   box.className = 'pd-box';
@@ -382,6 +396,20 @@ function mountPresetDrawer(before, o) {
       });
       listEl.appendChild(it);
     });
+    if (o.share) {
+      var tools = document.createElement('div');
+      tools.className = 'pd-tools';
+      tools.innerHTML = '<button data-x="out">导出全部</button><button data-x="in">导入</button>';
+      tools.querySelector('[data-x="out"]').addEventListener('click', function() {
+        var items = o.share.items();
+        if (!items.length) { showToast('还没有自己存的预设', 'plain'); return; }
+        mphoneExportFile(o.share.type, { items: items }, o.share.file || '预设');
+      });
+      tools.querySelector('[data-x="in"]').addEventListener('click', function() {
+        mphoneImportFile(o.share.type, function(f) { var n = o.share.add(f.items || []); paint(); showToast('✓ 导入了 ' + n + ' 个预设（同名的换成了新的）', 'success'); });
+      });
+      listEl.appendChild(tools);
+    }
   }
   box.querySelector('.pd-head').addEventListener('click', function() { box.classList.toggle('open'); });
   box.querySelector('[data-act="save"]').addEventListener('click', function() {

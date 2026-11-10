@@ -15,8 +15,8 @@ function commitAssistantReply(hist, raw, list, empty) {
   raw = th.text;
   var st = takeStatus(raw);
   raw = st.text; status = st.status;
-  // 状态栏：角色照规则写，用正则认出来（只在聊天窗口）
-  var sc = charOfHistory(hist), sLook = sc && chatHistories[sc.id] === hist ? Object.assign({}, DEFAULT_LOOK, sc.look || {}) : null;
+  // 状态栏：角色照规则写，用正则认出来（聊天窗口；剧情窗口开了「也写状态栏」时也认）
+  var sc = charOfHistory(hist), sLook = sc && (chatHistories[sc.id] === hist || (dramaHistories[sc.id] === hist && statusOnFor(sc, true))) ? Object.assign({}, DEFAULT_LOOK, sc.look || {}) : null;
   var sSpec = sLook && sLook.statusOn ? statusSpec(sLook) : null;
   if (sSpec && typeof statusRegexTake === 'function') {
     var rt = statusRegexTake(sSpec, status || raw);
@@ -54,6 +54,10 @@ function commitAssistantReply(hist, raw, list, empty) {
   // 剧情配图：<配图>这一幕的画面</配图> 拿出来，回复后面单独一条（设置里剧情配图选了生图才会写）
   var illus = '', isDramaHist = !!(rc && dramaHistories[rc.id] === hist);
   raw = raw.replace(/<配图>([\s\S]*?)(<\/配图>|$)/g, function(_, s) { illus = s.replace(/\s+/g, ' ').trim(); return ''; });
+  // MianIN 发文件：<文件 名字="xx.css">内容</文件> 拆成单独一条文件消息，点开能复制、保存（js/chat/file-send.js，用户要的）
+  var outFiles = [];
+  if (rc && typeof isAssistantOn === 'function' && isAssistantOn(rc) && typeof fileFromText === 'function')
+    raw = raw.replace(/<文件\s+名字\s*=\s*["“]([^"”<>\n]{1,60})["”]\s*>([\s\S]*?)(<\/文件>|$)/g, function(_, n, t) { var f = fileFromText(n, t); if (f) outFiles.push(f); return ''; });
   var parts = raw.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean);
   // 聊天窗口：角色发的照片 <照片>画面</照片> 拆成单独一条（js/chat/img-use.js）
   if (rc && chatHistories[rc.id] === hist && typeof photoSplitParts === 'function') parts = photoSplitParts(parts, hist);
@@ -68,11 +72,15 @@ function commitAssistantReply(hist, raw, list, empty) {
   var added = parts.map(function(p) {
     return typeof p === 'string' ? { role: 'assistant', content: p, time: now } : Object.assign({ role: 'assistant', time: now }, p);
   });
-  if (added.length && status) added[added.length - 1].status = status;
+  if (added.length && status) {
+    added[added.length - 1].status = status;
+    if (sLook && typeof statusBodyOf === 'function') statusBodyOf(sc, sLook, added[added.length - 1]);   // 收到时就画好存起来，以后打开面板直接用
+  }
   if (added.length && th.think) added[0].think = th.think;
   if (added.length && recap) added[added.length - 1].recap = recap;
   actions.forEach(function(a) { added.push({ role: 'assistant', content: '', action: a, time: now }); });
   calItems.forEach(function(c) { added.push({ role: 'assistant', content: '', cal: c, time: now }); });
+  outFiles.forEach(function(f) { added.push({ role: 'assistant', content: '[发了一个文件：《' + f.name + '》]', file: f, time: now }); });
   if (illus && isDramaHist && typeof imgUse === 'function' && imgUse('drama') === 'gen') added.push({ role: 'assistant', content: '[配图] ' + illus, textImg: illus, illus: true, time: now });
   var pc = charOfHistory(hist);
   if (patBack && pc && chatHistories[pc.id] === hist && Object.assign({}, DEFAULT_CHAT_CFG, pc.chatCfg || {}).patOn) added.push({ role: 'assistant', content: '', pat: 'user', time: now });
@@ -428,17 +436,17 @@ function sendMsg(userText, requestOnly, onDone) {
       aiText = full;
       if (isGrp) { scrollLive(); return; }   // 群聊：收完再一条条出来，中间只显示「正在输入」
       // 导入的酒馆状态栏那段不在聊天里冒出来
-      var liveText = (isChatView && typeof statusStreamCut === 'function') ? statusStreamCut(replyChar, aiText) : aiText;
+      var liveText = ((isChatView || statusOnFor(replyChar, true)) && typeof statusStreamCut === 'function') ? statusStreamCut(replyChar, aiText) : aiText;
       // 操作块不直接显示原始代码，写完后会变成确认卡片
       var shown = liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
         .replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
-        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设|记下持有)[\s\S]*?(<\/(待关心|已关心|补人设|记下持有)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设|记下持有)[\s\S]*?(<\/(待关心|已关心|补人设|记下持有)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<文件[\s\S]*?(<\/文件>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
         .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, '').trim();
       if (bubbleStream && shown.indexOf('⚙️') < 0) {
         // 聊天窗口：写完的句子一个一个冒出来，打字气泡保持小点
         if (started) { typing.bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>'; started = false; }
         previewStream(liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
-          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设|记下持有)[\s\S]*?(<\/(待关心|已关心|补人设|记下持有)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
+          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设|记下持有)[\s\S]*?(<\/(待关心|已关心|补人设|记下持有)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<文件[\s\S]*?(<\/文件>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
           .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, ''));
       } else {
         if (!started) { typing.bubble.innerHTML = ''; started = true; }

@@ -445,7 +445,7 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
   transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1);
 }
 
-.preset-list.open { max-height: 300px; }
+.preset-list.open { max-height: 300px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }   /* 存了很多时能往下滑（以前滑不动，用户反馈过） */
 
 .preset-item {
   padding: 12px 16px;
@@ -533,6 +533,17 @@ textarea.field-input { resize: vertical; font-family: inherit; line-height: 1.5;
 .pd-btn[data-act="del"] { background: rgba(0, 0, 0, 0.045); color: #999; }
 .pd-btn:active { transform: scale(0.95); }
 .pd-list { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
-.pd-box.open .pd-list { max-height: 240px; overflow-y: auto; margin-top: 6px; }
+.pd-box.open .pd-list { max-height: 240px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; margin-top: 6px; }
+.pd-tools { display: flex; gap: 8px; padding: 6px 4px 2px; }
+.pd-tools button { flex: 1; border: none; border-radius: 8px; padding: 7px 0; font: inherit; font-size: 12px; background: rgba(0,0,0,0.04); color: #888; cursor: pointer; }
 .pd-item { padding: 9px 12px; border-radius: 8px; font-size: 13px; color: #444; cursor: pointer; }
 .pd-item:active, .pd-item.selected { background: rgba(208, 88, 120, 0.1); color: #C05070; font-weight: 600; }
+/* 从别的小手机搬家（js/settings/transfer.js）：认出来的一样一行，勾选 + 放到哪里 */
+.xf-list { max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.xf-sec { font-size: 12px; font-weight: 600; color: #b08a96; margin: 4px 2px 0; }
+.xf-row { display: flex; gap: 10px; align-items: flex-start; background: rgba(250,240,244,0.9); border-radius: 12px; padding: 10px 12px; }
+.xf-row input { flex: none; margin-top: 3px; accent-color: #d05878; }
+.xf-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.xf-main b { font-size: 14px; color: #444; word-break: break-all; }
+.xf-main small { font-size: 11.5px; color: #999; }
+.xf-select { width: 100%; border: none; border-radius: 8px; background: #fff; padding: 6px 8px; font: inherit; font-size: 12px; color: #666; }

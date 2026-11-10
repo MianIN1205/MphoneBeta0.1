@@ -93,6 +93,13 @@ function renderWbList() {
       head.appendChild(renBtn);
       head.appendChild(delBtn);
     }
+    if (g.entries.length) {   // 一个文件夹单独导出（用户要的：按分类导出，方便备份、分享）
+      var outBtn = document.createElement('button');
+      outBtn.className = 'wb-folder-act';
+      outBtn.textContent = '导出';
+      outBtn.addEventListener('click', function(e) { e.stopPropagation(); wbExport([g], g.name); });
+      head.appendChild(outBtn);
+    }
     folder.appendChild(head);
 
     var body = document.createElement('div');
@@ -143,6 +150,15 @@ function renderWbList() {
   });
 }
 
+// 导出世界书：眠花糖机的世界书文件（「导入世界书」认得），一个文件夹或者全部
+function wbExport(groups, name) {
+  groups = groups.filter(function(g) { return g.entries.length; });
+  if (!groups.length) { showToast('还没有世界书', 'plain'); return; }
+  mphoneExportFile('worldbook', { folders: groups.map(function(g) {
+    return { name: g.name, entries: g.entries.map(function(e) { return { name: e.name, keywords: e.keywords || '', content: e.content || '', pos: e.pos || 'auto', enabled: e.enabled !== false }; }) };
+  }) }, '世界书-' + name);
+}
+document.getElementById('wbExportAllBtn').addEventListener('click', function(e) { e.stopPropagation(); wbExport(wbGroups(), '全部'); });
 // 长按半秒（按在开关上、手指挪动了都不算），长按后松手的那次点击不再打开 / 收起
 function wbLongPress(el, onLong) {
   var timer = null, sx = 0, sy = 0, fired = false;

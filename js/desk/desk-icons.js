@@ -202,5 +202,23 @@ document.getElementById('deskIconPresetSave').addEventListener('click', function
   useDeskIconPreset(p);
   showToast('✓ 已存为「' + n + '」', 'success');
 });
+// 导出 / 导入自己存的图标预设（用户要的：按分类单独导出，方便备份）
+document.getElementById('deskIconPresetOut').addEventListener('click', function() {
+  var mine = deskIconPresets.list.filter(function(p) { return !p.builtin; }).map(function(p) { return { name: p.name, base: p.base || '', icons: p.icons || {} }; });
+  if (!mine.length) { showToast('还没有自己存的预设，先「存为预设」', 'plain'); return; }
+  mphoneExportFile('icon-presets', { items: mine }, '桌面图标预设');
+});
+document.getElementById('deskIconPresetIn').addEventListener('click', function() {
+  mphoneImportFile('icon-presets', function(f) {
+    var n = 0;
+    (f.items || []).forEach(function(p) {
+      if (!p || !p.name || DESK_ICON_BUILTIN.some(function(b) { return b.name === p.name; })) return;
+      deskIconPresets.list = deskIconPresets.list.filter(function(x) { return x.builtin || x.name !== p.name; }).concat([{ id: 'ip' + Date.now().toString(36) + n, name: String(p.name).slice(0, 12), base: p.base || '', icons: p.icons || {} }]);
+      n++;
+    });
+    saveDeskIconPresets(); renderDeskIconUi();
+    showToast('✓ 导入了 ' + n + ' 个图标预设', 'success');
+  });
+});
 renderDeskIconUi();
 document.getElementById('dockAppearance').addEventListener('click', renderDeskIconUi);

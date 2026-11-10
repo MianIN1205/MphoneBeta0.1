@@ -78,8 +78,18 @@ function chatFormatRules(char) {
   rules.push('如果你此刻的状态有变化（在做什么、心情），在全部消息最后另起一行写 <签名>不超过 12 个字</签名>，' +
              '它会显示在聊天界面你名字的下面，像微信状态一样（比如「在赶地铁」「有点困了」）。现在显示的是「' +
              (char.headStatus || CHAT_SUB_DEFAULT) + '」，没变就不用写。');
-  // 状态栏：照「生成规则」写，小手机用正则认出来画成卡片（statusSpec，见 js/char/settings.js）
-  if (look.statusOn && !(typeof readerOpenWith === 'function' && readerOpenWith(char))) {   // 在书里一起看时先不要状态栏
+  if (!(typeof readerOpenWith === 'function' && readerOpenWith(char))) statusRulesFor(char, false).forEach(function(r) { rules.push(r); });   // 在书里一起看时先不要状态栏
+  return rules.length ? [{ role: 'system', content: '【回复格式】' + rules.join('\n') }] : [];
+}
+// 状态栏用在哪个窗口：聊天窗口开了就有；剧情窗口要另外打开「剧情窗口也写状态栏」（用户要的，能开能关），两边用同一套写法
+function statusOnFor(char, drama) {
+  var look = Object.assign({}, DEFAULT_LOOK, (char && char.look) || {});
+  return !!(char && !char.isGroup && look.statusOn && (!drama || look.statusDrama));
+}
+// 状态栏：照「生成规则」写，小手机用正则认出来画成卡片（statusSpec，见 js/char/settings.js）
+function statusRulesFor(char, drama) {
+  var rules = [], look = Object.assign({}, DEFAULT_LOOK, char.look || {});
+  if (statusOnFor(char, drama)) {
     var spec = statusSpec(look);
     if (spec) {
       // 和酒馆的正则状态栏一样：照「生成规则」写，格式、外层标签都照规则来；没写规则就照正则的格式
@@ -92,10 +102,10 @@ function chatFormatRules(char) {
                  '保留模板里的标签和样式，只把内容换成你此刻的真实状态。\n' + fillMacros(statusTplOf(look), char));
     }
     // 接着上一次的状态写，数值不会忽高忽低
-    var prev = lastStatusOf(chatHistories[char.id]);
+    var prev = lastStatusOf((drama ? dramaHistories : chatHistories)[char.id]);
     if (prev) rules.push('你上一次的状态是：' + prev + '\n这次在它的基础上按刚才发生的事自然变化，没变的项照抄，数值不要无故大起大落。');
   }
-  return rules.length ? [{ role: 'system', content: '【回复格式】' + rules.join('\n') }] : [];
+  return rules;
 }
 
 // 酒馆通用写法：{{char}} = 角色名，{{user}} = 用户名（本聊天所用账号的昵称）；也认旧写法 <BOT> / <USER>。
@@ -117,7 +127,8 @@ function fillMacros(text, char) {
 function dramaFormatRules(char) {
   var illus = (typeof imgUse === 'function' && imgUse('drama') === 'gen')
     ? '再另起一行写 <配图>用一两句话描述这一幕的画面（人物外貌和动作、场景、光线、氛围），会照着它画一张配图</配图>，这一行也不会显示出来。' : '';
-  return [{ role: 'system', content: '【回复格式】在回复的最后另起一行写 <前情>用一句话概括这一轮发生了什么（30 字以内，第三人称，写清楚谁做了什么）</前情>。这一行不会显示出来，只用来记住剧情。' + illus }];
+  var st = statusRulesFor(char, true);   // 开了「剧情窗口也写状态栏」才有
+  return [{ role: 'system', content: '【回复格式】在回复的最后另起一行写 <前情>用一句话概括这一轮发生了什么（30 字以内，第三人称，写清楚谁做了什么）</前情>。这一行不会显示出来，只用来记住剧情。' + illus + (st.length ? '\n' + st.join('\n') : '') }];
 }
 // 一个回合的前情（剧情回复里藏着的那句话）
 function roundRecap(r) {
@@ -284,12 +295,19 @@ var MPHONE_FICTION_NOTE = '【眠花糖机】「眠花糖机」（Muse）是眠�
 function cotRules(isDrama, char) {
   if (isDrama) return [];   // 思维链只给聊天窗口；剧情的思考交给预设（用户定的）
   var t = typeof cotPrompt === 'function' ? cotPrompt(cotModeFor(char, false)) : '';
-  return t ? [{ role: 'system', content: t }] : [];
+  if (!t) return [];
+  // 「锁住」：开了我们自己的思维链时，最后再单独提醒一次——先想、再写正文（用户要的）。
+  // 用「用户」身份、标明是系统提示：Claude 这类接口会把系统提示都挪到最前面，放在最后一条才离回复最近
+  return [{ role: 'system', content: fillMacros(t, char) }, { role: 'user', content: fillMacros('（这是小手机的系统提示，不是对方发来的消息）这次回复第一件事：先在 <thinking></thinking> 里把上面要想的想完，写完 </thinking> 再写正式回复；没写思考就直接回复不算完成。思考{{user}}看不到，正式回复里不要再提思考的内容。', char) }];   // {{char}} / {{user}} 换成名字（以前这里没换，原样发出去了）
 }
-// 从回复里摘出思考：<thinking>…</thinking>、有的模型直接把自带思考写成 <think>…</think>；只有开头没有结尾的就把那个标签去掉
+// 从回复里摘出思考：<thinking>…</thinking>、有的模型直接把自带思考写成 <think>…</think>；只有开头没有结尾的就把那个标签去掉；
+// 只有结尾没有开头的（模型忘了写开头）：结尾前面那段都算思考，不让它混进正文
 function takeThink(text) {
   var think = [];
-  text = String(text || '').replace(/<(thinking|think)>([\s\S]*?)<\/\1>/gi, function(_, t, s) { if (s.trim()) think.push(s.trim()); return ''; });
+  text = String(text || '');
+  var close = text.search(/<\/(thinking|think)>/i), open = text.search(/<(thinking|think)>/i);
+  if (close >= 0 && (open < 0 || open > close)) { var head = text.slice(0, close).trim(); if (head) think.push(head); text = text.slice(close).replace(/^<\/(thinking|think)>/i, ''); }
+  text = text.replace(/<(thinking|think)>([\s\S]*?)<\/\1>/gi, function(_, t, s) { if (s.trim()) think.push(s.trim()); return ''; });
   text = text.replace(/<\/?(thinking|think)>/gi, '');
   return { text: text.trim(), think: think.join('\n\n') };
 }

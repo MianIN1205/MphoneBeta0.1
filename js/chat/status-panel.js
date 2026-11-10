@@ -7,6 +7,18 @@
 // =============================================
 var crStatusPanel = document.getElementById('crStatusPanel');
 var STATUS_HISTORY = 10;
+var STATUS_HISTORY_DRAMA = 5;   // 剧情窗口只看最近 5 条（用户要的）
+// 一条状态栏画成什么样：第一次画好就存在这条消息上（m.statusHtml / m.statusLined），以后打开面板直接用，不再每次跑正则（用户要的，像 ovo 那样存渲染好的；
+// 以前每次打开都重新匹配，复杂的正则会卡）。之后改了美化，旧的几条保持当时的样子，新的照新写法画
+function statusBodyOf(char, look, m) {
+  if (typeof m.statusHtml === 'string') return { body: m.statusHtml, lined: !!m.statusLined, cached: true };
+  var spec = statusSpec(look), rx = spec ? statusRegexRender(spec, m.status) : null, body, lined = false;
+  if (rx) body = statusSafeHtml(fillMacros(rx, char));
+  else if (statusIsHtml(m.status)) body = statusSafeHtml(fillMacros(m.status, char));
+  else { body = statusTextHtml(fillMacros(m.status, char).replace(/\n+/g, '|')); lined = true; }
+  m.statusHtml = body; m.statusLined = lined;
+  return { body: body, lined: lined };
+}
 
 // 去掉脚本、内嵌页面和事件属性，只留标签和样式
 function statusSafeHtml(html) {
@@ -147,15 +159,20 @@ function statusFontFollow(html) {
     return fonts.length && fonts.every(function(f) { return STATUS_GENERIC_FONTS.test(f); }) ? '' : all;
   });
 }
-// 小梦改状态栏的确认卡片上的效果图：拿这个角色最近一条状态栏，照改完的写法画一张（和面板里一样放进 Shadow DOM）；没有状态栏就不画
+// 小梦改状态栏的确认卡片上的效果图：拿这个角色最近一条状态栏，照改完的写法画一张
 function statusPreviewEl(a) {
   var char = typeof findCharByName === 'function' ? findCharByName(a.target) : null;
   if (!char) return null;
-  var hist = chatHistories[char.id] || [], last = null;
+  return statusCardEl(char, Object.assign({}, DEFAULT_LOOK, char.look || {}, typeof statusLookPatch === 'function' ? statusLookPatch(a) : {}), true);
+}
+// 照一套状态栏写法画一张卡片（和面板里一样放进 Shadow DOM）：有最近一条状态栏就用它；没有时（needLast = false）把模板里的 $1、$2 换成「…」画个样子
+function statusCardEl(char, look, needLast) {
+  var hist = (char && chatHistories[char.id]) || [], last = null;
   for (var i = hist.length - 1; i >= 0; i--) if (hist[i] && hist[i].status) { last = hist[i]; break; }
-  if (!last) return null;
-  var look = Object.assign({}, DEFAULT_LOOK, char.look || {}, typeof statusLookPatch === 'function' ? statusLookPatch(a) : {});
-  var spec = statusSpec(look), rx = spec ? statusRegexRender(spec, last.status) : null, body, lined = false;
+  var spec = statusSpec(look);
+  if (!last && (needLast || !spec || !spec.tpl)) return null;
+  if (!last) last = { status: '' };
+  var rx = !last.status ? String(spec.tpl).replace(/\$\d+|\{\{\s*match\s*\}\}/gi, '…') : spec ? statusRegexRender(spec, last.status) : null, body, lined = false;
   if (rx) body = statusSafeHtml(fillMacros(rx, char));
   else if (statusIsHtml(last.status)) body = statusSafeHtml(fillMacros(last.status, char));
   else { body = statusTextHtml(fillMacros(last.status, char).replace(/\n+/g, '|')); lined = true; }
@@ -171,17 +188,18 @@ function renderStatusPanel() {
   var char = charList[openingChatCharIdx];
   crStatusPanel.innerHTML = '';
   if (!char) return;
-  var look = Object.assign({}, DEFAULT_LOOK, char.look || {});
-  // 从旧到新排成一行，打开时停在最新一条；往右滑看更早的
-  var all = getChatHistory(openingChatCharIdx).filter(function(m) { return m.status && !m.recalled; }).slice(-STATUS_HISTORY);
+  var look = Object.assign({}, DEFAULT_LOOK, char.look || {}), drama = currentCrSubView === 'contacts';
+  // 从旧到新排成一行，打开时停在最新一条；往右滑看更早的；剧情窗口看剧情里的状态栏
+  var all = ((drama ? dramaHistories : chatHistories)[char.id] || []).filter(function(m) { return m.status && !m.recalled; }).slice(drama ? -STATUS_HISTORY_DRAMA : -STATUS_HISTORY);
   if (!all.length) {
     var empty = document.createElement('div');
     empty.className = 'cr-sp-empty';
-    empty.textContent = look.statusOn ? '还没有状态，等角色下一次回复吧' : '还没有状态栏，可以在角色设置 →「美化」→「状态栏」里开启';
+    empty.textContent = drama && look.statusOn && !look.statusDrama ? '剧情窗口还没开状态栏，可以在角色设置 →「美化」→「状态栏」里打开「剧情窗口也写状态栏」'
+      : look.statusOn ? '还没有状态，等角色下一次回复吧' : '还没有状态栏，可以在角色设置 →「美化」→「状态栏」里开启';
     crStatusPanel.appendChild(empty);
     return;
   }
-  var spec = statusSpec(look);
+  var newCache = false;
   var track = document.createElement('div');
   track.className = 'cr-sp-track';
   all.forEach(function(m) {
@@ -192,10 +210,8 @@ function renderStatusPanel() {
     time.textContent = m.time ? fmtMsgTime(m.time) : '';
     // 卡片内容放进 Shadow DOM：模板自带的 <style> 只管自己，不影响聊天界面
     // 正则认得出就套进美化 HTML；以前 AI 直接写的整段 HTML 照原样显示；都不是就按行显示成线条本卡片
-    var body, lined = false, rx = spec ? statusRegexRender(spec, m.status) : null;
-    if (rx) body = statusSafeHtml(fillMacros(rx, char));
-    else if (statusIsHtml(m.status)) body = statusSafeHtml(fillMacros(m.status, char));
-    else { body = statusTextHtml(fillMacros(m.status, char).replace(/\n+/g, '|')); lined = true; }
+    var sb = statusBodyOf(char, look, m), body = sb.body, lined = sb.lined;
+    if (!sb.cached) newCache = true;
     var card = document.createElement('div');
     card.className = 'cr-status-card' + (lined ? ' cr-status-lined' : '');
     var root = card.attachShadow({ mode: 'open' });
@@ -222,7 +238,7 @@ function renderStatusPanel() {
           return;
         }
         openConfirm('删除这一条状态？（聊天消息还在，只删状态栏）', function() {
-          delete m.status;
+          delete m.status; delete m.statusHtml; delete m.statusLined;
           saveHistories();
           renderStatusPanel();
         });
@@ -233,6 +249,7 @@ function renderStatusPanel() {
     track.appendChild(item);
   });
   crStatusPanel.appendChild(track);
+  if (newCache) saveHistories();   // 以前的状态栏第一次画：画好的存起来，下次不用再画
   // 第几条 / 共几条（只有一条时不显示）
   var count = document.createElement('div');
   count.className = 'cr-sp-count';
@@ -260,12 +277,23 @@ function renderStatusPanel() {
 
 function openStatusPanel() {
   // 面板从顶栏（开了便捷拓展栏就从拓展栏）下沿开始
-  var under = appChatRoom.classList.contains('cr-qb-on') ? document.getElementById('crQuickBar') : appChatRoom.querySelector('.settings-nav');
-  var roomTop = appChatRoom.getBoundingClientRect().top, top = under.getBoundingClientRect().bottom - roomTop;
-  crStatusPanel.style.top = top + 'px';
-  // 高度一直到输入栏上面（卡片长的话在面板里上下滑）
-  var barTop = crBottomBar ? crBottomBar.getBoundingClientRect().top - roomTop : appChatRoom.clientHeight;
-  var maxH = Math.max(160, barTop - top - 4);
+  var under = appChatRoom.classList.contains('cr-qb-on') && !appChatRoom.classList.contains('cr-qb-in-nav') ? document.getElementById('crQuickBar') : appChatRoom.querySelector('.settings-nav');
+  var roomRect = appChatRoom.getBoundingClientRect(), roomTop = roomRect.top, top = under.getBoundingClientRect().bottom - roomTop;
+  // 名字在下面的时候（仿siya）：面板从名字上方往上长（用户要的），不从顶栏下面出来
+  var name = appChatRoom.querySelector('.chat-room-title-text').getBoundingClientRect(), fromName = name.top - roomTop > roomRect.height / 2;
+  var maxH;
+  if (fromName) {
+    crStatusPanel.style.top = 'auto';
+    crStatusPanel.style.bottom = (roomRect.bottom - name.top + 6) + 'px';
+    maxH = Math.max(160, name.top - roomTop - top - 12);
+  } else {
+    crStatusPanel.style.bottom = '';
+    crStatusPanel.style.top = top + 'px';
+    // 高度一直到输入栏上面（卡片长的话在面板里上下滑）
+    var barTop = crBottomBar ? crBottomBar.getBoundingClientRect().top - roomTop : appChatRoom.clientHeight;
+    maxH = Math.max(160, barTop - top - 4);
+  }
+  crStatusPanel.classList.toggle('from-name', fromName);
   crStatusPanel.style.maxHeight = maxH + 'px';
   crStatusPanel.style.setProperty('--sp-max', maxH + 'px');   // 每一条在这个高度里自己上下滑
   crStatusPanel.classList.add('open');

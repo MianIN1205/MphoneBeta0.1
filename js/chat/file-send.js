@@ -137,6 +137,11 @@ function openFileView(m) {
   fileViewOverlay.classList.add('open');
 }
 document.getElementById('fileViewClose').addEventListener('click', function() { fileViewOverlay.classList.remove('open'); });
+// 保存成文件（MianIN 发来的 CSS、世界书这些，用户要能直接存下来）
+document.getElementById('fileViewSave').addEventListener('click', function() {
+  if (!fileViewing) return;
+  shareOrDownload(new Blob([fileViewing.text || ''], { type: 'text/plain;charset=utf-8' }), fileViewing.name || '文件.txt');
+});
 document.getElementById('fileViewCopy').addEventListener('click', function() {
   if (!fileViewing || !navigator.clipboard) { showToast('✗ 这里不能复制', 'error'); return; }
   navigator.clipboard.writeText(fileViewing.text || '').then(function() { showToast('✓ 已复制', 'success'); }, function() { showToast('✗ 复制失败', 'error'); });
@@ -148,7 +153,16 @@ closeOnBackdrop(fileViewOverlay);
 // =============================================
 function fileTextForAI(m) {
   var f = m.file || {};
-  return '[发来一个文件：《' + (f.name || '文件') + '》' + (f.text ? '，全文在前面「用户发来的文件」里' : '') + ']';
+  return (m.role === 'assistant' ? '[你发了一个文件：《' : '[发来一个文件：《') + (f.name || '文件') + '》' + (f.text ? '，全文在前面「聊天里的文件」里' : '') + ']';
+}
+// MianIN 回复里的 <文件 名字="…">内容</文件> 变成一个文件（整段包在 ``` 里的去掉外壳）
+function fileFromText(name, text) {
+  text = String(text || '').replace(/^\s*\n/, '').replace(/\s+$/, '');
+  var fence = text.match(/^```[\w-]*\n([\s\S]*?)\n?```$/);
+  if (fence) text = fence[1];
+  if (!text.trim()) return null;
+  name = String(name).trim() || '文件.txt';
+  return { name: name, size: new Blob([text]).size, ext: (name.match(/\.([a-z0-9]{1,6})$/i) || [, 'txt'])[1].toLowerCase(), text: text };
 }
 function filesContextFor(history) {
   var files = (history || []).filter(function(m) { return m.file && m.file.text && !m.recalled; });
@@ -156,7 +170,7 @@ function filesContextFor(history) {
   var left = FILE_AI_BUDGET, parts = [];
   for (var i = files.length - 1; i >= 0; i--) {
     var f = files[i].file, when = files[i].time ? fmtMsgTime(files[i].time) : '';
-    var head = '《' + f.name + '》' + (when ? '（' + when + ' 发来）' : '');
+    var head = '《' + f.name + '》' + (when ? '（' + when + (files[i].role === 'assistant' ? ' 你发的）' : ' 发来）') : (files[i].role === 'assistant' ? '（你发的）' : ''));
     var cost = estTokens(f.text);
     if (left <= 500) { parts.unshift(head + '：这次放不下全文了（前面的文件太长）。需要的话请用户重新发一次。'); continue; }
     var text = f.text;
@@ -168,6 +182,6 @@ function filesContextFor(history) {
     left -= cost;
     parts.unshift(head + (f.cut ? '（原文件太长，只存了前面一部分）' : '') + '\n<<<文件开始>>>\n' + text + '\n<<<文件结束>>>');
   }
-  return { role: 'system', content: '【用户发来的文件】下面是用户在聊天里发给你的文件全文（按发送先后）。聊天记录里写着「[发来一个文件：《…》]」的，就是这些文件。' +
+  return { role: 'system', content: '【聊天里的文件】下面是聊天里发过的文件全文（按发送先后，标着「你发的」是你自己发给用户的）。聊天记录里写着「[发来一个文件：《…》]」「[你发了一个文件：《…》]」的，就是这些文件。' +
     '用户让你读、参考、总结、修改的时候以这里的原文为准，可以引用原句；没问到的时候不用主动复述。\n\n' + parts.join('\n\n') };
 }

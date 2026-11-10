@@ -63,7 +63,10 @@ function renderQuickBar() {
   var api = charApiPreset(char);
   var pre = charOwnPromptPreset(char);
   var qbDrama = typeof currentCrSubView !== 'undefined' && currentCrSubView === 'contacts';
-  var nWb = charWbOf(char, qbDrama).folders.length;
+  // 用到了几本：整本关联的 + 单独勾了条目的那几本（用户能在拓展栏里一条条勾）
+  var wbCur = charWbOf(char, qbDrama), wbUsed = wbCur.folders.slice();
+  (typeof wbEntries !== 'undefined' ? wbEntries : []).forEach(function(e) { if (wbCur.ids.indexOf(e.id) >= 0 && wbUsed.indexOf(e.folderId || '') < 0) wbUsed.push(e.folderId || ''); });
+  var nWb = wbUsed.length;
   var val = function(k, t) { crQuickBar.querySelector('[data-qb="' + k + '"] .cr-qb-val').textContent = t; };
   // 显示现在实际用的名字（用户要的）：跟着全局时写全局正在用的模型 / 预设，不写「跟随全局」
   val('api', api ? api.name : (getApiCfg().model || '未选模型'));
@@ -72,7 +75,7 @@ function renderQuickBar() {
   crQuickBar.querySelector('[data-qb="cot"]').style.display = drama ? 'none' : '';
   var gPre = typeof stPresets !== 'undefined' && (stPresets[stActivePresetIdx] || stPresets[0]);
   val('preset', pre ? pre.name : (gPre ? gPre.name : '无'));
-  var wbNames = charWbOf(char, qbDrama).folders.map(function(id) { var f = (typeof wbFolders !== 'undefined' ? wbFolders : []).filter(function(x) { return x.id === id; })[0]; return f ? f.name : ''; }).filter(Boolean);
+  var wbNames = wbUsed.map(function(id) { var f = (typeof wbFolders !== 'undefined' ? wbFolders : []).filter(function(x) { return x.id === id; })[0]; return f ? f.name : id ? '' : '未分类'; }).filter(Boolean);
   val('wb', !nWb ? '未选' : wbNames.length ? wbNames[0] + (nWb > 1 ? ' 等 ' + nWb + ' 本' : '') : nWb + ' 本');
   val('cot', typeof cotModeFor === 'function' ? cotName(cotModeFor(char, false)) : '');
   if (crQuickOpen) renderQuickPop();
@@ -84,6 +87,8 @@ function closeQuickPop() {
   crQuickBar.querySelectorAll('.cr-qb-chip').forEach(function(c) { c.classList.remove('open'); });
 }
 
+var crQbPreOpen = {};   // 拓展栏预设里展开看条目的（只在这次打开期间）
+var crQbWbOpen = {};   // 拓展栏世界书里展开看条目的那几本（只在这次打开期间）
 function quickItem(name, sub, selected, onClick) {
   var it = document.createElement('div');
   it.className = 'cr-qb-item' + (selected ? ' selected' : '');
@@ -97,6 +102,7 @@ function quickItem(name, sub, selected, onClick) {
   it.appendChild(s);
   it.addEventListener('click', function(e) { e.stopPropagation(); onClick(); });
   crQuickPop.appendChild(it);
+  return it;
 }
 
 function setQuickField(key, value) {
@@ -114,7 +120,7 @@ function statusFormPreset() {
   var v = function(id) { return document.getElementById(id).value; };
   return { fields: v('statusFields').trim() || DEFAULT_LOOK.statusFields, tpl: v('statusTpl').trim(), css: v('statusCss'), find: v('statusFind').trim(), rules: v('statusRules').trim() };
 }
-var statusPresetBox = mountPresetDrawer(document.getElementById('statusImportBtn'), {
+var statusPresetBox = mountPresetDrawer(document.querySelector('#statusSub .st-live-label'), {
   list: function() { return [Object.assign(statusBuiltin(), { builtin: true })].concat(statusPresets); },
   apply: function(p) {
     document.getElementById('statusOn').checked = true;
@@ -135,7 +141,9 @@ var statusPresetBox = mountPresetDrawer(document.getElementById('statusImportBtn
     var mine = statusFormPreset(), key = JSON.stringify(statusPresetSpec(mine));
     return this.list().filter(function(p) { return JSON.stringify(statusPresetSpec(p)) === key && (p.css || '') === (mine.css || ''); })[0] || null;
   },
-  suggest: function() { return statusImportName; }
+  suggest: function() { return statusImportName; },
+  share: { type: 'status-presets', file: '状态栏预设', items: function() { return statusPresets; },
+    add: function(list) { var n = 0; list.forEach(function(p) { if (!p || !p.name) return; statusPresets = statusPresets.filter(function(x) { return x.name !== p.name; }).concat([Object.assign({}, p, { id: 'sp' + Date.now().toString(36) + n })]); n++; }); saveStatusPresets(); return n; } }
 });
 
 // 导入酒馆正则状态栏（regex JSON，单个、数组、或者藏在预设 / 角色卡里的都认）：正则 + 美化 HTML 原样放进来，规则让用户自己贴
@@ -156,12 +164,17 @@ function syncStatusRegexForm(fold) {
     var v = $(p[0]).value.trim();
     $(p[1]).textContent = v ? v.length + ' 字' : '空着';
   });
-  if (fold) {
-    $('statusRulesFold').open = $('statusRules').value.trim().length < 400;
-    $('statusFindFold').open = false;
-    $('statusTplFold').open = false;
-    $('statusCssFold').open = false;
-  }
+  if (fold) $('statusCodeFold').open = false;   // 规则和代码平时收着（用户要的）
+  statusLivePaint();
+}
+// 「现在的样子」：照表单里现在的写法画一张卡片（这个角色有状态栏记录就用最近一条，没有就画个样子）
+function statusLivePaint() {
+  var box = document.getElementById('statusLive');
+  if (!box) return;
+  var p = statusFormPreset(), c = typeof editingCharIndex !== 'undefined' && editingCharIndex >= 0 ? charList[editingCharIndex] : null;
+  var el = statusCardEl(c, Object.assign({}, DEFAULT_LOOK, { statusOn: true, statusFields: p.fields, statusTpl: p.tpl, statusCss: p.css, statusFind: p.find, statusRules: p.rules }), false);
+  box.innerHTML = '';
+  if (el) box.appendChild(el); else box.innerHTML = '<div class="auto-hint" style="margin:0;">还画不出来：规则和代码里还没写好</div>';
 }
 ['statusTpl', 'statusFind', 'statusRules', 'statusCss'].forEach(function(id) {
   document.getElementById(id).addEventListener('input', function() { syncStatusRegexForm(); });
@@ -197,14 +210,15 @@ document.getElementById('statusImportFile').addEventListener('change', function(
     // 之前贴的规则留着（重新导入改好的正则时不用再贴）；小手机自己换算出来的那种清掉，换成酒馆的要贴的
     if (/^每次回复的最后另起一行，按下面的格式写你此刻的状态/.test(document.getElementById('statusRules').value)) document.getElementById('statusRules').value = '';
     syncStatusRegexForm(true);
-    document.getElementById('statusRulesFold').open = true;
+    document.getElementById('statusCodeFold').open = true;
     showToast('✓ 已导入「' + (pick.scriptName || '状态栏') + '」' + (list.length > 1 ? '（文件里有 ' + list.length + ' 条，用了最像状态栏的一条）' : '') + '，把配套的规则贴进「生成规则」，点保存生效', 'success');
   }).catch(function() { showToast('✗ 读不了这个文件，要酒馆导出的正则 JSON', 'error'); });
 });
 
 function renderQuickPop() {
-  var char = crQuickChar();
+  var char = crQuickChar(), keepTop = crQuickPop.scrollTop;   // 点条目重画后停在原处，不跳回顶上
   crQuickPop.innerHTML = '';
+  requestAnimationFrame(function() { crQuickPop.scrollTop = keepTop; });
   if (crQuickOpen === 'api') {
     var api = charApiPreset(char);
     quickItem('跟随全局', getApiCfg().model || '未选择模型', !api, function() { setQuickField('apiPresetName', ''); });
@@ -216,23 +230,61 @@ function renderQuickPop() {
     var cur = stPresets[stActivePresetIdx];
     var mine = charOwnPromptPreset(char);
     quickItem('跟随全局', cur ? cur.name : '', !mine, function() { setQuickField('promptPresetName', ''); });
+    // 每个预设右边「条目」：展开一条条开关（用户要的：选完预设还能改具体开哪些）；改的是这个预设本身，用它的角色都会跟着变
     stPresets.forEach(function(p) {
-      quickItem(p.name, (p.entries || []).length + ' 条', mine === p, function() { setQuickField('promptPresetName', p.name); });
+      var es = p.entries || [], nOn = es.filter(function(e) { return e.enabled; }).length;
+      var it = quickItem(p.name, nOn + ' / ' + es.length + ' 条开着', mine === p, function() { setQuickField('promptPresetName', p.name); });
+      if (!es.length) return;
+      var ex = document.createElement('button');
+      ex.className = 'cr-qb-expand';
+      ex.textContent = crQbPreOpen[p.name] ? '收起' : '条目';
+      ex.addEventListener('click', function(e) { e.stopPropagation(); crQbPreOpen[p.name] = !crQbPreOpen[p.name]; renderQuickPop(); });
+      it.appendChild(ex);
+      if (!crQbPreOpen[p.name]) return;
+      es.forEach(function(en) {
+        var sub = quickItem(en.name || '未命名条目', en.pos === 'after' ? '放在后' : '', !!en.enabled, function() {
+          en.enabled = !en.enabled;
+          saveStPresetsToStorage();
+          if (typeof renderStEntryList === 'function') renderStEntryList();   // Prompt 页开着的话跟着变
+          renderQuickPop();
+        });
+        sub.classList.add('cr-qb-sub');
+      });
+      crQuickPop.insertAdjacentHTML('beforeend', '<div class="cr-qb-empty" style="padding:2px 14px 8px;text-align:left;">改的是「' + escHtmlAsset(p.name) + '」本身，用它的角色都会跟着变</div>');
     });
   } else if (crQuickOpen === 'wb') {
-    // 世界书可多选：点一下关联 / 取消，弹层不收起
+    // 世界书可多选：点一本 = 整本关联 / 取消；点「条目」展开，一条条单独勾（用户要的），弹层不收起
     // 只换当前窗口（聊天 / 剧情）那栏的
     var groups = wbGroups(), wbDrama = currentCrSubView === 'contacts';
     if (wbDrama && !char.dramaWb) char.dramaWb = { ids: (char.worldbookIds || []).slice(), folders: (char.worldbookFolders || []).slice() };
+    var setWb = function(folders, ids) {
+      if (wbDrama) { char.dramaWb.folders = folders; char.dramaWb.ids = ids; } else { char.worldbookFolders = folders; char.worldbookIds = ids; }
+      saveCharList();
+      renderQuickBar();
+    };
     groups.forEach(function(g) {
-      var cur = charWbOf(char, wbDrama);
-      var linked = cur.folders.indexOf(g.id) >= 0;
-      quickItem(g.name, g.entries.length + ' 条', linked, function() {
-        var list = cur.folders.filter(function(id) { return id !== g.id; });
-        if (!linked) list.push(g.id);
-        if (wbDrama) char.dramaWb.folders = list; else char.worldbookFolders = list;
-        saveCharList();
-        renderQuickBar();
+      var cur = charWbOf(char, wbDrama), fOn = cur.folders.indexOf(g.id) >= 0;
+      var gIds = g.entries.map(function(e) { return e.id; });
+      var nOn = fOn ? gIds.length : gIds.filter(function(id) { return cur.ids.indexOf(id) >= 0; }).length;
+      var it = quickItem(g.name, fOn ? '整本 · ' + gIds.length + ' 条' : nOn ? '选了 ' + nOn + ' / ' + gIds.length + ' 条' : gIds.length + ' 条', fOn, function() {
+        var others = cur.ids.filter(function(id) { return gIds.indexOf(id) < 0; });   // 整本开关时，这本里单独勾的不用再记
+        setWb(fOn ? cur.folders.filter(function(id) { return id !== g.id; }) : cur.folders.concat([g.id]), others);
+      });
+      if (nOn && !fOn) it.classList.add('part');
+      if (!gIds.length) return;
+      var ex = document.createElement('button');
+      ex.className = 'cr-qb-expand';
+      ex.textContent = crQbWbOpen[g.id] ? '收起' : '条目';
+      ex.addEventListener('click', function(e) { e.stopPropagation(); crQbWbOpen[g.id] = !crQbWbOpen[g.id]; renderQuickPop(); });
+      it.appendChild(ex);
+      if (!crQbWbOpen[g.id]) return;
+      g.entries.forEach(function(en) {
+        var on = fOn || cur.ids.indexOf(en.id) >= 0;
+        var sub = quickItem(en.name || '未命名', en.enabled === false ? '已关' : en.keywords ? '关键词' : '常驻', on, function() {
+          if (fOn) setWb(cur.folders.filter(function(id) { return id !== g.id; }), cur.ids.concat(gIds.filter(function(id) { return id !== en.id; })));   // 从整本变成一条条
+          else setWb(cur.folders, on ? cur.ids.filter(function(id) { return id !== en.id; }) : cur.ids.concat([en.id]));
+        });
+        sub.classList.add('cr-qb-sub');
       });
     });
     if (!groups.length) crQuickPop.insertAdjacentHTML('beforeend', '<div class="cr-qb-empty">还没有世界书</div>');
@@ -243,6 +295,14 @@ function renderQuickPop() {
     [['off', '模型自带的思考也尽量关掉，回得最快'], ['native', '模型有自己的思考就用，没有就直接回']].concat(cotList().map(function(c) { return [c.id, c.builtin ? c.desc : '自己写的思维链']; })).forEach(function(o) {
       quickItem(cotName(o[0]), o[1], own === o[0], function() { setQuickField('cotMode', o[0]); });
     });
+    // 显示 / 隐藏思考（用户要的：在这里就能开关，和 Prompt 页「在聊天里显示思考」是同一个）
+    var showT = document.getElementById('cotShowToggle');
+    var tg = quickItem('在聊天里显示思考', showT.checked ? '开着' : '关着', showT.checked, function() {
+      showT.checked = !showT.checked;
+      showT.dispatchEvent(new Event('change'));
+      renderQuickPop();
+    });
+    tg.classList.add('cr-qb-toggle');
   }
 }
 
@@ -254,6 +314,12 @@ crQuickBar.querySelectorAll('.cr-qb-chip').forEach(function(chip) {
     closeQuickPop();
     crQuickOpen = k;
     chip.classList.add('open');
+    crQuickPop.scrollTop = 0;
+    // 拓展栏在顶栏里（仿siya）时它很窄：弹层照聊天室的宽度摆，左右各留 12px
+    if (appChatRoom.classList.contains('cr-qb-in-nav')) {
+      var rr = appChatRoom.getBoundingClientRect(), qr = crQuickBar.getBoundingClientRect();
+      crQuickPop.style.left = (rr.left + 12 - qr.left) + 'px'; crQuickPop.style.right = 'auto'; crQuickPop.style.width = (rr.width - 24) + 'px';
+    } else { crQuickPop.style.left = ''; crQuickPop.style.right = ''; crQuickPop.style.width = ''; }
     renderQuickPop();
     crQuickPop.classList.add('open');
   });

@@ -447,7 +447,7 @@ function grpPaintLook() {
     d.addEventListener('click', function() { e.bubble.preset = i; grpPaintLook(); });
     bc.appendChild(d);
   });
-  grpOptRow(document.getElementById('grpBubbleTpl'), BUBBLE_TPLS.filter(function(t) { return t.id === 'plain' || t.chat; }).map(function(t) { return [t.id, t.name]; }), e.bubble.tpl || 'plain', function(v) { e.bubble.tpl = v; grpPaintLook(); });
+  grpOptRow(document.getElementById('grpBubbleTpl'), BUBBLE_TPLS.filter(function(t) { return t.id === 'plain' || (t.chat && !/^siya/.test(t.id)); })   /* 群里不放仿siya（用户要的） */.map(function(t) { return [t.id, t.name]; }), e.bubble.tpl || 'plain', function(v) { e.bubble.tpl = v; grpPaintLook(); });
   document.getElementById('grpOpacityVal').textContent = e.bubble.opacity + '%';
 }
 document.getElementById('grpOpacity').addEventListener('input', function() { if (grpEdit) { grpEdit.bubble.opacity = parseInt(this.value, 10); grpPaintLook(); } });

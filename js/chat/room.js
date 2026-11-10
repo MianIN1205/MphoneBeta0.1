@@ -89,7 +89,7 @@ var BUBBLE_TPLS = [
   { id: 'siyad', name: '仿siya', drama: true, desc: '剧情版：更宽的深紫渐变长框，叙述是浅紫细字、对话是白色粗字，行距大，像在读剧情；你的是深灰紫框；不显示头像，顶栏和输入栏变深色。颜色固定，不跟主题色' }
 ];
 // 聊天窗口用了仿siya：TA 的一次回复不拆成一句一条、动作描写留在气泡里（reply.js、render.js 用）
-function charBigBubble(char) { return !!(char && char.bubble && char.bubble.tpl === 'siya'); }
+function charBigBubble(char) { return !!(char && !char.isGroup && char.bubble && char.bubble.tpl === 'siya'); }
 function hexDarken(hex, k) {
   var n = parseInt(String(hex).slice(1), 16);
   var f = function(v) { return Math.max(0, Math.round(v * (1 - k))); };
@@ -123,21 +123,27 @@ function siyaChrome(sel, op) {
     sc + ' .chat-room-head-av { display: none !important; }\n' +
     // 角色名和签名：输入栏上方左边（--cr-bottom-h 是输入栏现在的高度，抽屉打开、剧情多一排符号都会跟着变）
     sc + ' .chat-room-title-wrap { position: absolute; left: 22px; right: 22px; bottom: calc(var(--cr-bottom-h, 64px) + 12px); top: auto; transform: none; max-width: none; z-index: 6; pointer-events: none; }\n' +
+    sc + ' .chat-room-title-text { pointer-events: auto; cursor: pointer; }\n' +   /* 名字点了照样出状态栏（聊天、剧情都是） */
     sc + ' .chat-room-title-text { align-items: flex-start; max-width: 100%; }\n' +
-    sc + ' .chat-room-main-title { font-size: 24px; font-weight: 800; color: var(--siya-ink); letter-spacing: 2px; text-shadow: 0 2px 6px rgba(0,0,0,0.4); }\n' +
-    sc + ' .chat-room-sub-title { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--siya-ink); opacity: 0.92; letter-spacing: 2px; text-shadow: 0 1px 4px rgba(0,0,0,0.45); }\n' +
+    sc + ' .chat-room-main-title { font-size: 22px; font-weight: 600; color: var(--siya-ink); letter-spacing: 1.5px; text-shadow: 0 1px 6px rgba(0,0,0,0.32); }\n' +
+    sc + ' .chat-room-sub-title { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 12.5px; color: var(--siya-ink); opacity: 0.85; letter-spacing: 1.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.38); }\n' +
     sc + ' .chat-room-sub-title::before { content: ""; flex: 0 0 auto; width: 20px; height: 12px; background: ' + SIYA_MASK + '; opacity: 0.85; }\n' +
     // 消息别被名字盖住；下面一层渐淡阴影托着名字
     sc + ' .chat-msg-list { padding-bottom: 84px; }\n' +
-    sc + ' #chatRoomContent { background: transparent !important; box-shadow: inset 0 -130px 90px -60px var(--siya-fade); }\n' +
+    sc + ' #chatRoomContent { background: transparent !important; box-shadow: inset 0 -170px 110px -70px var(--siya-fade); }\n' +
     // 输入栏：深色一条，输入框是深色圆角
-    sc + ' .chat-room-bottom { background: var(--siya-bar); border-top: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }\n' +
+    // 输入栏不再是一条实心深色：从最下面往上渐淡，接着上面聊天区那层阴影，看着是一整片从底下升上来的渐变（用户要的）
+    sc + ' .chat-room-bottom { background: linear-gradient(to bottom, var(--siya-fade), rgba(10,8,18,0.88)); border-top: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }\n' +
     sc + ' .cr-input { background: var(--siya-field); color: #f2eef8; }\n' +
     sc + ' .cr-input::placeholder { color: rgba(242,238,248,0.5); }\n' +
     sc + ' .cr-icon-btn { background: rgba(255,255,255,0.1); color: #f2eef8; }\n' +
     sc + ' .cr-icon-btn svg { stroke: #f2eef8; }\n' +
     sc + ' .cr-symbol-bar button { background: rgba(255,255,255,0.1); color: #f2eef8; border-color: transparent; }\n' +
-    sc + ' .cr-qb { background: rgba(20,18,28,0.35); }\n' +
+    // 拓展栏：不要底色那一条，只留三颗半透明的小胶囊（用户要的）
+    sc + ' .cr-qb { background: transparent; }\n' +
+    sc + ' .cr-qb-chip { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.16); color: #f2eef8; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }\n' +
+    sc + ' .cr-qb-chip.open { background: rgba(255,255,255,0.24); color: #fff; }\n' +
+    sc + ' .cr-qb-key { color: rgba(255,255,255,0.55); } ' + sc + ' .cr-qb-val { color: #f2eef8; } ' + sc + ' .cr-qb-chip.open .cr-qb-key { color: rgba(255,255,255,0.8); }\n' +
     // 加号 / 表情抽屉也换成深色
     sc + ' .cr-plus-panel { background: var(--siya-bar); border-top-color: rgba(255,255,255,0.06); }\n' +
     sc + ' .cr-plus-box { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.1); box-shadow: none; }\n' +
@@ -164,14 +170,15 @@ function bubbleTplCss(sel, tpl, colors, op) {
     A + ' { background: linear-gradient(' + hexToRgba(colors[0], 0.3) + ', ' + hexToRgba(colors[0], 0.3) + '), rgba(255,255,255,0.35); }\n' +
     U + ' { background: linear-gradient(' + hexToRgba(colors[1], 0.3) + ', ' + hexToRgba(colors[1], 0.3) + '), rgba(255,255,255,0.35); }\n';
   if (tpl === 'sticker') return both + ' { border-radius: 14px; border: 2.5px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.05), 0 4px 10px rgba(80,60,80,0.14); }\n';
-  if (tpl === 'siya') return siyaChrome(sel, op) + both + ' { max-width: 84%; padding: 14px 18px; border-radius: 14px; color: var(--siya-ink); font-size: 15px; font-weight: 600; letter-spacing: 1.5px; line-height: 1.65; box-shadow: 0 4px 14px rgba(20,14,40,0.22); }\n' +
-    A + ' { background: var(--siya-ai); border-bottom-left-radius: 4px; }\n' +
-    U + ' { background: var(--siya-user); border-bottom-right-radius: 4px; }\n' +
-    sel + ' .cr-act { color: var(--siya-soft); font-weight: 400; }\n';
-  if (tpl === 'siyad') return siyaChrome(sel, op) + both + ' { max-width: 92%; padding: 18px 20px; border-radius: 18px; font-size: 15px; letter-spacing: 1.5px; line-height: 1.95; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 6px 20px rgba(20,14,40,0.28); }\n' +
-    A + ' { background: linear-gradient(160deg, rgba(0,0,0,0.12), rgba(255,255,255,0.06)), var(--siya-ai); color: var(--siya-soft); font-weight: 400; border-top-left-radius: 4px; }\n' +
-    U + ' { background: var(--siya-user); color: var(--siya-ink); font-weight: 500; max-width: 80%; border-top-right-radius: 4px; }\n' +
-    sel + ' .cr-dq { color: var(--siya-ink); font-weight: 700; }\n' +
+  // 第二版（用户要「纤细一点、丝滑一点」）：字细一点、圆角柔一点、一层很淡的亮光和细边，阴影轻；不用毛玻璃（气泡多了手机上滑起来会卡）
+  if (tpl === 'siya') return siyaChrome(sel, op) + both + ' { max-width: 84%; padding: 6px 9px; border-radius: 15px; color: var(--siya-ink); font-size: 14.5px; font-weight: 500; letter-spacing: 0.8px; line-height: 1.45; border: 0.5px solid rgba(255,255,255,0.1); box-shadow: 0 2px 12px rgba(20,14,40,0.16); }\n' +
+    A + ' { background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0) 55%), var(--siya-ai); border-bottom-left-radius: 6px; }\n' +
+    U + ' { background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 55%), var(--siya-user); border-bottom-right-radius: 6px; }\n' +
+    sel + ' .cr-act { color: var(--siya-soft); font-weight: 400; opacity: 0.9; }\n';
+  if (tpl === 'siyad') return siyaChrome(sel, op) + both + ' { max-width: 92%; padding: 8px 10px; border-radius: 16px; font-size: 14.5px; letter-spacing: 1px; line-height: 1.6; border: 0.5px solid rgba(255,255,255,0.1); box-shadow: 0 3px 16px rgba(20,14,40,0.2); }\n' +
+    A + ' { background: linear-gradient(160deg, rgba(255,255,255,0.07), rgba(0,0,0,0.08)), var(--siya-ai); color: var(--siya-soft); font-weight: 400; border-top-left-radius: 6px; }\n' +
+    U + ' { background: var(--siya-user); color: var(--siya-ink); font-weight: 400; max-width: 80%; border-top-right-radius: 6px; }\n' +
+    sel + ' .cr-dq { color: var(--siya-ink); font-weight: 600; }\n' +
     sel + ' .cr-act { color: var(--siya-soft); opacity: 0.85; font-style: italic; }\n';
   if (tpl === 'night') return both + ' { color: #eee8f6; }\n' +
     A + ' { background: rgba(40,36,62,' + Math.max(0.75, op) + '); }\n' + U + ' { background: rgba(64,54,92,' + Math.max(0.75, op) + '); }\n';
@@ -247,7 +254,7 @@ function viewLookPart(char, drama) {
   var part = drama ? (char.dramaLook || { chatBg: char.chatBg, bubble: char.bubble, look: char.look, customCss: '', _borrowed: true })
                    : { chatBg: char.chatBg, bubble: char.bubble, look: char.look, customCss: char.customCss };
   var t = part.bubble && part.bubble.tpl, def = t && typeof BUBBLE_TPLS !== 'undefined' && BUBBLE_TPLS.filter(function(x) { return x.id === t; })[0];
-  if (def && (drama ? def.chat : def.drama)) part = Object.assign({}, part, { bubble: Object.assign({}, part.bubble, { tpl: 'plain' }) });
+  if (def && ((drama ? def.chat : def.drama) || (char.isGroup && /^siya/.test(t)))) part = Object.assign({}, part, { bubble: Object.assign({}, part.bubble, { tpl: 'plain' }) });   // 群里不用仿siya（用户要的）
   if (drama && part._borrowed) part = Object.assign({}, part, { look: Object.assign({}, part.look || {}, { format: 'bubble' }) });
   return part;
 }
@@ -258,7 +265,7 @@ function applyChatRoomStyle(char) {
   content.style.background = '';
   appChatRoom.classList.remove('cr-no-avatar', 'cr-head-avatar', 'cr-head-left');
   appChatRoom.style.background = '';
-  if (!char) { crCharStyleEl.textContent = ''; return; }
+  if (!char) { crCharStyleEl.textContent = ''; crQbPlace(false); return; }
 
   var part = roomLookPart(char);
   var look = Object.assign({}, DEFAULT_LOOK, part.look || {});
@@ -267,7 +274,8 @@ function applyChatRoomStyle(char) {
   if (look.headAlign === 'left') appChatRoom.classList.add('cr-head-left');
   paintCharAvatar(document.getElementById('chatRoomHeadAv'), char);
   // 有状态栏时顶上名字右边一个很小的朝下箭头：让人知道点名字能看状态栏（用户要的，自然一点的提示）
-  appChatRoom.classList.toggle('cr-has-status', !!(Object.assign({}, DEFAULT_LOOK, char.look || {}).statusOn && (chatHistories[char.id] || []).some(function(m) { return m.status; })));
+  var stDrama = currentCrSubView === 'contacts';
+  appChatRoom.classList.toggle('cr-has-status', statusOnFor(char, stDrama) && ((stDrama ? dramaHistories : chatHistories)[char.id] || []).some(function(m) { return m.status; }));
   if (typeof paintChatSubTitle === 'function') paintChatSubTitle(char);
 
   var bg = part.chatBg || DEFAULT_CHAT_BG;
@@ -275,16 +283,25 @@ function applyChatRoomStyle(char) {
   // 仿siya：背景铺满整个聊天室（顶栏透明，背景要一直到最上面）
   if (tplBgColor(part)) appChatRoom.style.background = bgCss;
   else if (bgCss) content.style.background = bgCss;
+  crQbPlace(!!tplBgColor(part));   // 仿siya：拓展栏挤进顶栏那一行（用户要的：顶栏太空）
 
   // 状态栏样式只属于聊天窗口
   var chatLook = Object.assign({}, DEFAULT_LOOK, char.look || {});
   crCharStyleEl.textContent = lookCss(part, '#appChatRoom') +
-    (currentCrSubView === 'contacts' ? '' : (chatLook.statusCss || '')) + '\n' +
+    (currentCrSubView === 'contacts' && !chatLook.statusDrama ? '' : (chatLook.statusCss || '')) + '\n' +
     (part.customCss || '');
   if (typeof renderQuickBar === 'function') renderQuickBar();
   if (typeof refreshStatusPanel === 'function') refreshStatusPanel();
 }
 
+// 拓展栏放在哪：平时在聊天区最上面；仿siya 的顶栏是空的，就挪进顶栏、夹在返回和切换按钮中间（只显示值、缩短）
+function crQbPlace(inNav) {
+  var qb = document.getElementById('crQuickBar'), nav = appChatRoom.querySelector('.settings-nav'), content = document.getElementById('chatRoomContent');
+  if (!qb || !nav) return;
+  appChatRoom.classList.toggle('cr-qb-in-nav', inNav);
+  if (inNav && qb.parentNode !== nav) nav.insertBefore(qb, nav.querySelector('.chat-room-right-wrap'));
+  else if (!inNav && qb.parentNode !== content) content.insertBefore(qb, content.firstChild);
+}
 // 输入栏现在多高（抽屉打开、剧情窗口多一排符号都会变）：仿siya 把角色名摆在它上方要用
 (function() {
   var bar = document.getElementById('crBottomBar');

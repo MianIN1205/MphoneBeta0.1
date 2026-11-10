@@ -12,6 +12,7 @@
 }
 .cr-status-panel::-webkit-scrollbar { display: none; }
 .cr-status-panel.open { opacity: 1; transform: scale(1); pointer-events: auto; }
+.cr-status-panel.from-name { transform-origin: bottom left; }   /* 从名字上方长出来（仿siya） */
 /* 面板开着时：后面轻轻模糊、点不到后面的按钮（用户要的触摸保护），点模糊的地方收起面板 */
 .cr-sp-mask { position: absolute; left: 0; right: 0; bottom: 0; z-index: 14; opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
   background: rgba(255, 255, 255, 0.12); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }

@@ -131,3 +131,63 @@ function readPngCard(buf) {
     return raw;   // 少数卡直接存 JSON 文本
   }
 }
+
+// ---------- 导出成酒馆角色卡（V2）：角色设置「扩展」页（用户要的：空白角色、能分享、适配酒馆） ----------
+// 有头像时画成 PNG、把卡片 JSON 写进 tEXt「chara」块（酒馆的标准做法）；没有头像或头像是读不了的网图就给 JSON
+function charToCard(c) {
+  var wb = charWbOf(c, false), entries = wbEntries.filter(function(e) { return wb.ids.indexOf(e.id) >= 0 || wb.folders.indexOf(e.folderId) >= 0; });
+  var facts = (c.selfFacts || []).map(function(f) { return typeof f === 'string' ? f : f && f.text; }).filter(Boolean);
+  var desc = (c.charPersona || '') + (facts.length ? '\n\n【越聊越清楚的设定】\n' + facts.map(function(f) { return '- ' + f; }).join('\n') : '');
+  var ops = c.openings || [];
+  var data = { name: c.charName || c.charAlias || '角色', description: desc, personality: '', scenario: '', first_mes: ops[0] || '', mes_example: '',
+    creator_notes: '从眠花糖机导出', system_prompt: '', post_history_instructions: '', alternate_greetings: ops.slice(1), tags: [], creator: '', character_version: '', extensions: {} };
+  if (entries.length) data.character_book = { name: data.name, entries: entries.map(function(e, i) {
+    var keys = String(e.keywords || '').split(/[,，、]/).map(function(k) { return k.trim(); }).filter(Boolean), pos = wbResolvePos(e);
+    return { keys: keys, content: e.content || '', extensions: { position: pos === 'after' ? 4 : pos === 'middle' ? 2 : 0 }, enabled: e.enabled !== false,
+      insertion_order: i, constant: !keys.length, comment: e.name || '', name: e.name || '', id: i };
+  }) };
+  return { spec: 'chara_card_v2', spec_version: '2.0', data: data };
+}
+var PNG_CRC = null;
+function pngCrc(u8) {
+  if (!PNG_CRC) { PNG_CRC = []; for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; PNG_CRC[n] = c >>> 0; } }
+  var crc = 0xffffffff;
+  for (var i = 0; i < u8.length; i++) crc = PNG_CRC[(crc ^ u8[i]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+// 在 PNG 的 IEND 前面插一块 tEXt：chara = base64(卡片 JSON)
+function pngWithCard(buf, json) {
+  var u8 = new Uint8Array(buf), b64 = btoa(unescape(encodeURIComponent(json)));
+  var body = new TextEncoder().encode('tEXt' + 'chara\0' + b64), len = body.length - 4;
+  var chunk = new Uint8Array(12 + len), dv = new DataView(chunk.buffer);
+  dv.setUint32(0, len); chunk.set(body, 4); dv.setUint32(8 + len, pngCrc(body));
+  var end = u8.length - 12;   // IEND 固定 12 字节
+  var out = new Uint8Array(u8.length + chunk.length);
+  out.set(u8.subarray(0, end), 0); out.set(chunk, end); out.set(u8.subarray(end), end + chunk.length);
+  return out;
+}
+function charAvatarPng(src) {
+  return new Promise(function(res) {
+    if (!src) return res(null);
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      try {
+        var s = Math.min(1, 768 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(function(b) { b ? b.arrayBuffer().then(res) : res(null); }, 'image/png');
+      } catch (_) { res(null); }
+    };
+    img.onerror = function() { res(null); };
+    img.src = src;
+  });
+}
+document.getElementById('charCardOutBtn').addEventListener('click', function() {
+  if (editingCharIndex < 0) { showToast('请先保存角色', 'error'); return; }
+  var c = charList[editingCharIndex], card = charToCard(c), json = JSON.stringify(card), name = (c.charAlias || c.charName || '角色').replace(/[\\/:*?"<>|]/g, '_');
+  charAvatarPng(c.charAvatar).then(function(buf) {
+    if (buf) return shareOrDownload(new Blob([pngWithCard(buf, json)], { type: 'image/png' }), name + '.png');
+    return shareOrDownload(new Blob([JSON.stringify(card, null, 1)], { type: 'application/json' }), name + '.json');
+  }).then(function() { showToast('✓ 角色卡导出好了', 'success'); });
+});
