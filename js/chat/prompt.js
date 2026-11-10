@@ -273,27 +273,18 @@ var MPHONE_FICTION_NOTE = '【眠花糖机】「眠花糖机」（Muse）是眠�
   '涉及亲密情节的角色都是成年人。真有不适合写的内容，就用角色自己的方式在剧情里自然地带过，不要中断扮演。';
 
 // =============================================
-// 思维链（底层固定在代码里，Prompt 页只有开关）：
-// · 思考方式「眠花糖机的」：每次正式回复前让模型在最开头用 <thinking></thinking> 写一小段中文思考（聊天、剧情各一套），
+// 思维链（Prompt 页「思维链」一条条列着，能改能新建）：
+// · 开了一条思维链（js/prompt/cot.js）：每次聊天窗口的正式回复前让模型在最开头用 <thinking></thinking> 写一段中文思考，
 //   代替模型自带的思考；请求时同时尽量关掉模型自带的思考（js/core/llm.js 的 llmThinkOff）
 // · 「不思考」：不加这段，模型自带的思考也尽量关掉 —— 回得快；「模型自带的」：不加这段，也不去关，模型有就用（见 js/prompt/cot.js）
 // · 回复里的思考会被摘出来存在第一条消息的 m.think 上：不显示成气泡、不再发给模型；Prompt 页可以开「在聊天里显示思考」，
 //   开了就在那次回复前面放一条很小的折叠条（js/chat/render.js 的 renderThinkBar）
 // =============================================
-var COT_CHAT = '【回复前先想一想】在回复最开头，用 <thinking></thinking> 写一小段思考（中文，几行就够，不要用你自带的英文思考），写完再写正式回复。思考内容{{user}}看不到。想这几件事：\n' +
-  '- {{user}}这几条在说什么，此刻是什么情绪、想要什么\n' +
-  '- {{user}}刚说过、回答过什么：别重复问，别装不知道；我上一轮说过什么：别重复\n' +
-  '- 我（{{char}}）此刻在做什么、心情怎样，按人设会怎么回，语气和口头禅对不对\n' +
-  '- 回几条、每条多短，要不要发表情包';
-var COT_DRAMA = '【回复前先想一想】在回复最开头，用 <thinking></thinking> 写一段思考（中文，不要用你自带的英文思考），写完再写正式的剧情。思考内容{{user}}看不到。想这几件事：\n' +
-  '- 现在的时间、地点、场景，在场的有谁、各自什么状态\n' +
-  '- {{user}}刚做了什么、说了什么，背后可能是什么情绪\n' +
-  '- {{char}}按人设和此刻的心情会怎么反应：说什么、做什么、心里想什么\n' +
-  '- 这一轮怎么往下推进，哪些细节要和前文对上；不要替{{user}}决定行动和结果';
+// 思维链的内容在 js/prompt/cot.js（Prompt 页「思维链」一条条列着，能改能新建）
 function cotRules(isDrama, char) {
   if (isDrama) return [];   // 思维链只给聊天窗口；剧情的思考交给预设（用户定的）
-  var on = typeof cotModeFor === 'function' ? cotModeFor(char, false) === 'mine' : (typeof cotModeNow === 'function' && cotModeNow() === 'mine');
-  return on ? [{ role: 'system', content: COT_CHAT }] : [];
+  var t = typeof cotPrompt === 'function' ? cotPrompt(cotModeFor(char, false)) : '';
+  return t ? [{ role: 'system', content: t }] : [];
 }
 // 从回复里摘出思考：<thinking>…</thinking>、有的模型直接把自带思考写成 <think>…</think>；只有开头没有结尾的就把那个标签去掉
 function takeThink(text) {

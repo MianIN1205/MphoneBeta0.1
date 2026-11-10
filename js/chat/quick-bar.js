@@ -74,7 +74,7 @@ function renderQuickBar() {
   val('preset', pre ? pre.name : (gPre ? gPre.name : '无'));
   var wbNames = charWbOf(char, qbDrama).folders.map(function(id) { var f = (typeof wbFolders !== 'undefined' ? wbFolders : []).filter(function(x) { return x.id === id; })[0]; return f ? f.name : ''; }).filter(Boolean);
   val('wb', !nWb ? '未选' : wbNames.length ? wbNames[0] + (nWb > 1 ? ' 等 ' + nWb + ' 本' : '') : nWb + ' 本');
-  val('cot', typeof cotModeFor === 'function' ? COT_MODE_NAMES[cotModeFor(char, false)] : '');
+  val('cot', typeof cotModeFor === 'function' ? cotName(cotModeFor(char, false)) : '');
   if (crQuickOpen) renderQuickPop();
 }
 
@@ -251,10 +251,10 @@ function renderQuickPop() {
     if (!groups.length) crQuickPop.insertAdjacentHTML('beforeend', '<div class="cr-qb-empty">还没有世界书</div>');
   } else if (crQuickOpen === 'cot') {
     // 思维链：这个角色单独选，或者跟着 Prompt 页的全局设置
-    var own = char.cotMode && COT_MODE_NAMES[char.cotMode] ? char.cotMode : '';
-    quickItem('跟随全局', COT_MODE_NAMES[cotModeNow()], !own, function() { setQuickField('cotMode', ''); });
-    [['off', '模型自带的思考也尽量关掉，回得最快'], ['mine', '回复前按眠花糖机的方式想一想'], ['native', '模型有自己的思考就用，没有就直接回']].forEach(function(o) {
-      quickItem(COT_MODE_NAMES[o[0]], o[1], own === o[0], function() { setQuickField('cotMode', o[0]); });
+    var own = char.cotMode && cotValid(char.cotMode) ? char.cotMode : '';
+    quickItem('跟随全局', cotName(cotModeNow()), !own, function() { setQuickField('cotMode', ''); });
+    [['off', '模型自带的思考也尽量关掉，回得最快'], ['native', '模型有自己的思考就用，没有就直接回']].concat(cotList().map(function(c) { return [c.id, c.builtin ? c.desc : '自己写的思维链']; })).forEach(function(o) {
+      quickItem(cotName(o[0]), o[1], own === o[0], function() { setQuickField('cotMode', o[0]); });
     });
   }
 }
