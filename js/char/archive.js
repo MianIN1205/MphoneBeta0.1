@@ -535,7 +535,7 @@ function arcConsolidate(char) {
           memStore[char.id] = list.filter(function(m) { return g.indexOf(m) < 0; });
           got.forEach(function(x, xi) {
             var nm = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) + xi, type: x.type === 'precious' ? 'precious' : 'long',
-              text: x.text.slice(0, 300), time: x.time || first.time, source: 'import', from: first.from };
+              text: x.text.slice(0, typeof MEM_TEXT_MAX !== 'undefined' ? MEM_TEXT_MAX : 300), time: x.time || first.time, source: 'import', from: first.from };
             if (first.scene) nm.scene = first.scene;
             memStore[char.id].push(nm);
           });

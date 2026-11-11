@@ -16,29 +16,73 @@ function hubLs(k, v) {
   return '';
 }
 function hubCfg() { return { url: hubLs('mphoneHubUrl').replace(/\/+$/, ''), pass: hubLs('mphoneHubPass'), auto: hubLs('mphoneHubAuto') !== '0' }; }
-function hubState() {
-  var s = null;
-  try { s = JSON.parse(hubLs('mphoneHubState') || 'null'); } catch (e) {}
-  s = s || {};
+// 同步进度按记忆库的网址分开存：{ hubs: { 网址: { since, after, items, alias } } }（以前只有一个记忆库时是直接存的那一份，读到时放到默认记忆库名下）
+function hubStateAll() {
+  var a = null;
+  try { a = JSON.parse(hubLs('mphoneHubState') || 'null'); } catch (e) {}
+  a = a || {};
+  if (!a.hubs) { var old = a, u = hubCfg().url; a = { hubs: {} }; if (u && (old.items || old.since)) a.hubs[u] = old; }
+  return a;
+}
+function hubState(url) {
+  url = url || hubCfg().url;
+  var s = hubStateAll().hubs[url] || {};
   s.items = s.items || {}; s.alias = s.alias || {};
+  s._url = url;
   return s;
 }
-function hubSaveState(s) { hubLs('mphoneHubState', JSON.stringify(s)); }
+function hubSaveState(s) {
+  var a = hubStateAll(), o = Object.assign({}, s);
+  delete o._url; delete o._solo;
+  a.hubs[s._url || hubCfg().url] = o;
+  hubLs('mphoneHubState', JSON.stringify(a));
+}
+function hubDropState(url) { var a = hubStateAll(); delete a.hubs[url]; hubLs('mphoneHubState', JSON.stringify(a)); }
+// ---------- 每个角色用哪个记忆库（用户要的：整个小手机都同步就成了云同步，专属的记忆库要能只连一个角色） ----------
+// localStorage mphoneHubChars = { 角色id: { mode: 'own' 单独的 / 'off' 不同步, url, pass } }，没写的跟「默认记忆库」（连接设置里填的那个，可以不填）。不进备份
+function hubCharMap() { try { return JSON.parse(hubLs('mphoneHubChars') || '{}') || {}; } catch (e) { return {}; } }
+function hubTargetOf(c) {
+  var m = hubCharMap()[c.id], d = hubCfg();
+  if (m && m.mode === 'off') return null;
+  if (m && m.mode === 'own' && m.url && m.pass) return { url: m.url, pass: m.pass };
+  return d.url && d.pass ? { url: d.url, pass: d.pass } : null;
+}
+// 这次要同步的记忆库，各自带着归它管的角色：[{ url, pass, chars }]
+function hubTargets() {
+  var by = {}, out = [];
+  charList.forEach(function(c) {
+    if (c.isGroup) return;
+    var t = hubTargetOf(c);
+    if (!t) return;
+    if (!by[t.url]) { by[t.url] = { url: t.url, pass: t.pass, chars: [] }; out.push(by[t.url]); }
+    by[t.url].chars.push(c);
+  });
+  // 单独连的、库里只有这一个角色：算 TA 的专属库
+  var map = hubCharMap();
+  out.forEach(function(t) { if (t.chars.length === 1 && (map[t.chars[0].id] || {}).mode === 'own') t.solo = t.chars[0]; });
+  return out;
+}
 function hubHash(str) {
   var h = 5381;
   str = String(str);
   for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
   return (h >>> 0).toString(36);
 }
-function hubCharKey(c) { return c ? (c.builtinAssistant && typeof MIANIN_NAME !== 'undefined' ? MIANIN_NAME : (c.charName || c.charAlias || '').trim()) : ''; }
-function hubFindChar(name) {
+function hubCharKey(c) {
+  var nm = c && hubCharMap()[c.id] && hubCharMap()[c.id].name;   // 连接设置里写的「在记忆库里叫」
+  if (nm) return String(nm).trim();
+  return c ? (c.builtinAssistant && typeof MIANIN_NAME !== 'undefined' ? MIANIN_NAME : (c.charName || c.charAlias || '').trim()) : ''; }
+function hubFindChar(name, chars) {
   name = String(name || '').trim();
+  chars = chars || charList;
   if (!name) return null;
-  return charList.filter(function(c) { return hubCharKey(c) === name; })[0] ||
-    charList.filter(function(c) { return (c.charAlias || '').trim() === name || (c.charName || '').trim() === name; })[0] || null;
+  var low = name.toLowerCase();
+  return chars.filter(function(c) { return hubCharKey(c) === name; })[0] ||
+    chars.filter(function(c) { return hubCharKey(c).toLowerCase() === low; })[0] ||
+    chars.filter(function(c) { return (c.charAlias || '').trim() === name || (c.charName || '').trim() === name; })[0] || null;
 }
-function hubApi(path, opt) {
-  var cfg = hubCfg();
+function hubApi(path, opt, target) {
+  var cfg = target || hubCfg();   // target：这次连的是哪个记忆库（不写就是默认的）
   opt = opt || {};
   opt.headers = Object.assign({ 'content-type': 'application/json', authorization: 'Bearer ' + cfg.pass }, opt.headers || {});
   return fetch(cfg.url + path, opt).then(function(r) {
@@ -50,14 +94,15 @@ function hubApi(path, opt) {
 }
 
 // 手机里现在这份（要和记忆库对上的部分），按记忆库的 id 排好：{ id: { id, char, kind, content, meta, created_at, charId } }
-function hubSnapshot(state) {
+function hubSnapshot(state, chars, url) {
   var out = {};
   var put = function(it) { var id = state.alias[it.id] || it.id; it.id = id; out[id] = it; };
-  charList.forEach(function(c) { if (c.isGroup) return;   // 群聊不算
-    var key = hubCharKey(c);
+  (chars || charList).forEach(function(c) { if (c.isGroup) return;   // 群聊不算
+    var key = (state._solo === c && state.soloName) || hubCharKey(c);
     if (!key) return;
     (typeof memList === 'function' ? memList(c.id) : []).forEach(function(m) {
       if (m.type !== 'long' && m.type !== 'precious') return;
+      if (m.hubSrc && url && m.hubSrc !== url) return;   // 从别的记忆库拉下来的：只属于那个库，不推到这里（默认库和专属库互不影响）
       var meta = { type: m.type };
       if (m.scene) meta.scene = m.scene;
       if (m.from) meta.from = m.from;
@@ -78,9 +123,10 @@ function hubRec(it, h) { var r = { h: h, c: it.charId }; if (it.kind === 'core')
 function hubItemHash(it) { return hubHash(it.kind + '|' + it.char + '|' + it.content + '|' + JSON.stringify(it.meta || {})); }
 
 // 把记忆库里拉下来的一条放进手机里（新的、改过的、删掉的）
-function hubApplyRow(row, state) {
-  var c = hubFindChar(row.char);
-  if (!c) return false;   // 手机里没有这个角色：先不管，记忆库里照样留着
+function hubApplyRow(row, state, chars) {
+  // 专属记忆库（只归一个角色）：库里的东西都是 TA 的，不看名字（名字写法不一样也对得上）
+  var c = state._solo || hubFindChar(row.char, chars);
+  if (!c) return false;   // 手机里没有这个角色（或者这个角色不归这个记忆库）：先不管，记忆库里照样留着
   var meta = {};
   try { meta = row.meta ? JSON.parse(row.meta) : {}; } catch (e) {}
   if (row.kind === 'core') {   // 人设核心：不一样时先记下，同步完弹窗问用哪个
@@ -88,7 +134,7 @@ function hubApplyRow(row, state) {
     var mine = c.charPersona || '';
     if (mine === row.content) { delete c.hubCorePending; return 'char'; }
     if (!mine.trim()) { c.charPersona = row.content; delete c.hubCorePending; return 'char'; }
-    c.hubCorePending = { text: row.content, id: row.id, at: Date.now() };
+    c.hubCorePending = { text: row.content, id: row.id, at: Date.now(), hub: state._url };
     return 'char';
   }
   if (row.kind === 'fact') {
@@ -114,11 +160,11 @@ function hubApplyRow(row, state) {
   }
   var type = meta.type === 'precious' || row.kind === 'relation' ? 'precious' : 'long';
   if (cur) {
-    cur.text = String(row.content).slice(0, 300);
+    cur.text = String(row.content).slice(0, typeof memTextMax === 'function' ? memTextMax(type) : 300);
     cur.type = type; delete cur.expires;
     if (row.kind !== 'memory') cur.hubKind = row.kind; else delete cur.hubKind;
   } else {
-    var m = { id: row.id, type: type, text: String(row.content).slice(0, 300), time: row.created_at || row.updated_at, source: meta.source || 'hub' };
+    var m = { id: row.id, type: type, text: String(row.content).slice(0, typeof memTextMax === 'function' ? memTextMax(type) : 300), time: row.created_at || row.updated_at, source: meta.source || 'hub', hubSrc: state._url };
     if (meta.scene) m.scene = meta.scene;
     if (meta.from) m.from = meta.from;
     else if (!meta.source && row.source && row.source !== '眠花糖机') m.from = String(row.source).slice(0, 20);
@@ -129,21 +175,41 @@ function hubApplyRow(row, state) {
 }
 
 var hubBusy = false, hubLastAt = 0, hubLastErr = '';
-// 同步一次：先拉（别处的新东西放进手机），再推（手机里新的、改过的、删掉的）
+// 同步一次：每个记忆库轮着来，先拉（别处的新东西放进手机），再推（手机里新的、改过的、删掉的）；一个连不上不耽误别的
 function hubSync(manual) {
-  var cfg = hubCfg();
-  if (!cfg.url || !cfg.pass) { if (manual) showToast('还没连记忆库，先点「连接设置」', 'error'); return Promise.resolve(false); }
+  var targets = hubTargets();
+  if (!targets.length) { if (manual) showToast('还没连记忆库，先点「连接设置」', 'error'); return Promise.resolve(false); }
   if (hubBusy) return Promise.resolve(false);
   hubBusy = true; hubPaintStatus('正在同步…');
-  var state = hubState(), changed = {}, pulled = {}, pushedN = 0, pulledN = 0;
+  var tot = { pulled: 0, pushed: 0 }, errs = [], i = 0;
+  function next() {
+    if (i >= targets.length) return Promise.resolve();
+    var t = targets[i++];
+    return hubSyncOne(t, tot).then(null, function(err) { errs.push((err && err.message) || '连不上'); }).then(next);
+  }
+  return next().then(function() {
+    var ok = errs.length < targets.length;   // 至少有一个同步上了
+    if (ok) { hubLastAt = Date.now(); hubLs('mphoneHubLastAt', String(hubLastAt)); }
+    hubLastErr = errs.length ? errs[0] + (targets.length > 1 ? '（' + errs.length + ' / ' + targets.length + ' 个记忆库）' : '') : '';
+    if (tot.pulled && typeof renderMemHome === 'function' && document.getElementById('appMemory').classList.contains('active')) { try { renderMemHome(); } catch (e) {} }
+    if (manual && !errs.length) showToast('✓ 同步好了' + (tot.pulled || tot.pushed ? '：拉下来 ' + tot.pulled + ' 条，推上去 ' + tot.pushed + ' 条' : '，两边一样'), 'success');
+    else if (manual) showToast('✗ 没同步上：' + hubLastErr, 'error');
+    return ok;
+  }).then(function(ok) { hubBusy = false; hubPaintStatus(); setTimeout(function() { hubCoreAsk(); }, 0); return ok; });
+}
+// 和一个记忆库同步：t = { url, pass, chars 归它管的角色 }
+function hubSyncOne(t, tot) {
+  var state = hubState(t.url), changed = {}, pulled = {};
   function pullPage() {
-    return hubApi('/api/pull?since=' + (state.since || 0) + '&after=' + encodeURIComponent(state.after || '')).then(function(j) {
+    return hubApi('/api/pull?since=' + (state.since || 0) + '&after=' + encodeURIComponent(state.after || ''), null, t).then(function(j) {
       j.rows.forEach(function(row) {
         // 自己推上去的那个版本（上一轮推的，时间排在拉的位置后面）：手机里已经是这样或者已经又改了 / 删了，不要再拉回来盖掉
         var known = state.items[row.id];
         if (!row.deleted && known && known.h === hubHash(row.kind + '|' + row.char + '|' + row.content + '|' + (row.meta || '{}'))) { state.since = row.updated_at; state.after = row.id; return; }
-        var what = hubApplyRow(row, state);
-        if (what) { changed[what] = true; pulled[row.id] = true; pulledN++; }
+        state._solo = t.solo || null;
+        if (t.solo && row.char && !row.deleted) state.soloName = row.char;   // 专属库里 TA 叫什么：推上去时也用这个名字，免得同一个人存成两个名字
+        var what = hubApplyRow(row, state, t.chars);
+        if (what) { changed[what] = true; pulled[row.id] = true; tot.pulled++; }
         if (row.deleted) delete state.items[row.id];
         state.since = row.updated_at; state.after = row.id;
       });
@@ -154,7 +220,8 @@ function hubSync(manual) {
     if (changed.mem) saveMemStore();
     if (changed.char) saveCharList();
     if (changed.ms && typeof saveMilestones === 'function') saveMilestones();
-    var snap = hubSnapshot(state);
+    state._solo = t.solo || null;
+    var snap = hubSnapshot(state, t.chars, t.url);
     // 刚拉下来的：照手机里现在的样子记下，免得又推回去
     Object.keys(pulled).forEach(function(id) { if (snap[id]) state.items[id] = hubRec(snap[id], hubItemHash(snap[id])); });
     var changes = [];
@@ -162,12 +229,12 @@ function hubSync(manual) {
       var it = snap[id], h = hubItemHash(it);
       if (!state.items[id] || state.items[id].h !== h) changes.push({ id: id, char: it.char, kind: it.kind, content: it.content, meta: JSON.stringify(it.meta), created_at: it.created_at, _h: h, _c: it.charId, _k: it.kind });
     });
-    // 手机里删掉的（角色还在才算删；整个角色删了不动记忆库，别的小手机还要用）
+    // 手机里删掉的（角色还在、而且还归这个记忆库管才算删；整个角色删了、或者角色改连别的记忆库了，都不动这个记忆库里的）
     Object.keys(state.items).forEach(function(id) {
       if (snap[id]) return;
       var rec = state.items[id];
       if (rec.k === 'core') { delete state.items[id]; return; }   // 这边清空了人设：不去删记忆库里的核心
-      if (rec.c && charList.some(function(c) { return c.id === rec.c; })) changes.push({ id: id, deleted: true, _del: true });
+      if (rec.c && t.chars.some(function(c) { return c.id === rec.c; })) changes.push({ id: id, deleted: true, _del: true });
       else delete state.items[id];
     });
     var i = 0;
@@ -175,33 +242,21 @@ function hubSync(manual) {
       if (i >= changes.length) return Promise.resolve();
       var batch = changes.slice(i, i + HUB_PUSH_BATCH);
       i += HUB_PUSH_BATCH;
-      return hubApi('/api/sync', { method: 'POST', body: JSON.stringify({ changes: batch.map(function(c) { var o = Object.assign({}, c); delete o._h; delete o._c; delete o._k; delete o._del; return o; }) }) }).then(function(j) {
+      return hubApi('/api/sync', { method: 'POST', body: JSON.stringify({ changes: batch.map(function(c) { var o = Object.assign({}, c); delete o._h; delete o._c; delete o._k; delete o._del; return o; }) }) }, t).then(function(j) {
         var alias = j.alias || {};
         batch.forEach(function(c) {
           if (c._del) { delete state.items[c.id]; return; }
           var hid = alias[c.id] || c.id;
           if (alias[c.id]) state.alias[c.id] = hid;
           state.items[hid] = hubRec({ charId: c._c, kind: c._k }, c._h);
-          pushedN++;
+          tot.pushed++;
         });
         hubSaveState(state);
         return pushNext();
       });
     }
     return pushNext();
-  }).then(function() {
-    hubSaveState(state);
-    hubLastAt = Date.now(); hubLastErr = '';
-    hubLs('mphoneHubLastAt', String(hubLastAt));
-    if (pulledN && typeof renderMemHome === 'function' && document.getElementById('appMemory').classList.contains('active')) { try { renderMemHome(); } catch (e) {} }
-    if (manual) showToast('✓ 同步好了' + (pulledN || pushedN ? '：拉下来 ' + pulledN + ' 条，推上去 ' + pushedN + ' 条' : '，两边一样'), 'success');
-    return true;
-  }, function(err) {
-    hubSaveState(state);
-    hubLastErr = (err && err.message) || '连不上';
-    if (manual) showToast('✗ 没同步上：' + hubLastErr, 'error');
-    return false;
-  }).then(function(ok) { hubBusy = false; hubPaintStatus(); setTimeout(function() { hubCoreAsk(); }, 0); return ok; });
+  }).then(function() { hubSaveState(state); }, function(err) { hubSaveState(state); throw err; });
 }
 
 // ---------- 人设核心：两边不一样时问用哪个（用户要的：不自己覆盖），没选的那份留着，能「返回上个版本」 ----------
@@ -212,7 +267,7 @@ function hubCoreResolve(c, useHub) {
   hubCoreWhenIdle(function() {
     var p = c.hubCorePending;
     if (!p) return;
-    var st = hubState(), myId = 'p' + hubHash(hubCharKey(c));
+    var st = hubState(p.hub || (hubTargetOf(c) || {}).url), myId = 'p' + hubHash((p.hub && st.soloName) || hubCharKey(c));
     if (p.id && p.id !== myId) { st.alias[myId] = p.id; hubSaveState(st); }   // 记忆库里那份是别处建的：接着用它的 id，不另起一条
     c.personaPrev = { text: useHub ? c.charPersona : p.text, at: Date.now() };
     if (useHub) c.charPersona = p.text;
@@ -263,6 +318,94 @@ function hubCoreAsk(c) {
   });
   (document.querySelector('.phone') || document.body).appendChild(ov);
 }
+// 连接设置里的一小块：每个角色用哪个记忆库（默认的 / 单独的 / 不同步），点一行改
+function hubPaintCharList() {
+  var box = document.getElementById('hubCharList');
+  if (!box) {
+    box = document.createElement('div'); box.id = 'hubCharList';
+    var msg = document.getElementById('hubMsg');
+    msg.parentNode.insertBefore(box, msg);
+  }
+  box.innerHTML = '';
+  var chars = charList.filter(function(c) { return !c.isGroup; });
+  if (!chars.length) return;
+  var lab = document.createElement('div'); lab.className = 'field-label'; lab.textContent = '每个角色用哪个记忆库';
+  var hint = document.createElement('div'); hint.className = 'auto-hint'; hint.style.margin = '0 2px 6px';
+  hint.textContent = '没单独设置的角色用上面填的默认记忆库（上面可以不填）。想给某个角色一个只属于 TA 的记忆库，点 TA 那一行。';
+  var list = document.createElement('div'); list.className = 'hub-char-list';
+  var map = hubCharMap();
+  chars.forEach(function(c) {
+    var m = map[c.id] || {}, row = document.createElement('div'); row.className = 'auto-row';
+    var name = document.createElement('span'); name.className = 'auto-row-label'; name.textContent = hubCoreName(c);
+    var btn = document.createElement('button'); btn.className = 'pf-radio-btn';
+    btn.textContent = m.mode === 'off' ? '不同步' : m.mode === 'own' ? '单独的' : '默认的' + (m.name ? '·' + m.name : '');
+    if (m.mode === 'own') btn.classList.add('selected');
+    btn.addEventListener('click', function() { hubCharDialog(c); });
+    row.appendChild(name); row.appendChild(btn); list.appendChild(row);
+  });
+  box.appendChild(lab); box.appendChild(hint); box.appendChild(list);
+}
+function hubCharDialog(c) {
+  var m = hubCharMap()[c.id] || {}, mode = m.mode || '';
+  var ov = document.createElement('div');
+  ov.className = 'mine-acc-overlay open hub-core-dlg';
+  ov.innerHTML = '<div class="mine-acc-modal hub-modal"><div class="mine-acc-title"></div>' +
+    '<div class="pf-radio-row" data-k="modes"><button class="pf-radio-btn" data-val="">默认的</button><button class="pf-radio-btn" data-val="own">单独的</button><button class="pf-radio-btn" data-val="off">不同步</button></div>' +
+    '<div class="auto-hint" data-k="hint" style="margin:6px 2px 8px;"></div>' +
+    '<div data-k="own"><div class="field-label">记忆库网址</div><input class="field-input" data-k="url" type="url" placeholder="https://……workers.dev" autocomplete="off" spellcheck="false">' +
+    '<div class="field-label">密码</div><input class="field-input" data-k="pass" type="password" placeholder="在那个记忆库网页里设的密码" autocomplete="off"></div>' +
+    '<div data-k="nameBox"><div class="field-label">在记忆库里叫</div><input class="field-input" data-k="name" maxlength="40" autocomplete="off">' +
+    '<div class="auto-hint" style="margin:4px 2px 0;">记忆库靠名字认出是谁。别的小手机里 TA 叫别的名字时填这里，两边写一样就对上了。单独的记忆库不用填，里面的都算 TA 的。</div></div>' +
+    '<div class="auto-hint" data-k="msg" style="margin:8px 2px 0;color:#c25a7e;min-height:16px;"></div>' +
+    '<div class="mine-acc-actions"><button class="mine-acc-btn mine-acc-btn-close" data-a="cancel">取消</button><button class="mine-acc-btn mine-acc-btn-close" data-a="test">测试连接</button><button class="mine-acc-btn mine-acc-btn-add" data-a="save">保存</button></div></div>';
+  var q = function(k) { return ov.querySelector('[data-k="' + k + '"]'); };
+  var HINT = { '': '和别的角色一起，用连接设置里填的默认记忆库。', own: '只属于 TA 的记忆库：TA 的人设、记忆只和这一个同步，别的角色不会进来。再部署一份记忆库、打开它的网址设好密码，把网址和密码填在下面。', off: 'TA 的人设和记忆只留在这台手机里，不同步到任何记忆库。' };
+  var paint = function() {
+    q('modes').querySelectorAll('.pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.val === mode); });
+    q('hint').textContent = HINT[mode];
+    q('own').style.display = mode === 'own' ? '' : 'none';
+    q('nameBox').style.display = mode === '' ? '' : 'none';
+    ov.querySelector('[data-a="test"]').style.display = mode === 'own' ? '' : 'none';
+  };
+  ov.querySelector('.mine-acc-title').textContent = '「' + hubCoreName(c) + '」用哪个记忆库';
+  q('url').value = m.url || ''; q('pass').value = m.pass || '';
+  q('name').value = m.name || ''; q('name').placeholder = (c.builtinAssistant && typeof MIANIN_NAME !== 'undefined' ? MIANIN_NAME : (c.charName || c.charAlias || '').trim()) + '（不填就用这个）';
+  paint();
+  var form = function() {
+    var url = q('url').value.trim().replace(/\/+$/, '').replace(/\/(api\/ping|mcp)$/, '');
+    if (url && !/^https?:\/\//.test(url)) url = 'https://' + url;
+    return { url: url, pass: q('pass').value };
+  };
+  ov.addEventListener('click', function(e) {
+    var t = e.target, a = t.getAttribute && t.getAttribute('data-a');
+    if (t.dataset && t.dataset.val !== undefined && t.classList.contains('pf-radio-btn')) { mode = t.dataset.val; paint(); return; }
+    if (a === 'cancel') { ov.remove(); return; }
+    if (a === 'test') {
+      var f = form();
+      if (!f.url) { shakeEl(q('url')); return; }
+      q('msg').textContent = '正在连…';
+      hubTry(f).then(function() { q('msg').textContent = '✓ 连上了'; }, function(err) { q('msg').textContent = '✗ ' + (err.message === 'Failed to fetch' ? '连不上（网址不对，或者现在网络到不了）' : err.message); });
+      return;
+    }
+    if (a === 'save') {
+      var map = hubCharMap(), f2 = form();
+      if (mode === 'own') {
+        if (!f2.url) { shakeEl(q('url')); return; }
+        if (!f2.pass) { shakeEl(q('pass')); return; }
+        map[c.id] = { mode: 'own', url: f2.url, pass: f2.pass };
+      } else if (mode === 'off') map[c.id] = { mode: 'off' };
+      else { var nm2 = q('name').value.trim(); if (nm2) map[c.id] = { name: nm2.slice(0, 40) }; else delete map[c.id]; }
+      hubLs('mphoneHubChars', JSON.stringify(map));
+      delete c.hubCorePending;   // 换了记忆库：之前没选完的人设版本不算了
+      // TA 现在归的那个记忆库从头再拉一遍，把 TA 的东西都拿下来（别的角色已经对过的不会重复）
+      var now = hubTargetOf(c);
+      if (now) hubCoreWhenIdle(function() { var st = hubState(now.url); st.since = 0; st.after = ''; hubSaveState(st); hubSync(true); });
+      ov.remove();
+      hubPaintCharList(); hubPaintStatus();
+    }
+  });
+  (document.querySelector('.phone') || document.body).appendChild(ov);
+}
 // 连接设置里的一小块：哪些角色的人设还没选版本、哪些能返回上个版本
 function hubPaintCoreList() {
   var box = document.getElementById('hubCoreList');
@@ -290,8 +433,7 @@ function hubPaintCoreList() {
 // ---------- 自动同步：打开小手机、记忆有变化（等半分钟攒一攒）、每十分钟、切回小手机时 ----------
 var hubTimer = null;
 function hubSoon(ms) {
-  var cfg = hubCfg();
-  if (!cfg.url || !cfg.pass || !cfg.auto) return;
+  if (!hubCfg().auto || !hubTargets().length) return;
   clearTimeout(hubTimer);
   hubTimer = setTimeout(function() { hubSync(false); }, ms || 30000);
 }
@@ -319,9 +461,10 @@ function hubPaintStatus(text) {
   if (!el) return;
   var cfg = hubCfg();
   if (text) { el.textContent = text; return; }
-  if (!cfg.url) { el.textContent = '还没连。连上以后，几个小手机、几台设备上的角色共用同一份记忆。'; return; }
+  var targets = hubTargets();
+  if (!targets.length) { el.textContent = '还没连。连上以后，几个小手机、几台设备上的角色共用同一份记忆。'; return; }
   var last = hubLastAt || parseInt(hubLs('mphoneHubLastAt') || '0', 10);
-  el.textContent = '已连接 ' + cfg.url.replace(/^https?:\/\//, '') + (cfg.auto ? '，自动同步' : '，手动同步') +
+  el.textContent = '已连接 ' + (targets.length > 1 ? targets.length + ' 个记忆库' : targets[0].url.replace(/^https?:\/\//, '')) + (cfg.auto ? '，自动同步' : '，手动同步') +
     (last ? '。上次同步：' + (typeof fmtAgo === 'function' ? fmtAgo(last) : new Date(last).toLocaleString()) : '') +
     (hubLastErr ? '。刚才没同步上：' + hubLastErr + '（连上了会再试）' : '');
 }
@@ -342,6 +485,7 @@ document.getElementById('hubOpenSet').addEventListener('click', function() {
   document.getElementById('hubAuto').checked = cfg.auto;
   hubMsg('');
   hubLoadMcp();
+  hubPaintCharList();
   hubPaintCoreList();
   hubOverlay.classList.add('open');
 });
@@ -378,15 +522,16 @@ document.getElementById('hubSave').addEventListener('click', function() {
   var changedUrl = f.url !== hubCfg().url;
   hubLs('mphoneHubUrl', f.url); hubLs('mphoneHubPass', f.pass);
   hubLs('mphoneHubAuto', document.getElementById('hubAuto').checked ? null : '0');
-  if (changedUrl) { hubLs('mphoneHubState', null); hubLs('mphoneHubLastAt', null); hubLastAt = 0; }   // 换了一个记忆库：从头对一遍
+  if (changedUrl) { hubLs('mphoneHubLastAt', null); hubLastAt = 0; }   // 换了一个记忆库：各有各的进度（按网址存），新的那个从头对一遍
   hubOverlay.classList.remove('open');
   hubPaintStatus();
   hubSync(true);
 });
 document.getElementById('hubUnlink').addEventListener('click', function() {
   if (!hubCfg().url) { hubOverlay.classList.remove('open'); return; }
-  openConfirm('断开记忆库？手机里的记忆不会删，记忆库里的也还在，之后可以再连', function() {
-    ['mphoneHubUrl', 'mphoneHubPass', 'mphoneHubAuto', 'mphoneHubState', 'mphoneHubLastAt'].forEach(function(k) { hubLs(k, null); });
+  openConfirm('断开默认记忆库？单独给角色连的不受影响。手机里的记忆不会删，记忆库里的也还在，之后可以再连', function() {
+    hubDropState(hubCfg().url);   // 只断开默认的这个；单独给角色连的记忆库不动
+    ['mphoneHubUrl', 'mphoneHubPass', 'mphoneHubAuto', 'mphoneHubLastAt'].forEach(function(k) { hubLs(k, null); });
     hubLastAt = 0; hubLastErr = '';
     hubOverlay.classList.remove('open');
     hubPaintStatus();

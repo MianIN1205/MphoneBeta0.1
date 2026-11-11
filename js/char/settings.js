@@ -670,7 +670,7 @@ function fillCharForm(char) {
 }
 
 // 扩展页 — 记忆权限：开关、读取条数、可写入的类型、短期保留天数、动态是否记入
-var DEFAULT_MEM_CFG = { on: true, read: true, topK: 6, write: true, types: { short: true, long: true, precious: true }, shortDays: 3, feed: true, milestone: true, budget: 2000 };
+var DEFAULT_MEM_CFG = { on: true, read: true, topK: 6, write: true, types: { short: true, long: true, precious: true }, shortDays: 3, feed: true, milestone: true, budget: 6000 };   // 记忆最多占用（token）：一条记忆能放一整件事以后，从 2000 调大
 function fillMemCfgForm(m) {
   m = Object.assign({}, DEFAULT_MEM_CFG, m || {});
   var types = Object.assign({}, DEFAULT_MEM_CFG.types, m.types || {});
@@ -698,7 +698,7 @@ function readMemCfgForm() {
     shortDays: num('memShortDays', 3, 1, 60),
     feed:      document.getElementById('memFeed').checked,
     milestone: document.getElementById('memMilestone').checked,
-    budget:    num('memBudget', 2000, 0, 100000)
+    budget:    num('memBudget', 6000, 0, 100000)
   };
 }
 document.getElementById('memOn').addEventListener('change', function() {

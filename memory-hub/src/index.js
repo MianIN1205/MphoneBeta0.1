@@ -3,7 +3,7 @@
 // 第一次打开网页时设密码（只存加盐后的哈希）；/api 请求带「Authorization: Bearer 密码」。/mcp 用单独的连接码（网页里能看、能换），也认密码。
 // /api/ping 不用密码，用来测连不连得上。
 
-const VERSION = 3;
+const VERSION = 4;
 
 export default {
   async fetch(req, env) {
@@ -250,7 +250,8 @@ async function findChar(db, name) {
   if (!name) throw new Error('要写角色名字（char）');
   const r = await db.prepare('SELECT DISTINCT char FROM memories WHERE deleted = 0').all();
   const all = (r.results || []).map(x => x.char);
-  return all.find(c => c === name) || all.find(c => c.toLowerCase() === name.toLowerCase()) || name;
+  const norm = s => s.toLowerCase().replace(/[\s·・_\-]/g, '');
+  return all.find(c => c === name) || all.find(c => norm(c) === norm(name)) || (all.length === 1 ? all[0] : name);   // 专属记忆库只有一个角色：怎么叫都是 TA
 }
 function day(t) { const d = new Date(t + 8 * 3600000); return d.toISOString().slice(0, 10); }   // 按北京时间写日期
 function memLine(m) { return '- [' + day(m.created_at) + '] ' + m.content + '（id: ' + m.id + (m.source ? '，来自 ' + m.source : '') + '）'; }
@@ -407,6 +408,14 @@ details.card summary { cursor: pointer; color: var(--accent); font-size: 14px; }
         <div class="row"><button id="copyTok">复制值</button></div></div>
       <div class="kv">连接码泄露了就换一个，换了以后旧的就连不上了，要去各个小手机里重新填。<div class="row"><button id="resetTok">换一个连接码</button></div></div>
     </details>
+    <details class="card" id="ioBox">
+      <summary>导入 / 导出</summary>
+      <div class="kv">导入：选一个整理好的文件（.json），里面的人设核心、设定、关系、记忆一次放进来。同样的内容不会放两遍；文件里有人设核心时，会换掉这个角色现在的那份。
+        <div class="row"><button id="impPick">选文件导入</button><button id="expAll">导出全部</button></div>
+        <input type="file" id="impFile" accept=".json,.txt,application/json" class="hide">
+        <div class="msg" id="impMsg"></div></div>
+      <div class="kv">导出：把记忆库里现在的全部存成一个文件，留着当备份，也能再导进别的记忆库。</div>
+    </details>
     <div class="chips" id="chars"></div>
     <input id="search" placeholder="搜一搜记忆里的字">
     <div id="list"></div>
@@ -509,6 +518,52 @@ $('setupBtn').onclick = function() {
     });
 };
 $('loginBtn').onclick = function() { pass = $('loginPass').value; try { localStorage.setItem('mmPass', pass); } catch (e) {} load(); };
+// ---------- 导入 / 导出 ----------
+// 文件：{ app: 'mphone-memory', items: [{ char, kind: core / fact / relation / memory, content, time }] }（直接一个数组也行；time 是日期字符串或毫秒数，可以不写）
+// id 用内容算出来（同一条再导一次还是同一个 id）；人设核心一个角色一份：已经有就换掉那份，没有就用 p + 名字的哈希（和眠花糖机推上来的是同一个 id）
+function hash(s) { var h = 5381; s = String(s); for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+$('impPick').onclick = function() { $('impFile').click(); };
+$('impFile').onchange = function() {
+  var f = this.files[0]; this.value = '';
+  if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function() { runImport(String(rd.result)); };
+  rd.readAsText(f);
+};
+function runImport(text) {
+  var j;
+  try { j = JSON.parse(text); } catch (e) { $('impMsg').textContent = '这个文件读不懂（要 .json）'; return; }
+  var items = Array.isArray(j) ? j : (j && (j.items || j.memories)) || [];
+  var list = [], n = { core: 0, fact: 0, relation: 0, memory: 0 }, seen = {};
+  items.forEach(function(x) {
+    if (!x) return;
+    var char = String(x.char || (j && j.char) || '').trim(), content = String(x.content || x.text || '').trim(), kind = KIND[x.kind] ? x.kind : 'memory';
+    if (!char || !content) return;
+    var id = 'i' + hash(char + '|' + kind + '|' + content);
+    if (kind === 'core') { var cur = all.filter(function(m) { return m.kind === 'core' && m.char === char; })[0]; id = cur ? cur.id : 'p' + hash(char); }
+    if (seen[id]) return; seen[id] = 1;
+    var t = x.time || x.date || x.created_at, at = typeof t === 'number' ? t : (t ? Date.parse(t) : 0);
+    list.push({ id: id, char: char, kind: kind, content: content, source: String(x.source || '导入'), meta: x.meta || {}, created_at: at || Date.now() });   // meta.type = precious 的进小手机时是珍贵记忆
+    n[kind]++;
+  });
+  if (!list.length) { $('impMsg').textContent = '文件里没找到能导入的内容'; return; }
+  if (!confirm('要导入 ' + list.length + ' 条：人设核心 ' + n.core + '、设定 ' + n.fact + '、关系 ' + n.relation + '、记忆 ' + n.memory + '。' + (n.core ? '已有的人设核心会换成文件里的。' : '') + '继续吗？')) return;
+  var i = 0;
+  function next() {
+    if (i >= list.length) { $('impMsg').textContent = '导入好了，一共 ' + list.length + ' 条'; load(); return; }
+    $('impMsg').textContent = '正在导入 ' + i + ' / ' + list.length + '…';
+    var batch = list.slice(i, i + 40); i += 40;
+    api('/api/sync', { method: 'POST', body: JSON.stringify({ changes: batch }) }).then(next, function(e) { $('impMsg').textContent = '导到一半断了：' + e.message + '（再导一次就行，已经进去的不会重复）'; load(); });
+  }
+  next();
+}
+$('expAll').onclick = function() {
+  var data = { app: 'mphone-memory', exported: new Date().toISOString(), items: all.map(function(m) { var meta = {}; try { meta = m.meta ? JSON.parse(m.meta) : {}; } catch (e) {} return { char: m.char, kind: m.kind, content: m.content, time: m.created_at, source: m.source, meta: meta }; }) };
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  a.download = '记忆库-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+};
 $('search').oninput = render;
 $('addBtn').onclick = function() { openEdit(null); };
 $('editCancel').onclick = function() { $('editMask').classList.remove('open'); };

@@ -19,6 +19,9 @@ function memWhereText(m) {
   return (m.scene === 'drama' ? '发生在剧情空间' : '') + (m.from && (m.source === 'import' || m.source === 'hub') ? (m.scene === 'drama' ? '，' : '') + '在' + m.from + '里' : '');
 }
 var MEM_DAY = 86400000;
+// 一条记忆最多多少字（2026-11-11 用户要的：长期 / 珍贵的放得下一整件事，不用切成好多碎条）；短期的还是短短一句
+var MEM_TEXT_MAX = 2000, MEM_SHORT_MAX = 300;
+function memTextMax(type) { return type === 'short' ? MEM_SHORT_MAX : MEM_TEXT_MAX; }
 
 function saveMemStore() { mphoneStore.save('mphone_memories', memStore); }
 function memCfgOf(char) {
@@ -58,9 +61,10 @@ function memList(charId) {
 // 记下一条；和已有的很像时只更新时间（类型取更重要的那个）
 // data: { type, text, source, scene, time（导入时用原来聊天的时间）, from（导入自哪个小手机）, noMilestone（导入时最后统一整理）, dupAt（多像算重复，默认 0.85） }
 function memAdd(char, data) {
-  var text = String((data && data.text) || '').trim().slice(0, 300);
+  var type = data && MEM_TYPE_NAME[data.type] ? data.type : 'long';
+  var text = String((data && data.text) || '').trim().slice(0, memTextMax(type));
   if (!char || !text) return null;
-  var cfg = memCfgOf(char), type = MEM_TYPE_NAME[data.type] ? data.type : 'long';
+  var cfg = memCfgOf(char);
   var tv = memTokens(text);
   var dup = memList(char.id).filter(function(m) { return memCos(tv, memTokens(m.text)) > (data.dupAt || 0.85); })[0];
   if (dup) {

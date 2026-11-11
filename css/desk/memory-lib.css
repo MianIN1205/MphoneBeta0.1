@@ -45,6 +45,7 @@
 
 /* 连通记忆库的设置弹窗 */
 .hub-modal { max-height: 86%; overflow-y: auto; }
+.hub-char-list { max-height: 150px; overflow-y: auto; overscroll-behavior: contain; }
 .hub-core-text { max-height: 96px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 6px; }
 #hubCoreList .auto-row-label { min-width: 0; }
 .hub-core-dlg .mine-acc-btn { padding-left: 4px; padding-right: 4px; min-width: 0; white-space: nowrap; }

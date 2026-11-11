@@ -313,7 +313,7 @@ document.getElementById('memEditSave').addEventListener('click', function() {
   if (!text) { shakeEl(ta); return; }
   var e = memEditing;
   if (e.m) {
-    if (e.m.text !== text) { e.m.text = text.slice(0, 300); delete e.m.emb; delete e.m.embModel; }
+    if (e.m.text !== text) { e.m.text = text.slice(0, typeof memTextMax === 'function' ? memTextMax(e.m.type) : 300); delete e.m.emb; delete e.m.embModel; }
     e.m.type = memEditType;
     if (memEditType === 'short') { if (!e.m.expires) e.m.expires = Date.now() + memCfgOf(e.char).shortDays * MEM_DAY; }
     else delete e.m.expires;
