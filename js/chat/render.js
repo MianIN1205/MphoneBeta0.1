@@ -283,6 +283,7 @@ function renderHistMsg(m, list, empty) {
     }
   }
   if (list.id === 'dramaMsgList') addDramaHead(r.row, r.bubble, m);
+  if (list.id === 'dramaMsgList' && m.recap && typeof dramaRecapLine === 'function') dramaRecapLine(r.bubble, m);   // 这一轮的摘要（开了「显示每轮摘要」才看得到）
   if (m.quote) r.row._extras.push(appendQuoteBlock(list, m.quote, role));
   if (m.alts && m.alts.length > 1) { r.row._extras.push(appendAltSwitch(list, m)); list._altTime = m.time || 1; }
   // 角色刚发就撤回的：先正常显示两秒半，再换成「撤回了一条消息」

@@ -143,10 +143,31 @@ function estTokens(c) {
 }
 function msgTokens(m) { return estTokens(msgTextForAI(m)) + (m.imgSrc || m.voice ? 300 : 0); }
 
-// 另一个窗口最近发生的事（聊天窗口带剧情空间的，剧情窗口带线上聊天的总结和最近记录），标明是在哪边发生的
-// 剧情那边有前情的回合只带那句前情，没有的（旧记录）带原文
-var CROSS_SCENE_MSGS = 12;
-var CROSS_SCENE_ROUNDS = 12;
+// 另一个窗口发生的事，标明是在哪边发生的（2026-11-11 用户定的：摘要 + 最后六七条原文，不要再带最近十二条互动）
+// · 聊天窗口：剧情更早的经过用每回合那句「前情」当摘要（最多 CROSS_RECAP_MAX 句，不另外请求），加最后 CROSS_SCENE_MSGS 条原文；
+//   剧情之后第一次在线上说话（12 小时内、TA 还没在聊天里说过话）时告诉 TA 可以自然地提起刚才的事，说过以后就只是记得
+// · 剧情窗口：聊天的记忆总结 + 最后 CROSS_SCENE_MSGS 条聊天
+var CROSS_SCENE_MSGS = 7;
+var CROSS_RECAP_MAX = 10;
+// 剧情存档（js/chat/compose-plus.js，用户手动存的「哪次发生了什么」）。msgs = 剧情记录（不算操作卡片）
+// 存档记的是这一段第一条和最后一条消息的时间（fromT / toT），不是第几条：之后删消息、重新生成，范围也不会错位（用户要的）；
+// dramaSaveRange 现算它现在是第几条到第几条（从 0 数），这一段的原文全删了就是 null——存档还在，那件事照样算发生过。没有时间的旧消息才退回用存的条数
+var DRAMA_SAVE_MAX = 12;
+function dramaSaveRange(s, msgs) {
+  if (s.fromT && s.toT) {
+    var a = -1, b = -1;
+    msgs.forEach(function(m, i) { var t = m.time || 0; if (t >= s.fromT && t <= s.toT) { if (a < 0) a = i; b = i; } });
+    return a < 0 ? null : [a, b];
+  }
+  return [(s.from || 1) - 1, (s.to || 1) - 1];
+}
+// 按先后排好；covered(i) = 第 i 条有没有被哪个存档盖到；text(upto) = 第 upto 条之前开始的存档（原文删掉的也算）
+function dramaSavesOf(char, msgs) {
+  var list = ((char && char.dramaSaves) || []).filter(function(s) { return s && s.text; }).map(function(s) { return { s: s, r: dramaSaveRange(s, msgs) }; })
+    .sort(function(x, y) { return (x.s.fromT || 0) - (y.s.fromT || 0) || (x.r ? x.r[0] : -1) - (y.r ? y.r[0] : -1); });
+  return { list: list, covered: function(i) { return list.some(function(x) { return x.r && i >= x.r[0] && i <= x.r[1]; }); },
+    text: function(upto) { return list.filter(function(x) { return upto == null || !x.r || x.r[0] < upto; }).slice(-DRAMA_SAVE_MAX).map(function(x) { return '〔' + (x.s.title || '一段经过') + '〕' + x.s.text; }).join('\n'); } };
+}
 function crossSceneContext(idx, isDrama) {
   var char = charList[idx] || {};
   var other = isDrama ? getChatHistory(idx) : getDramaHistory(idx);
@@ -169,13 +190,24 @@ function crossSceneContext(idx, isDrama) {
     return '【线上聊天的前情】以下是你们在线上聊天里的经过（那时你们隔着手机屏幕）：\n' +
       (sums.length ? sums.join('\n') + (lines.length ? '\n最近的聊天：\n' : '') : '') + lines.join('\n');
   }
-  splitRounds(other.filter(function(m) { return !m.action; })).slice(-CROSS_SCENE_ROUNDS).forEach(function(r) {
-    var rc = roundRecap(r);
-    if (rc) { lines.push('· ' + rc); return; }
-    r.forEach(function(m) { var l = lineOf(m); if (l) lines.push(l); });
-  });
-  if (!lines.length) return '';
-  return '【剧情空间里最近发生的事】你记得这些，但那是在剧情空间里发生的；现在你们在线上聊天，仍然隔着屏幕：\n' + lines.join('\n');
+  var dr = other.filter(function(m) { return !m.action; });
+  var tail = dr.slice(-CROSS_SCENE_MSGS), recaps = [];
+  var dsv = dramaSavesOf(char, dr), sum = dsv.text(), at0 = 0;   // 存过档的：先一个个列存档，存档没盖到的回合才带每轮摘要
+  splitRounds(dr.slice(0, dr.length - tail.length)).forEach(function(r) { var at = at0; at0 += r.length; if (dsv.covered(at)) return; var rc = roundRecap(r); if (rc) recaps.push('· ' + rc); });
+  recaps = recaps.slice(-CROSS_RECAP_MAX);
+  tail.forEach(function(m) { var l = lineOf(m); if (l) lines.push(l); });
+  if (!lines.length && !recaps.length && !sum) return '';
+  var last = (dr[dr.length - 1] || {}).time || 0, gap = last ? Date.now() - last : 0;
+  var ago = !last ? '' : gap < 3600000 ? '刚结束不久' : gap < 86400000 ? '在 ' + Math.floor(gap / 3600000) + ' 小时前' : '在 ' + Math.floor(gap / 86400000) + ' 天前';
+  // 剧情之后 TA 还没在线上说过话：这次可以提起；说过了就只是记得
+  var spoke = getChatHistory(idx).some(function(m) { return m.role === 'assistant' && !m.action && (m.time || 0) > last; });
+  var fresh = last && gap < 12 * 3600000 && !spoke;
+  return '【剧情空间里的事】你们在剧情空间里一起经历了下面这些' + (ago ? '（最后一幕' + ago + '）' : '') + '。那是在剧情空间里发生的，你都记得；现在你们回到了线上聊天，仍然隔着屏幕。\n' +
+    (sum ? '之前的几段经过：\n' + sum + '\n' : '') +
+    (recaps.length ? (sum ? '其余的经过：\n' : '之前的经过：\n') + recaps.join('\n') + '\n' : '') +
+    (lines.length ? '最后的几句：\n' + lines.join('\n') + '\n' : '') +
+    (fresh ? '这是那段剧情之后你们第一次在线上说话：按你的性格自然地提起刚才的事（一两句感受，或者接着刚才的话说），不用复述经过。'
+           : '这些你记得就好：话题自然带到时可以提起，不用每次都提。');
 }
 
 // histOverride：指定使用的记录（自主活动 / 动态生成时用聊天记录），默认取当前子视图的记录
@@ -382,9 +414,12 @@ function buildMsgs(idx, histOverride) {
       }
     }
     if (isDrama && rounds.length < allRounds.length) {
-      var recaps = allRounds.slice(0, allRounds.length - rounds.length).map(roundRecap).filter(Boolean).slice(-40);
-      if (recaps.length) {
-        msgs.push({ role: 'system', content: '【更早的剧情】下面是更早的剧情经过（原文已省略，只留每一轮的前情）：\n' +
+      // 存过档的（char.dramaSaves，js/chat/compose-plus.js）：省略掉的这部分先一个个列存档，存档没盖到的回合再接每轮的前情
+      var dsv = dramaSavesOf(char, history.filter(function(m) { return !m.action; })), seenN = 0;
+      var recaps = allRounds.slice(0, allRounds.length - rounds.length).filter(function(r) { var at = seenN; seenN += r.filter(function(m) { return !m.action; }).length; return !dsv.covered(at); }).map(roundRecap).filter(Boolean).slice(-40);
+      var dSum = dsv.text(seenN);
+      if (recaps.length || dSum) {
+        msgs.push({ role: 'system', content: '【更早的剧情】下面是更早的剧情经过（原文已省略）：\n' + (dSum ? dSum + '\n' : '') +
           recaps.map(function(r) { return '· ' + r; }).join('\n') });
       }
     }
