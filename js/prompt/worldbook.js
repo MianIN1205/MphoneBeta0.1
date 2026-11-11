@@ -15,7 +15,8 @@ var wbAddEntryBtn= document.getElementById('wbAddEntryBtn');
 var wbPanelList  = document.getElementById('wbPanelList');
 var wbDetailDelete = document.getElementById('wbDetailDelete');
 
-// 世界书条目：{ id, name, keywords, content, pos: 'auto' | 'before' | 'middle' | 'after', folderId: '' = 未分类 }
+// 世界书条目：{ id, name, keywords, content, pos: 'auto' | 'before' | 'middle' | 'after', folderId: '' = 未分类, rule }
+// rule: true =「写法要求」（用户要的：世界书要能真的管住模型）：不放进「背景设定」那段，单独一段【写法要求】放在聊天记录后面（js/chat/prompt.js 的 WB_RULE_WRAP）
 // 自动（新条目默认）：常驻条目放「前」当底色，关键词触发的放「中」（预设后面、聊天记录前面），都不插进聊天记录里，不抢戏
 // 文件夹：{ id, name }
 var wbEntries = mphoneStore.load('mphone_worldbook', []);
@@ -155,7 +156,7 @@ function wbExport(groups, name) {
   groups = groups.filter(function(g) { return g.entries.length; });
   if (!groups.length) { showToast('还没有世界书', 'plain'); return; }
   mphoneExportFile('worldbook', { folders: groups.map(function(g) {
-    return { name: g.name, entries: g.entries.map(function(e) { return { name: e.name, keywords: e.keywords || '', content: e.content || '', pos: e.pos || 'auto', enabled: e.enabled !== false }; }) };
+    return { name: g.name, entries: g.entries.map(function(e) { return { name: e.name, keywords: e.keywords || '', content: e.content || '', pos: e.pos || 'auto', enabled: e.enabled !== false, rule: !!e.rule }; }) };
   }) }, '世界书-' + name);
 }
 document.getElementById('wbExportAllBtn').addEventListener('click', function(e) { e.stopPropagation(); wbExport(wbGroups(), '全部'); });
@@ -244,10 +245,15 @@ function openWbDetail(id, folderId) {
   wbInjectPos.querySelectorAll('.pf-radio-btn').forEach(function(b) {
     b.classList.toggle('selected', b.dataset.val === pos);
   });
+  wbEntryKind.querySelectorAll('.pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.val === (entry && entry.rule ? 'rule' : '')); });
   wbDetailDelete.classList.toggle('hidden', !entry);
   wbDetailView.classList.add('open');
 }
 
+var wbEntryKind = document.getElementById('wbEntryKind');
+wbEntryKind.querySelectorAll('.pf-radio-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() { wbEntryKind.querySelectorAll('.pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b === btn); }); });
+});
 wbDetailBack.addEventListener('click', function() { wbDetailView.classList.remove('open'); });
 
 wbAddEntryBtn.addEventListener('click', function(e) { e.stopPropagation(); openWbDetail(null); });
@@ -259,7 +265,8 @@ wbDetailSave.addEventListener('click', function() {
     keywords: wbEntryKeywords.value.trim(),
     content:  wbEntryContent.value.trim(),
     pos:      posBtn ? posBtn.dataset.val : 'auto',
-    folderId: document.getElementById('wbEntryFolder').value
+    folderId: document.getElementById('wbEntryFolder').value,
+    rule:     !!wbEntryKind.querySelector('.pf-radio-btn.selected[data-val="rule"]')
   };
   var entry = null;
   wbEntries.forEach(function(e) { if (e.id === wbEditingId) entry = e; });

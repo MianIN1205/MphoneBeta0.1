@@ -9,6 +9,36 @@ function takeStatus(text) {
 }
 
 // 把角色的一次原始回复拆成多条消息（||| 分隔）并取出 <status>，写入记录并显示
+// =============================================
+// 回复里的标签表：角色在回复里写的、不该让用户看到的标签都登记在这里，只登记这一次。
+// · names：标签名。边生成边出的预览里一律藏掉（replyHideTags），写了一半的也藏
+// · take：正式收到时取走并做事的函数名（私聊的回复和主动消息都走 replyTakeTags；群里不取）
+// 没有 take 的由 commitAssistantReply 自己取（思考、状态栏、签名、照片、文件…）。以后加新标签：在这里加一行就行
+// =============================================
+var REPLY_TAGS = [
+  { names: ['thinking', 'think'] },
+  { names: ['status'] },
+  { names: ['记忆'] },
+  { names: ['签名'] },
+  { names: ['个性签名'] },
+  { names: ['照片', '配图'] },
+  { names: ['前情'] },
+  { names: ['文件'] },
+  { names: ['日程', '提醒', '闹钟'] },
+  { names: ['改密码'], take: 'peekTakeLockTag' },                     // TA 决定改手机密码（js/chat/peek.js）
+  { names: ['星星'], take: 'starTakeTag' },                           // 悄悄叠的星星放进星星瓶（js/desk/starjar.js）
+  { names: ['待关心', '已关心', '补人设'], take: 'lifeTakeTags' },     // js/char/life.js
+  { names: ['记下持有'], take: 'assetTakeTags' }                      // js/chat/assets.js
+];
+var REPLY_HIDE_RE = new RegExp('<(' + REPLY_TAGS.reduce(function(a, t) { return a.concat(t.names); }, []).join('|') + ')(?![\\u4e00-\\u9fffA-Za-z])[\\s\\S]*?(<\\/\\1>|$)', 'gi');
+function replyHideTags(text) {
+  return String(text || '').replace(REPLY_HIDE_RE, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '');
+}
+function replyTakeTags(char, text) {
+  REPLY_TAGS.forEach(function(t) { if (t.take && typeof window[t.take] === 'function') text = window[t.take](char, text); });
+  return text;
+}
+
 function commitAssistantReply(hist, raw, list, empty) {
   var status = '', headStatus = '', recap = '', patBack = false;
   var th = takeThink(raw);   // 思维链：摘出来存在第一条上，不显示成气泡（见 js/chat/prompt.js）
@@ -333,10 +363,7 @@ function sendMsg(userText, requestOnly, onDone) {
     var list = showing ? document.getElementById(listId) : null;
     if (showing && typeof crMarkOtherView === 'function') crMarkOtherView(isChatView);
     if (showing && !isChatView && currentCrSubView === 'contacts' && typeof crDramaSeen === 'function') crDramaSeen(replyChar);
-    if (!isGrp && typeof peekTakeLockTag === 'function') text = peekTakeLockTag(replyChar, text);   // TA 决定改手机密码
-    if (!isGrp && typeof starTakeTag === 'function') text = starTakeTag(replyChar, text);   // 悄悄叠的星星放进星星瓶
-    if (!isGrp && typeof lifeTakeTags === 'function') text = lifeTakeTags(replyChar, text);   // 待关心、已关心、补人设
-    if (!isGrp && typeof assetTakeTags === 'function') text = assetTakeTags(replyChar, text);   // 记下持有（js/chat/assets.js）
+    if (!isGrp) text = replyTakeTags(replyChar, text);   // 改密码、星星、待关心、记下持有…（见上面的标签表）
     var mark = list ? list.lastChild : null;
     var added = isGrp ? groupCommitReply(replyChar, hist, text, list) : commitAssistantReply(hist, text, list, null);
     if (isChatView && !isGrp && added.length && typeof peekCaughtDone === 'function') peekCaughtDone(replyChar);   // 发现查手机的事已经提过了
@@ -438,16 +465,12 @@ function sendMsg(userText, requestOnly, onDone) {
       // 导入的酒馆状态栏那段不在聊天里冒出来
       var liveText = ((isChatView || statusOnFor(replyChar, true)) && typeof statusStreamCut === 'function') ? statusStreamCut(replyChar, aiText) : aiText;
       // 操作块不直接显示原始代码，写完后会变成确认卡片
-      var shown = liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
-        .replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️')
-        .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设|记下持有)[\s\S]*?(<\/(待关心|已关心|补人设|记下持有)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<文件[\s\S]*?(<\/文件>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
-        .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, '').trim();
+      var hidden = replyHideTags(liveText);   // 标签表里的都先藏掉
+      var shown = hidden.replace(/<mphone-action>[\s\S]*?(<\/mphone-action>|$)/g, '⚙️').trim();
       if (bubbleStream && shown.indexOf('⚙️') < 0) {
         // 聊天窗口：写完的句子一个一个冒出来，打字气泡保持小点
         if (started) { typing.bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>'; started = false; }
-        previewStream(liveText.replace(/<(thinking|think)>[\s\S]*?(<\/(thinking|think)>|$)/gi, '')
-          .replace(/<记忆[\s\S]*?(<\/记忆>|$)/g, '').replace(/<签名[\s\S]*?(<\/签名>|$)/g, '').replace(/<个性签名[\s\S]*?(<\/个性签名>|$)/g, '').replace(/<(待关心|已关心|补人设|记下持有)[\s\S]*?(<\/(待关心|已关心|补人设|记下持有)>|$)/g, '').replace(/<改密码[\s\S]*?(<\/改密码>|$)/g, '').replace(/<星星>[\s\S]*?(<\/星星>|$)/g, '').replace(/<(照片|配图)>[\s\S]*?(<\/(照片|配图)>|$)/g, '').replace(/<前情[\s\S]*?(<\/前情>|$)/g, '').replace(/<文件[\s\S]*?(<\/文件>|$)/g, '').replace(/<拍一拍[^>]*>(<\/拍一拍>)?/g, '')
-          .replace(/<status>[\s\S]*?(<\/status>|$)/gi, '').replace(/<(日程|提醒|闹钟)[\s\S]*?(<\/(日程|提醒|闹钟)>|$)/g, ''));
+        previewStream(hidden);
       } else {
         if (!started) { typing.bubble.innerHTML = ''; started = true; }
         typing.bubble.textContent = shown;

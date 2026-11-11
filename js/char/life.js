@@ -45,7 +45,6 @@ function lifeTakeTags(char, text) {
   }
   return text;
 }
-var LIFE_TAG_STRIP = /<(待关心|已关心|补人设|记下持有)[\s\S]*?(<\/(待关心|已关心|补人设|记下持有)>|$)/g;   // 边生成边出的预览里藏掉
 
 // ---------- 给聊天的要求（chatFormatRules 里加） ----------
 function lifeFormatRules(char) {

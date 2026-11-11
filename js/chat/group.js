@@ -80,16 +80,18 @@ function buildGroupMsgs(g, history) {
     '\n\n【群成员的资料】\n' + roster + (userInfo ? '\n\n【{{user}}的资料】\n' + userInfo : '')) });
   // 世界书：按「是谁的」分开放（用户问过不适合某个角色怎么办）：所有成员都关联的是大家的背景；
   // 只有部分人关联的标明只和 TA 们有关，别的角色不知道、不用。同一条只放一次
-  var seen = {}, wbList = [];
+  var seen = {}, wbList = [], ruleSeen = {}, wbRuleList = [];
   [g].concat(members).forEach(function(c) {   // 群自己关联的（便捷拓展栏里选的）算大家都知道
     if (typeof getActiveWbEntries !== 'function') return;
     getActiveWbEntries(c, history, false).forEach(function(e) {
       var k = e.id || (e.name + '\n' + e.content);
+      if (e.rule) { if (!ruleSeen[k]) { ruleSeen[k] = 1; wbRuleList.push('【' + e.name + '】\n' + e.content); } return; }   // 写法要求：不算背景，单独一段
       if (!seen[k]) { seen[k] = { text: '【' + e.name + '】\n' + e.content, owners: [] }; wbList.push(seen[k]); }
       if (c === g) seen[k].owners = members.slice();
       else if (seen[k].owners.indexOf(c) < 0) seen[k].owners.push(c);
     });
   });
+  if (wbRuleList.length && typeof WB_RULE_WRAP !== 'undefined') msgs.push({ role: 'system', content: groupFill(g, WB_RULE_WRAP + '\n\n' + wbRuleList.join('\n\n')) });
   var wbGroups = {}, wbOrder = [];
   wbList.forEach(function(w) {
     var key = w.owners.length >= members.length ? '' : w.owners.map(groupLabel).join('、');

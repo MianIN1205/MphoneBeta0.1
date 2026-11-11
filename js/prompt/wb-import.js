@@ -27,7 +27,7 @@ function wbImpFromJson(j, fileName) {
     return j.folders.map(function(f) {
       return { name: String(f.name || '未分类'), entries: (f.entries || []).filter(function(e) { return e && e.content; }).map(function(e) {
         return { name: String(e.name || '未命名').slice(0, 60), keywords: wbImpKeys(e.keywords), content: String(e.content),
-          pos: ['auto', 'before', 'middle', 'after'].indexOf(e.pos) >= 0 ? e.pos : 'auto', enabled: e.enabled !== false };
+          pos: ['auto', 'before', 'middle', 'after'].indexOf(e.pos) >= 0 ? e.pos : 'auto', enabled: e.enabled !== false, rule: !!e.rule };
       }) };
     });
   }
@@ -144,6 +144,7 @@ document.getElementById('wbImpOk').addEventListener('click', function() {
     }
     var entry = { id: genWbId('wb'), name: e.name, keywords: e.keywords || '', content: e.content, pos: e.pos || 'auto', folderId: folderId };
     if (e.enabled === false) entry.enabled = false;
+    if (e.rule) entry.rule = true;
     wbEntries.push(entry);
     added++;
   });

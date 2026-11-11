@@ -139,9 +139,7 @@ function autoSendMessage(idx) {
     var viewing = appChatRoom.classList.contains('active') && openingChatCharIdx === idx;
     var showNow = viewing;   // 聊天室开着就画进聊天列表（停在剧情那边时也画，切回来就看得到），另一边的按钮冒小红点
     if (viewing && typeof crMarkOtherView === 'function') crMarkOtherView(true);
-    if (typeof peekTakeLockTag === 'function') text = peekTakeLockTag(char, text);
-    if (typeof lifeTakeTags === 'function') text = lifeTakeTags(char, text);   // 主动消息里问过的事也划掉
-    if (typeof assetTakeTags === 'function') text = assetTakeTags(char, text);
+    if (typeof replyTakeTags === 'function') text = replyTakeTags(char, text);   // 和正式回复取同一张标签表（js/chat/reply.js）：改密码、星星、待关心、记下持有
     var added = commitAssistantReply(hist, text,
       showNow ? document.getElementById('chatMsgList') : null,
       showNow ? document.getElementById('chatRoomEmpty') : null);

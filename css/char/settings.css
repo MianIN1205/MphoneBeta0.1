@@ -351,7 +351,10 @@
 }
 
 .wb-content.open {
-  max-height: 300px;
+  max-height: min(300px, 46vh);
+  overflow-y: auto;   /* 世界书多的时候在里面上下滑（以前滑不动、显示不全，用户反馈过） */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   border-top: 1px solid rgba(0,0,0,0.045);
 }
 
