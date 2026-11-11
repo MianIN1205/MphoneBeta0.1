@@ -24,6 +24,33 @@ var MEM_TEXT_MAX = 2000, MEM_SHORT_MAX = 300;
 function memTextMax(type) { return type === 'short' ? MEM_SHORT_MAX : MEM_TEXT_MAX; }
 
 function saveMemStore() { mphoneStore.save('mphone_memories', memStore); }
+// ---------- 情绪 + 感官线索（2026-11-11，「像人脑一样」的第一步，见 docs/记忆模式-像人脑一样.md） ----------
+// 每条记忆可以带：emo 情绪（从下面的词里选）、emoW 强度 1～3、cues 线索（3～6 个这件事里具体的东西：看到 / 听到 / 闻到 / 吃到 / 摸到的、地点、物件）
+// 想起时：她这次说的话里出现了线索 → 直接被勾起来；她现在的心情和记忆的情绪对得上 → 更容易想起；强度高的本来就更容易想起
+var MEM_EMOS = ['甜', '心疼', '委屈', '生气', '害怕', '安心', '好笑', '想念', '害羞', '难过', '骄傲', '平静'];
+// 从她最近说的话粗猜心情（不另外请求）
+var MEM_MOOD_RE = { '甜': /喜欢你|爱你|亲亲|抱抱|么么|贴贴|宝贝/, '心疼': /生病|发烧|难受|好疼|头疼|累死|住院|受伤|没睡|失眠/, '委屈': /委屈|凭什么|冤枉|被骂|不公平/,
+  '生气': /生气|气死|烦死|讨厌|火大/, '害怕': /害怕|好怕|吓死|恐怖|紧张|焦虑|不敢/, '安心': /安心|放心|踏实|有你在/, '好笑': /哈哈|笑死|hhh|233|好好笑/,
+  '想念': /想你|想念|好久没|好想/, '害羞': /害羞|脸红|不好意思/, '难过': /难过|伤心|失落|想哭|心情不好|哭了/, '骄傲': /考过了|拿到了|成功了|做到了|升职|获奖|上岸/ };
+function memNormEmo(s) { s = String(s || '').trim(); return MEM_EMOS.indexOf(s) >= 0 ? s : ''; }
+function memNormCues(v) {
+  var seen = {};
+  return (Array.isArray(v) ? v : String(v || '').split(/[,，、|｜\/;；]/)).map(function(x) { return String(x).trim().slice(0, 12); })
+    .filter(function(x) { if (!x || seen[x]) return false; seen[x] = 1; return true; }).slice(0, 6);
+}
+function memMoodsOf(text) { return MEM_EMOS.filter(function(e) { return MEM_MOOD_RE[e] && MEM_MOOD_RE[e].test(text); }); }
+// 把情绪、强度、线索写到一条记忆上（只写给了的）
+function memSetTags(m, data) {
+  var e = memNormEmo(data.emo);
+  if (e) { m.emo = e; m.emoW = Math.max(1, Math.min(3, parseInt(data.emoW, 10) || 2)); }
+  var c = memNormCues(data.cues);
+  if (c.length) m.cues = memNormCues((m.cues || []).concat(c));
+}
+// 给 TA 看的一条：〔线索〕正文（情绪，多久前…）——像回想起当时的画面，不是背资料
+function memLine(m, extra) {
+  var tail = [m.emo || ''].concat(extra || []).filter(Boolean);
+  return '· ' + (m.cues && m.cues.length ? '〔' + m.cues.join(' · ') + '〕' : '') + m.text + (tail.length ? '（' + tail.join('，') + '）' : '');
+}
 function memCfgOf(char) {
   var m = Object.assign({}, DEFAULT_MEM_CFG, (char && char.memCfg) || {});
   m.types = Object.assign({}, DEFAULT_MEM_CFG.types, m.types || {});
@@ -71,12 +98,14 @@ function memAdd(char, data) {
     if (!data.time) dup.time = Date.now();
     if (MEM_TYPE_RANK[type] > MEM_TYPE_RANK[dup.type]) { dup.type = type; delete dup.expires; }
     if (dup.type === 'short') dup.expires = Date.now() + cfg.shortDays * MEM_DAY;
+    memSetTags(dup, data);
     saveMemStore();
     return dup;
   }
   var m = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), type: type, text: text, time: data.time || Date.now(), source: data.source || 'chat' };
   if (data.scene === 'drama') m.scene = 'drama';   // 在剧情空间里记下的
   if (data.from) m.from = String(data.from).slice(0, 20);
+  memSetTags(m, data);
   if (type === 'short') m.expires = Date.now() + cfg.shortDays * MEM_DAY;
   (memStore[char.id] = memStore[char.id] || []).push(m);
   saveMemStore();
@@ -145,6 +174,58 @@ function memMilestoneStep(char, prevText, lines) {
   });
 }
 
+// ---------- 「TA 知道的你」：关于用户本人、不用回想就知道的事（喜好、口味、习惯、作息、在意的人…），每次聊天都带着 ----------
+// 用户要的（「像人脑一样」第 4 条）：不强制写日记——写日记时顺带更新；没写日记的，小手机开着时一周整理一次（有新记忆才整理）。字数放宽，免得时间久了挤掉东西
+var memKnow = mphoneStore.load('mphone_mem_know', {});   // 角色id → { text, time, basedOn }
+var KNOW_MAX = 1500, KNOW_EVERY_MS = 7 * MEM_DAY;
+var memKnowBusy = {};
+function saveMemKnow() { mphoneStore.save('mphone_mem_know', memKnow); }
+function memBuildKnow(char) {
+  var list = memImportant(char.id);
+  if (list.length < 3) return Promise.reject(new Error('长期和珍贵的记忆还太少'));
+  memKnowBusy[char.id] = true;
+  var old = memKnow[char.id] || {}, userName = (typeof resolveCharAccount === 'function' && resolveCharAccount(char).nickname) || '用户';
+  // 记忆太多时只带最近的（按 token 截），之前整理过的那份会一起给，旧的事不会丢
+  var lines = [], used = 0;
+  for (var i = list.length - 1; i >= 0; i--) {
+    var l = '· ' + list[i].text, t = estTokens(l);
+    if (used + t > 9000) break;
+    lines.unshift(l); used += t;
+  }
+  var prompt = '你是记忆整理助手。下面是「' + memCharName(char) + '」的长期记忆。请整理出「' + memCharName(char) + '」知道的关于「' + userName + '」本人的事：' +
+    '像一个熟悉对方的人，不用回想就知道的那些——喜好和口味、讨厌和雷区、习惯和作息、身体情况、工作或学习、在意的人和宠物、重要的日子、说话的小习惯。\n' +
+    (old.text ? '\n之前整理过的：\n' + old.text + '\n' : '') + '\n记忆：\n' + lines.join('\n') +
+    '\n\n要求：\n- 只写关于' + userName + '本人的事实，不写发生过的事情经过、不写' + memCharName(char) + '自己\n- 只从上面的记忆里来，不编、不猜\n' +
+    '- 之前整理过的，没有被新记忆推翻就保留；被推翻的改成新的\n- 按类别分几组，每条一句，短一点\n- 不超过 ' + KNOW_MAX + ' 字\n- 只输出整理好的内容；什么都没有就只输出「暂无」';
+  return llmRequest([{ role: 'user', content: prompt }], { stream: false, cfg: getApiCfg(char) }).then(function(text) {
+    text = String(text || '').trim();
+    if (/^暂无/.test(text)) text = '';
+    memKnow[char.id] = { text: text.slice(0, KNOW_MAX + 300), time: Date.now(), basedOn: list.length };
+    saveMemKnow();
+    if (typeof memLibChar !== 'undefined' && memLibChar === char.id && typeof renderMemLib === 'function') renderMemLib();
+    return text;
+  }).then(function(t) { delete memKnowBusy[char.id]; return t; }, function(e) { delete memKnowBusy[char.id]; throw e; });
+}
+// 要不要整理：写日记时（一天最多一次）或者离上次超过一周，而且有新的长期 / 珍贵记忆
+function memMaybeKnow(char, byDiary) {
+  var cfg = memCfgOf(char);
+  if (!char || !char.id || char.isGroup || !cfg.on || memKnowBusy[char.id]) return Promise.resolve();
+  var k = memKnow[char.id] || {}, n = memImportant(char.id).length, age = Date.now() - (k.time || 0);
+  if (n < 3 || n <= (k.basedOn || 0) || age < (byDiary ? MEM_DAY : KNOW_EVERY_MS)) return Promise.resolve();
+  var api = getApiCfg(char);
+  if (!api.url || !api.key || !api.model) return Promise.resolve();
+  return memBuildKnow(char).catch(function(err) { console.warn('[Mphone] 整理「TA 知道的你」失败:', err); });
+}
+// 小手机开着时每小时看一次，一个接一个来（不同时发一堆请求）
+if (typeof onMphoneReady === 'function') onMphoneReady(function() {
+  var tick = function() {
+    var chars = charList.filter(function(c) { return !c.isGroup; }), i = 0;
+    (function next() { if (i < chars.length) memMaybeKnow(chars[i++], false).then(next); })();
+  };
+  setTimeout(tick, 60000);
+  setInterval(tick, 3600000);
+});
+
 // ---------- 想起：按相关程度挑几条 ----------
 var memQueryEmb = {};   // 角色id → { text, emb }（发消息前用向量模型算好）
 function memVectorOn(char) { return !!(char && char.chatCfg && char.chatCfg.vectorOn && memEmbedModel); }
@@ -155,9 +236,16 @@ function memRecall(char, query, k, opts) {
   var qe = memQueryEmb[char.id], useEmb = memVectorOn(char) && qe && qe.text === query;
   var qt = memTokens(query);
   return list.map(function(m) {
-    var s = (useEmb && m.emb && m.embModel === memEmbedModel) ? memEmbCos(qe.emb, m.emb) : memCos(qt, memTokens(m.text));
-    if (m.type === 'short' && !opts.all) s += 0.03;   // 聊天时最近的事稍微优先（手动搜索时不加）
-    return { m: m, s: s };
+    var s = (useEmb && m.emb && m.embModel === memEmbedModel) ? memEmbCos(qe.emb, m.emb) : memCos(qt, memTokens(m.text)), cue = '';
+    if (!opts.all) {
+      if (m.type === 'short') s += 0.03;   // 聊天时最近的事稍微优先（手动搜索时不加）
+      // 线索被她的话勾起来：不管整段像不像，直接想起
+      var hits = (m.cues || []).filter(function(c) { return c.length >= 2 && query.indexOf(c) >= 0; });
+      if (hits.length) { s += 0.3 + 0.05 * (hits.length - 1); cue = hits[0]; }
+      if (m.emo && opts.moods && opts.moods.indexOf(m.emo) >= 0) s += 0.1;   // 心情对得上
+      if (m.emoW) s += 0.02 * (m.emoW - 1);   // 情绪越强越容易想起
+    }
+    return { m: m, s: s, cue: cue };
   }).filter(function(x) { return opts.all || x.s > (useEmb ? 0.25 : 0.06); })
     .sort(function(a, b) { return b.s - a.s; }).slice(0, k);
 }
@@ -177,7 +265,8 @@ function memoryContextFor(char, hist) {
   var out = '';
   if (cfg.read) {
     var precious = memList(char.id).filter(function(m) { return m.type === 'precious'; }).sort(function(a, b) { return a.time - b.time; }).slice(-12);
-    var rec = memRecall(char, memQueryOf(hist), cfg.topK, { skipPrecious: true });
+    var moods = memMoodsOf((hist || []).slice(-4).filter(function(m) { return m.role === 'user'; }).map(function(m) { return typeof m.content === 'string' ? m.content : ''; }).join('\n'));
+    var rec = memRecall(char, memQueryOf(hist), cfg.topK, { skipPrecious: true, moods: moods });
     // 相关的不够数时，用最近记下的补上，问得比较笼统时也想得起东西
     if (rec.length < cfg.topK) {
       var have = rec.map(function(r) { return r.m; });
@@ -186,26 +275,26 @@ function memoryContextFor(char, hist) {
         .forEach(function(m) { rec.push({ m: m, s: 0 }); });
     }
     // 关系里程碑一直带着；其余按「记忆最多占用」放：超出时先少想起几条相关的，再少放几条最早的珍贵回忆
-    var msText = (memMilestones[char.id] || {}).text || '';
+    var msText = (memMilestones[char.id] || {}).text || '', knowText = (memKnow[char.id] || {}).text || '';
     if (cfg.budget > 0 && typeof estTokens === 'function') {
       var cost = function() {
-        return estTokens(msText) + estTokens(precious.map(function(m) { return m.text; }).join('\n')) +
+        return estTokens(msText) + estTokens(knowText) + estTokens(precious.map(function(m) { return m.text; }).join('\n')) +
           estTokens(rec.map(function(r) { return r.m.text; }).join('\n'));
       };
       while (rec.length && cost() > cfg.budget) rec.pop();
       while (precious.length > 1 && cost() > cfg.budget) precious.shift();
     }
-    var lines = [];
+    var lines = [], youName = (typeof resolveCharAccount === 'function' && resolveCharAccount(char).nickname) || '用户';
+    if (knowText) lines.push('🌸 你知道的' + youName + '（熟悉的人不用回想就知道的事，自然地照顾到就好，不用提起）：\n' + knowText);
     if (msText) lines.push('📌 你们关系里的重要节点：\n' + msText);
-    if (precious.length) lines.push('💎 珍贵的回忆：\n' + precious.map(function(m) { var w = memWhereText(m); return '· ' + m.text + (w ? '（' + w + '）' : ''); }).join('\n'));
+    if (precious.length) lines.push('💎 珍贵的回忆：\n' + precious.map(function(m) { return memLine(m, [memWhereText(m)]); }).join('\n'));
     if (rec.length) lines.push('想起来的记忆：\n' + rec.map(function(r) {
-      var w = memWhereText(r.m);
-      return '· ' + r.m.text + '（' + memAgo(r.m.time) + (r.m.type === 'short' ? '，最近的事' : '') + (w ? '，' + w : '') + '）';
+      return memLine(r.m, [memAgo(r.m.time) + (r.m.type === 'short' ? '，最近的事' : ''), memWhereText(r.m), r.cue ? '是「' + r.cue + '」让你想起来的' : '']);
     }).join('\n'));
     if (lines.length) {
       // 讲清楚：这些是角色自己的记忆，「用户」指的是谁
       var userName = (typeof resolveCharAccount === 'function' && resolveCharAccount(char).nickname) || '用户';
-      out = '【你的记忆】下面是你（' + (char.charAlias || char.charName || '你') + '）自己的记忆：是你亲身经历、自己记下、一直记得的事，不是别人给你的资料。' +
+      out = '【你的记忆】下面是你（' + (char.charAlias || char.charName || '你') + '）自己的记忆：是你亲身经历、自己记下、一直记得的事，不是别人给你的资料。〔〕里是那件事留在你心里的画面和细节，括号里写着当时的心情。' +
         '里面说的「用户」就是正在和你聊天的' + userName + '。回忆时用你自己的口吻自然地带进对话，不要逐条复述，也不要说「根据记忆」「资料显示」这类话。\n' + lines.join('\n');
     }
   }
@@ -215,21 +304,29 @@ function memoryContextFor(char, hist) {
       var desc = { short: '短期＝几天内有用的事', long: '长期＝要一直记得的事实、喜好和经历', precious: '珍贵＝特别重要、想永远珍藏的回忆' };
       out += (out ? '\n\n' : '') + '【记下新记忆】如果这次对话里出现了值得记住的新信息，在回复最后另起一行写 <记忆 类型="' +
         allowed.map(function(t) { return MEM_TYPE_NAME[t]; }).join('|') + '">一句话</记忆>，可以写多条，用户看不到（' +
-        allowed.map(function(t) { return desc[t]; }).join('；') + '）。没有新东西就不写，已经记得的不要重复记。';
+        allowed.map(function(t) { return desc[t]; }).join('；') + '）。没有新东西就不写，已经记得的不要重复记。' +
+        '长期和珍贵的可以多写三个属性，像人记住一件事时连着当时的感觉：情绪="' + MEM_EMOS.join('|') + '"（选一个）强度="1|2|3"（越强越难忘）线索="3～6 个这件事里具体的东西，用顿号隔开"（看到的、听到的、闻到的、吃到的、摸到的、地点、物件，只写这件事里真有的，不要编）。' +
+        '比如 <记忆 类型="珍贵" 情绪="心疼" 强度="3" 线索="病房、蚊子、凌晨三点">她住院那晚一直说想回家</记忆>';
     }
   }
   return out;
 }
 
 // 从角色输出里取出 <记忆> 并存下；返回去掉标记后的文字
-var MEM_TAG_RE = /<记忆(?:\s+类型\s*=\s*["“'「]?([^"”'」>\s]*)["”'」]?)?\s*>([\s\S]*?)<\/记忆>/g;
+var MEM_TAG_RE = /<记忆([^>]*)>([\s\S]*?)<\/记忆>/g;
+// 标签里的属性：类型="长期" 情绪="心疼" 强度="2" 线索="病房、蚊子"（引号可有可无）
+function memTagAttrs(s) {
+  var o = {};
+  String(s || '').replace(/([\u4e00-\u9fa5A-Za-z]+)\s*=\s*(?:["“'「]([^"”'」]*)["”'」]|([^\s>]+))/g, function(_, k, v1, v2) { o[k] = v1 != null ? v1 : v2; });
+  return o;
+}
 var MEM_TYPE_BY_NAME = { '短期': 'short', '长期': 'long', '珍贵': 'precious' };
 // scene：'drama' = 在剧情窗口里记下的
 function memExtractTags(char, raw, scene) {
   var cfg = memCfgOf(char);
-  return String(raw || '').replace(MEM_TAG_RE, function(_, t, text) {
-    var type = MEM_TYPE_BY_NAME[String(t || '').trim()] || 'long';
-    if (char && cfg.on && cfg.write && cfg.types[type]) memAdd(char, { type: type, text: text, source: 'self', scene: scene });
+  return String(raw || '').replace(MEM_TAG_RE, function(_, attrs, text) {
+    var a = memTagAttrs(attrs), type = MEM_TYPE_BY_NAME[String(a['类型'] || '').trim()] || 'long';
+    if (char && cfg.on && cfg.write && cfg.types[type]) memAdd(char, { type: type, text: text, source: 'self', scene: scene, emo: a['情绪'], emoW: a['强度'], cues: a['线索'] });
     return '';
   }).replace(/\n{3,}/g, '\n\n').trim();
 }

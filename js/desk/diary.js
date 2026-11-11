@@ -90,6 +90,7 @@ function writeCharDiary(idx) {
     if (point && cfg.on && cfg.write && cfg.types.long) {
       memAdd(char, { type: 'long', text: (day.getMonth() + 1) + '月' + day.getDate() + '日的日记：' + point, source: 'diary' });
     }
+    if (typeof memMaybeKnow === 'function') memMaybeKnow(char, true);   // 写日记时顺带整理「TA 知道的你」（一天最多一次）
     return d;
   });
 }

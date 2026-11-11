@@ -3,7 +3,7 @@
 // =============================================
 // 记忆库界面：首页每个角色一张卡片（一行两张），点进去看这个角色的珍贵 / 长期 / 短期记忆
 // =============================================
-var memLibChar = '', memLibFilter = 'precious';
+var memLibChar = '', memLibFilter = 'precious', memLibEmo = '';   // memLibEmo：按情绪筛（空 = 全部）
 function memCharById(id) { return charList.filter(function(c) { return c.id === id; })[0] || null; }
 function memCounts(id) {
   var n = { precious: 0, long: 0, short: 0 };
@@ -56,12 +56,31 @@ function renderMemLib() {
   renderMemMilestone(char);
   document.querySelectorAll('#memFilterRow .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.f === memLibFilter); });
   var n = memCounts(char.id), cfg = memCfgOf(char);
-  document.getElementById('memStats').textContent = '珍贵 ' + n.precious + ' · 长期 ' + n.long + ' · 短期 ' + n.short +
+  var stats = document.getElementById('memStats'), untagged = memUntagged(char);
+  stats.textContent = '珍贵 ' + n.precious + ' · 长期 ' + n.long + ' · 短期 ' + n.short +
     (cfg.on ? '' : '（这个角色在「扩展」页关掉了记忆库，TA 暂时想不起来）');
+  if (untagged.length) {   // 以前记的还没有情绪和线索：点一下让模型照原文补上
+    var fill = document.createElement('button');
+    fill.className = 'mem-fill-btn';
+    fill.textContent = '给 ' + untagged.length + ' 条补上心情和画面';
+    fill.addEventListener('click', function() { memFillTags(char, fill); });
+    stats.appendChild(fill);
+  }
   var box = document.getElementById('memList');
   box.innerHTML = '';
-  var list = memList(char.id).filter(function(m) { return m.type === memLibFilter; })
-    .sort(function(a, b) { return b.time - a.time; });
+  var all = memList(char.id).filter(function(m) { return m.type === memLibFilter; });
+  // 按情绪筛：只列这一类里出现过的情绪
+  var emoRow = document.getElementById('memEmoFilter'), emos = MEM_EMOS.filter(function(e) { return all.some(function(m) { return m.emo === e; }); });
+  if (emos.indexOf(memLibEmo) < 0) memLibEmo = '';
+  emoRow.innerHTML = '';
+  emos.forEach(function(e) {
+    var c = document.createElement('button');
+    c.className = 'mem-emo-chip' + (memLibEmo === e ? ' on' : '');
+    c.textContent = e;
+    c.addEventListener('click', function() { memLibEmo = memLibEmo === e ? '' : e; renderMemLib(); });
+    emoRow.appendChild(c);
+  });
+  var list = all.filter(function(m) { return !memLibEmo || m.emo === memLibEmo; }).sort(function(a, b) { return b.time - a.time; });
   if (!list.length) {
     box.innerHTML = '<div class="auto-hint desk-empty">还没有' + MEM_TYPE_NAME[memLibFilter] + '记忆。聊天时 TA 会自己记下，你也可以点右上角「添加」。</div>';
     return;
@@ -83,6 +102,11 @@ function renderMemLib() {
     var text = document.createElement('div');
     text.className = 'mem-text';
     text.textContent = m.text;
+    // 当时的心情和画面：一行小字（情绪后面的小点是强度）
+    var tags = document.createElement('div');
+    tags.className = 'mem-tags';
+    if (m.emo) { var em = document.createElement('span'); em.className = 'mem-tag-emo'; em.textContent = m.emo + ' ' + '•••'.slice(0, m.emoW || 2); tags.appendChild(em); }
+    (m.cues || []).forEach(function(c) { var t = document.createElement('span'); t.className = 'mem-tag-cue'; t.textContent = c; tags.appendChild(t); });
     var acts = document.createElement('div');
     acts.className = 'anniv-acts';
     function btn(label, on, fn) {
@@ -109,6 +133,7 @@ function renderMemLib() {
     }).classList.add('anniv-del');
     card.appendChild(head);
     card.appendChild(text);
+    if (tags.childNodes.length) card.appendChild(tags);
     card.appendChild(acts);
     box.appendChild(card);
   });
@@ -121,7 +146,28 @@ function renderMemMilestone(char) {
   var ms = memMilestones[char.id] || {};
   document.getElementById('memMilestoneText').value = ms.text || '';
   document.getElementById('memMilestoneMeta').textContent = ms.time ? '整理于' + memAgo(ms.time) : '';
+  var k = memKnow[char.id] || {};
+  document.getElementById('memKnowText').value = k.text || '';
+  document.getElementById('memKnowMeta').textContent = k.time ? '整理于' + memAgo(k.time) : '';
 }
+// 「TA 知道的你」：重新整理 / 自己改了保存
+document.getElementById('memKnowRebuild').addEventListener('click', function() {
+  var char = memCharById(memLibChar), btn = this;
+  if (!char || btn.disabled) return;
+  btn.disabled = true; btn.textContent = '整理中…';
+  memBuildKnow(char).then(function(t) { showToast(t ? '✓ 整理好了' : '记忆里还没有关于你的事', t ? 'success' : 'plain'); })
+    .catch(function(err) { showToast('✗ 没整理成：' + err.message, 'error'); })
+    .then(function() { btn.disabled = false; btn.textContent = '重新整理'; });
+});
+document.getElementById('memKnowSave').addEventListener('click', function() {
+  var char = memCharById(memLibChar);
+  if (!char) return;
+  var old = memKnow[char.id] || {};
+  memKnow[char.id] = { text: document.getElementById('memKnowText').value.trim(), time: Date.now(), basedOn: old.basedOn || memImportant(char.id).length };
+  saveMemKnow();
+  renderMemLib();
+  showToast('✓ 保存了', 'success');
+});
 document.getElementById('memMilestoneRebuild').addEventListener('click', function() {
   var char = memCharById(memLibChar), btn = this;
   if (!char || btn.disabled) return;
@@ -292,10 +338,25 @@ function setMemEditType(t) {
   memEditType = t;
   document.querySelectorAll('#memEditType .pf-radio-btn').forEach(function(b) { b.classList.toggle('selected', b.dataset.type === t); });
 }
+var memEditEmo = '';
+function paintMemEditEmo() {
+  var row = document.getElementById('memEditEmo');
+  row.innerHTML = '';
+  MEM_EMOS.forEach(function(e) {
+    var c = document.createElement('button');
+    c.className = 'mem-emo-chip' + (memEditEmo === e ? ' on' : '');
+    c.textContent = e;
+    c.addEventListener('click', function() { memEditEmo = memEditEmo === e ? '' : e; paintMemEditEmo(); });
+    row.appendChild(c);
+  });
+}
 function openMemEdit(char, m) {
   memEditing = { char: char, m: m || null };
   document.getElementById('memEditTitle').textContent = m ? '编辑记忆' : '添加记忆';
   document.getElementById('memEditText').value = m ? m.text : '';
+  memEditEmo = (m && m.emo) || '';
+  paintMemEditEmo();
+  document.getElementById('memEditCues').value = ((m && m.cues) || []).join('、');
   setMemEditType(m ? m.type : memLibFilter);
   memEditOverlay.classList.add('open');
 }
@@ -317,9 +378,12 @@ document.getElementById('memEditSave').addEventListener('click', function() {
     e.m.type = memEditType;
     if (memEditType === 'short') { if (!e.m.expires) e.m.expires = Date.now() + memCfgOf(e.char).shortDays * MEM_DAY; }
     else delete e.m.expires;
+    if (memEditEmo) { if (e.m.emo !== memEditEmo) { e.m.emo = memEditEmo; e.m.emoW = e.m.emoW || 2; } } else { delete e.m.emo; delete e.m.emoW; }
+    var cues = memNormCues(document.getElementById('memEditCues').value);
+    if (cues.length) e.m.cues = cues; else delete e.m.cues;
     saveMemStore();
   } else {
-    memAdd(e.char, { type: memEditType, text: text, source: 'user' });
+    memAdd(e.char, { type: memEditType, text: text, source: 'user', emo: memEditEmo, cues: document.getElementById('memEditCues').value });
   }
   memEditOverlay.classList.remove('open');
   renderMemLib();
@@ -341,3 +405,38 @@ document.getElementById('memEmbedTest').addEventListener('click', function() {
     hint.textContent = '✓ 可以用：向量长度 ' + e[0].length + '，相近的两句相似度 ' + near.toFixed(2) + '，不相干的 ' + far.toFixed(2);
   }, function(err) { hint.textContent = '✗ 不能用：' + err.message; });
 });
+
+// ---------- 给以前记的补上心情和画面（长期 / 珍贵里还没有情绪和线索的）：一次 20 条，线索只能从原文里找，不编 ----------
+function memUntagged(char) { return memList(char.id).filter(function(m) { return m.type !== 'short' && !m.emo && !(m.cues && m.cues.length) && !m.tagTried; }); }
+function memFillTags(char, btn) {
+  var todo = memUntagged(char);
+  if (!todo.length || btn.disabled) return;
+  btn.disabled = true;
+  var done = 0, step = function() {
+    var batch = todo.slice(done, done + 20);
+    if (!batch.length) { btn.disabled = false; saveMemStore(); renderMemLib(); showToast('✓ 补好了 ' + done + ' 条', 'success'); return; }
+    btn.textContent = '正在补… ' + done + ' / ' + todo.length;
+    var ask = '下面是' + memCharName(char) + '的几条记忆。给每条补三样东西：\n' +
+      '1. emo：当时的心情，只能从这些里选一个：' + MEM_EMOS.join('、') + '（看不出就写 平静）\n' +
+      '2. w：情绪强度 1～3，越难忘越高\n' +
+      '3. cues：3～6 个线索，只能从这条记忆原文里取具体的东西（看到的、听到的、闻到的、吃到的、摸到的、地点、物件、人），原文里没有的不要编；实在没有就少写\n' +
+      '只输出 JSON 数组，不要别的字：[{"i":序号,"emo":"…","w":2,"cues":["…"]}]\n\n' +
+      batch.map(function(m, i) { return i + '. ' + m.text; }).join('\n');
+    callApiOnce([{ role: 'user', content: ask }], char).then(function(text) {
+      var arr = [];
+      try { arr = JSON.parse(String(text).replace(/^[\s\S]*?(\[[\s\S]*\])[\s\S]*$/, '$1')); } catch (_) {}
+      batch.forEach(function(m, i) {
+        var hit = (Array.isArray(arr) ? arr : []).filter(function(x) { return x && +x.i === i; })[0];
+        if (hit) memSetTags(m, { emo: hit.emo, emoW: hit.w, cues: (Array.isArray(hit.cues) ? hit.cues : []).filter(function(c) { return m.text.indexOf(String(c).trim()) >= 0; }) });   // 原文里没有的线索丢掉
+        else m.tagTried = 1;   // 没补上的不再反复问
+      });
+      done += batch.length;
+      saveMemStore();
+      step();
+    }).catch(function(err) {
+      btn.disabled = false; saveMemStore(); renderMemLib();
+      showToast('✗ 补到第 ' + done + ' 条停下了：' + ((err && err.message) || '请求失败') + '，可以再点一次接着补', 'error');
+    });
+  };
+  step();
+}

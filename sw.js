@@ -3,7 +3,7 @@
 // 只处理本站文件，AI / 语音 / 生图等外部接口请求完全不经过这里。
 
 // 文件拆分后 css/、js/ 也要预先缓存；改动这个列表时把版本号加一
-const V = '75';   // 和 index.html、js/core/boot.js 里的版本号一样，用 tools/bump-version.py 一起改
+const V = '76';   // 和 index.html、js/core/boot.js 里的版本号一样，用 tools/bump-version.py 一起改
 const CACHE = 'mphone-v' + V;
 const CSS = ['core/base', 'core/app-screen', 'core/controls', 'core/avatar', 'core/image-picker',
              'desk/statusbar', 'desk/desktop', 'desk/iconsets', 'desk/widgets', 'desk/appearance', 'desk/bookshelf',

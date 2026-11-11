@@ -107,6 +107,8 @@ function hubSnapshot(state, chars, url) {
       if (m.scene) meta.scene = m.scene;
       if (m.from) meta.from = m.from;
       if (m.source && m.source !== 'hub') meta.source = m.source;
+      if (m.emo) { meta.emo = m.emo; meta.emoW = m.emoW || 2; }   // 情绪和线索放 meta 里，别的小手机、MCP 也拿得到
+      if (m.cues && m.cues.length) meta.cues = m.cues;
       put({ id: m.id, char: key, kind: m.hubKind || 'memory', content: m.text, meta: meta, created_at: m.time, charId: c.id });
     });
     (c.selfFacts || []).forEach(function(f) {
@@ -163,12 +165,14 @@ function hubApplyRow(row, state, chars) {
     cur.text = String(row.content).slice(0, typeof memTextMax === 'function' ? memTextMax(type) : 300);
     cur.type = type; delete cur.expires;
     if (row.kind !== 'memory') cur.hubKind = row.kind; else delete cur.hubKind;
+    if (typeof memSetTags === 'function') memSetTags(cur, { emo: meta.emo, emoW: meta.emoW, cues: meta.cues });
   } else {
     var m = { id: row.id, type: type, text: String(row.content).slice(0, typeof memTextMax === 'function' ? memTextMax(type) : 300), time: row.created_at || row.updated_at, source: meta.source || 'hub', hubSrc: state._url };
     if (meta.scene) m.scene = meta.scene;
     if (meta.from) m.from = meta.from;
     else if (!meta.source && row.source && row.source !== '眠花糖机') m.from = String(row.source).slice(0, 20);
     if (row.kind !== 'memory') m.hubKind = row.kind;
+    if (typeof memSetTags === 'function') memSetTags(m, { emo: meta.emo, emoW: meta.emoW, cues: meta.cues });
     list.push(m);
   }
   return 'mem';
