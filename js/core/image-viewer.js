@@ -1,4 +1,4 @@
-// 眠花糖机 — 图片全屏查看：缩放、保存、收藏
+// 眠花糖机 — 图片全屏查看：缩放、保存、分享、收藏
 
 // =============================================
 // 图片全屏查看：点聊天 / 动态 / 收藏里的图片打开；双指或双击缩放，放大后可拖动，单击关闭
@@ -20,6 +20,7 @@ function openImgViewer(src, info) {
   imgViewerImg.src = src;
   // 收藏页里打开的图片不再显示「收藏」
   document.getElementById('imgViewerFav').style.display = info.noFav ? 'none' : '';
+  document.getElementById('imgViewerShare').style.display = ivCanShare() ? '' : 'none';
   ivReset();
   imgViewer.classList.add('open');
 }
@@ -111,15 +112,30 @@ imgViewer.addEventListener('wheel', function(e) {
   if (ivState.scale <= 1.02) ivReset(); else ivApply();
 }, { passive: false });
 
-// 保存：手机上走系统分享（可选「存储图像」），电脑上直接下载
+// 保存：直接存成文件（以前手机上只会弹分享，用户要能直接保存）；分享：走系统分享（手机支持时才显示）
+// iPhone 想存进「照片」：长按大图选「添加到照片」，或者点「分享」→「存储图像」
+function ivCanShare() {
+  try { return !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.png', { type: 'image/png' })] })); } catch (_) { return false; }
+}
+function ivBlob() {
+  return fetch(ivState.src).then(function(r) { return r.blob(); }).then(function(blob) {
+    if (!blob.type) blob = new Blob([blob], { type: 'image/png' });
+    return { blob: blob, name: 'mphone-' + Date.now() + '.' + (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg') };
+  });
+}
+document.getElementById('imgViewerShare').addEventListener('click', function(e) {
+  e.stopPropagation();
+  ivBlob().then(function(o) {
+    return navigator.share({ files: [new File([o.blob], o.name, { type: o.blob.type })] }).catch(function() {});
+  }).catch(function() { showToast('这张图分享不了，长按图片试试', 'plain'); });
+});
 document.getElementById('imgViewerSave').addEventListener('click', function(e) {
   e.stopPropagation();
   var src = ivState.src;
   var name = 'mphone-' + Date.now();
-  fetch(src).then(function(r) { return r.blob(); }).then(function(blob) {
-    var ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
-    if (!blob.type) blob = new Blob([blob], { type: 'image/png' });
-    return shareOrDownload(blob, name + '.' + ext);
+  ivBlob().then(function(o) {
+    downloadBlob(o.blob, o.name);
+    if (!/iPhone|iPad|iPod/.test(navigator.userAgent)) showToast('已保存', 'success');
   }).catch(function() {
     // 读不到图片数据（跨域图片）：在新页面打开，长按保存
     var a = document.createElement('a');

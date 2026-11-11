@@ -260,6 +260,8 @@
   max-width: 100%; max-height: 100%; object-fit: contain;
   transform-origin: center center; user-select: none; -webkit-user-drag: none;
 }
+/* 大图长按能用手机自带的菜单（iPhone「添加到照片」、安卓「下载图片」） */
+.phone .img-viewer img { -webkit-touch-callout: default; }
 .img-viewer-bar {
   position: absolute; left: 0; right: 0; bottom: 0;
   display: flex; justify-content: center; gap: 12px;
