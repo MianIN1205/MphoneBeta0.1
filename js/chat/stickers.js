@@ -18,14 +18,36 @@ function stkCatByName(name) { return stkData.cats.filter(function(c) { return c.
 function stkItemsOf(catId) { return stkData.items.filter(function(s) { return s.cat === catId; }); }
 
 function stickerText(name) { return '[表情包：' + name + ']'; }
-var STK_RE = /\[表情包[：:]\s*([^\]\n]{1,40}?)\s*(?:\]|$)/g;   // 忘了写后半个括号、写在一条最后的也认
+var STK_RE = /[\[［【]\s*表情包\s*[：:]\s*([^\]］】\n]{1,40}?)\s*(?:[\]］】]|$)/g;   // 忘了写后半个括号、写在一条最后的也认；全角括号、【】也认
 
 // 按名字找表情包：不分大小写，带不带 .jpg / .gif 这类后缀都算同一个
 function stkKey(name) { return String(name || '').trim().toLowerCase().replace(/\.(jpe?g|png|gif|webp|bmp)$/, ''); }
+// 同名的可以有好几个（用户要的，不再在后面排数字）：角色写这个名字时随机挑一个
 function findSticker(name, pool) {
   var k = stkKey(name);
   if (!k) return null;
-  return (pool || stkData.items).filter(function(s) { return stkKey(s.name) === k; })[0] || null;
+  var hits = (pool || stkData.items).filter(function(s) { return stkKey(s.name) === k; });
+  return hits.length ? hits[Math.floor(Math.random() * hits.length)] : null;
+}
+// 角色写的名字差一点（多了标点、引号、空格，或者只写了一部分 / 多写了几个字）：去掉标点后一样，或者一个包着另一个（至少两个字）也算
+function stkLooseKey(name) { return stkKey(name).replace(/[\s\u3000,.!?~，。！？～、…·'"“”‘’「」『』《》()（）\-_]/g, ''); }
+function findStickerLoose(name, pool) {
+  var s = findSticker(name, pool);
+  if (s) return s;
+  var k = stkLooseKey(name);
+  if (!k) return null;
+  pool = pool || stkData.items;
+  var same = pool.filter(function(x) { return stkLooseKey(x.name) === k; });
+  if (same.length) return same[Math.floor(Math.random() * same.length)];
+  if (k.length < 2) return null;
+  var best = null, bestN = 0;
+  pool.forEach(function(x) {
+    var n = stkLooseKey(x.name);
+    if (n.length < 2 || (n.indexOf(k) < 0 && k.indexOf(n) < 0)) return;
+    var score = Math.min(n.length, k.length) / Math.max(n.length, k.length);
+    if (score > bestN) { bestN = score; best = x; }
+  });
+  return best;
 }
 
 // 角色能用的表情包：没打开就是空的
@@ -44,13 +66,6 @@ function stkNameFromUrl(url) {
     if (seg) return seg.slice(0, 30);
   } catch (_) {}
   return '表情';
-}
-// 名字重复时在后面加数字，免得角色按名字认错
-function stkUniqueName(name, exceptId) {
-  var base = name, n = 2;
-  var taken = function(x) { return stkData.items.some(function(s) { return s.id !== exceptId && stkKey(s.name) === stkKey(x); }); };
-  while (taken(name)) name = base + n++;
-  return name;
 }
 
 // 图床图片：不带来源网址（不少图床会拦外站引用）；打不开时交给 onFail
@@ -248,9 +263,12 @@ function appendStickerMsg(role, m, targetListEl, targetEmptyEl) {
   row.appendChild(createMsgAvatar(role));
   var bubble = document.createElement('div');
   bubble.className = 'chat-msg-bubble sticker-bubble';
+  // 图片打不开：过一会儿再试一次，还不行就把这条藏起来（用户要的，不再变成一行「[表情包：名字]」文字）；记录里还在，下次打开能加载就又出来
+  var tried = false;
   var img = stkImg(m.sticker.url, m.content, function() {
-    bubble.classList.remove('sticker-bubble');
-    bubble.textContent = stickerText(m.sticker.name);
+    if (!tried) { tried = true; setTimeout(function() { img.src = m.sticker.url; }, 1500); return; }
+    row.classList.add('stk-failed');
+    row.style.display = 'none';
   });
   // 图片是后加载的：本来停在最底下就继续停在最底下
   img.onload = function() {
@@ -263,26 +281,26 @@ function appendStickerMsg(role, m, targetListEl, targetEmptyEl) {
   return { row: row, bubble: bubble };
 }
 
-// 角色回复里的「[表情包：名字]」：名字在 TA 能用的分类里的，拆成单独一条表情包消息；别的照原样留成文字
+// 角色回复里的「[表情包：名字]」：名字在 TA 能用的分类里的（差一点的也算，见 findStickerLoose），拆成单独一条表情包消息；
+// 对不上的、TA 没开表情包却学着写的，直接拿掉不显示（用户要的：发不出来就藏起来，不要剩一行文字）
 function stickerSplitParts(parts, char) {
   var pool = stkCharItems(char);
-  if (!pool.length) return parts;
   var out = [];
   parts.forEach(function(p) {
     if (typeof p !== 'string') { out.push(p); return; }
     var last = 0, m, segs = [];
     STK_RE.lastIndex = 0;
     while ((m = STK_RE.exec(p))) {
-      var s = findSticker(m[1], pool);
-      if (!s) continue;
+      var s = pool.length ? findStickerLoose(m[1], pool) : null;
       segs.push(p.slice(last, m.index));
-      segs.push({ content: stickerText(s.name), sticker: { name: s.name, url: s.url } });
       last = STK_RE.lastIndex;
+      if (!s) continue;
+      segs.push({ content: stickerText(s.name), sticker: { name: s.name, url: s.url } });
     }
     segs.push(p.slice(last));
     segs.forEach(function(x) {
       if (typeof x !== 'string') out.push(x);
-      else if (x.trim() && !/^[\]］]$/.test(x.trim())) out.push(x.trim());   // 单独剩下的半个括号不要
+      else if (x.trim() && !/^[\]］】]$/.test(x.trim())) out.push(x.trim());   // 单独剩下的半个括号不要
     });
   });
   return out;
@@ -302,7 +320,8 @@ function stickerPrompt(char) {
       for (var i = items.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = items[i]; items[i] = items[j]; items[j] = t; }
       items = items.slice(0, Math.max(3, Math.round(items.length * STK_PROMPT_MAX / total)));
     }
-    if (items.length) lines.push(c.name + '：' + items.map(function(s) { return s.name; }).join('、'));
+    var seen = {}, names = items.map(function(s) { return s.name; }).filter(function(n) { var k = stkKey(n); if (seen[k]) return false; seen[k] = 1; return true; });   // 同名的只列一次
+    if (names.length) lines.push(c.name + '：' + names.join('、'));
   });
   return '【表情包】你也可以像{{user}}一样发表情包：想发的时候单独发一条，只写「[表情包：名字]」，名字只能从下面挑，不要自己编。' +
     '看心情偶尔发，不用每次都发。\n' + lines.join('\n');
@@ -416,7 +435,7 @@ function stkImportGrouped(list) {
     if (!cat) { cat = { id: stkNewId('sc'), name: x.cat }; stkData.cats.push(cat); newCats++; }
     last = cat;
     if (stkItemsOf(cat.id).some(function(s) { return s.url === x.url; })) { skipped++; return; }
-    stkData.items.push({ id: stkNewId('sk'), name: stkUniqueName(x.name || stkNameFromUrl(x.url)), url: x.url, cat: cat.id });
+    stkData.items.push({ id: stkNewId('sk'), name: x.name || stkNameFromUrl(x.url), url: x.url, cat: cat.id });
     added++;
   });
   saveStickers();
@@ -500,7 +519,7 @@ document.getElementById('stkImportOk').addEventListener('click', function() {
   var added = 0, skipped = 0;
   list.forEach(function(x) {
     if (stkItemsOf(cat.id).some(function(s) { return s.url === x.url; })) { skipped++; return; }
-    stkData.items.push({ id: stkNewId('sk'), name: stkUniqueName(x.name), url: x.url, cat: cat.id });
+    stkData.items.push({ id: stkNewId('sk'), name: x.name, url: x.url, cat: cat.id });
     added++;
   });
   saveStickers();

@@ -270,7 +270,10 @@ function groupCommitReply(g, hist, raw, list) {
       }
       var text = (groupActionOn(g) ? piece : piece.replace(actionRe(), '')).replace(/[ \t]{2,}/g, ' ').trim();   // 动作描写看群设置
       if (!text) return;
-      chatSplitLines([text]).forEach(function(p) {
+      var who = members.filter(function(c) { return c.id === s.id; })[0], ps = chatSplitLines([text]);
+      if (typeof stickerSplitParts === 'function') ps = stickerSplitParts(ps, who);   // 表情包：这个成员能发的变成表情包，对不上的拿掉
+      ps.forEach(function(p) {
+        if (p && typeof p === 'object' && p.sticker) { added.push(Object.assign({ role: 'assistant', speaker: s.id, time: now }, p)); return; }
         if (typeof p !== 'string' || !p.trim() || CHAT_MARK_RE.test(p.trim())) return;
         added.push({ role: 'assistant', content: p, speaker: s.id, time: now });
       });

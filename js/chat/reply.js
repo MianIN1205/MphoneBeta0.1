@@ -373,7 +373,7 @@ function sendMsg(userText, requestOnly, onDone) {
     if (cut < 0) return;
     var done = shown.slice(0, cut + 1);
     // 没写完的标记、表情包、撤回先不显示，等正式消息
-    done = done.replace(/<撤回>[\s\S]*?(<\/撤回>|$)/g, '').replace(/\[表情包[:：][^\]\n]*\]?/g, '').replace(/<[^>\n]*$/, '');
+    done = done.replace(/<撤回>[\s\S]*?(<\/撤回>|$)/g, '').replace(/[\[［【]\s*表情包\s*[:：][^\]］】\n]*[\]］】]?/g, '').replace(/<[^>\n]*$/, '');
     if (!rcCfg.actionOn) done = done.replace(actionRe(), '').replace(/[ \t]{2,}/g, ' ');
     var parts = chatSplitLines(done.split(/\n?\s*\|\|\|\s*\n?/).map(function(p) { return p.trim(); }).filter(Boolean));
     // 一行刚写完、后面的「〔译〕」或者跟着的动作还没到时，最后一条可能还会变：先不出
