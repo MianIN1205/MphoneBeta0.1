@@ -1,9 +1,9 @@
-// 眠花糖机记忆库：部署在用户自己的 Cloudflare 账号里（Worker + D1），几个小手机、几台设备共用同一份角色记忆，让角色在哪儿都是同一个 TA。
+// 眠花糖机记忆库：部署在用户自己的 Cloudflare 账号里（Worker + D1），几个小手机、几台设备共用同一份角色核心（人设）和记忆，让角色在哪儿都是同一个 TA。
 // 三个门：/ 网页（翻看、编辑）；/api/* 给眠花糖机同步用（/api/sync 推上来、/api/pull 拉下去）；/mcp 给别的小手机连（MCP，Streamable HTTP，不保持连接）。
 // 第一次打开网页时设密码（只存加盐后的哈希）；/api 请求带「Authorization: Bearer 密码」。/mcp 用单独的连接码（网页里能看、能换），也认密码。
 // /api/ping 不用密码，用来测连不连得上。
 
-const VERSION = 2;
+const VERSION = 3;
 
 export default {
   async fetch(req, env) {
@@ -86,7 +86,9 @@ async function mcpToken(db, reset) {
 }
 
 // ---------- 接口 ----------
-const KINDS = ['memory', 'fact', 'relation'];
+const KINDS = ['memory', 'fact', 'relation', 'core'];   // core 人设核心：一个角色一份，这个角色是谁（第三版加的）
+const AI_KINDS = ['memory', 'fact', 'relation'];           // 角色自己能记的类型（人设核心只能用户改）
+function cap(kind) { return kind === 'core' ? 30000 : 4000; }   // 一条最多多少字：人设可以长
 const SYNC_MAX = 40;   // 一次最多推多少条（免费版每次请求能查数据库的次数有限，分批推）
 async function api(req, db, p, url) {
   const m = req.method;
@@ -112,7 +114,7 @@ async function api(req, db, p, url) {
     const now = Date.now(), id = String(b.id || ('m' + now.toString(36) + randomId(4)));
     const kind = KINDS.includes(b.kind) ? b.kind : 'memory';
     await db.prepare('INSERT INTO memories (id, char, content, kind, source, created_at, updated_at, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, 0)')
-      .bind(id, char.slice(0, 60), content.slice(0, 4000), kind, String(b.source || '').slice(0, 40), parseInt(b.created_at, 10) || now, now).run();
+      .bind(id, char.slice(0, 60), content.slice(0, cap(kind)), kind, String(b.source || '').slice(0, 40), parseInt(b.created_at, 10) || now, now).run();
     return json({ ok: true, id, updated_at: now });
   }
   const one = p.match(/^\/api\/memories\/([\w-]+)$/);
@@ -120,9 +122,9 @@ async function api(req, db, p, url) {
     const b = await req.json().catch(() => ({}));
     const cur = await db.prepare('SELECT * FROM memories WHERE id = ?').bind(one[1]).first();
     if (!cur) return json({ ok: false, error: '没有这条' }, 404);
-    const now = Date.now();
+    const now = Date.now(), kind = KINDS.includes(b.kind) ? b.kind : cur.kind;
     await db.prepare('UPDATE memories SET char = ?, content = ?, kind = ?, updated_at = ?, deleted = 0 WHERE id = ?')
-      .bind(String(b.char || cur.char).slice(0, 60), String(b.content || cur.content).slice(0, 4000), KINDS.includes(b.kind) ? b.kind : cur.kind, now, one[1]).run();
+      .bind(String(b.char || cur.char).slice(0, 60), String(b.content || cur.content).slice(0, cap(kind)), kind, now, one[1]).run();
     return json({ ok: true, updated_at: now });
   }
   if (one && m === 'DELETE') {
@@ -142,14 +144,14 @@ async function api(req, db, p, url) {
       const fresh = changes.filter(c => !have.has(String(c.id)) && !c.deleted && c.content);
       const dupMap = {};
       if (fresh.length) {
-        const ct = fresh.map(c => String(c.content).slice(0, 4000));
+        const ct = fresh.map(c => String(c.content).slice(0, cap(c.kind)));
         const d = await db.prepare('SELECT id, char, kind, content FROM memories WHERE deleted = 0 AND content IN (' + ct.map(() => '?').join(',') + ')').bind(...ct).all();
         (d.results || []).forEach(r => { dupMap[r.char + '\u0001' + r.kind + '\u0001' + r.content] = r.id; });
       }
       const now = Date.now(), stmts = [];
       changes.forEach(c => {
         const id = String(c.id).slice(0, 80), kind = KINDS.includes(c.kind) ? c.kind : 'memory';
-        const char = String(c.char || '').slice(0, 60), content = String(c.content || '').slice(0, 4000), meta = typeof c.meta === 'string' ? c.meta.slice(0, 2000) : JSON.stringify(c.meta || {});
+        const char = String(c.char || '').slice(0, 60), content = String(c.content || '').slice(0, cap(kind)), meta = typeof c.meta === 'string' ? c.meta.slice(0, 2000) : JSON.stringify(c.meta || {});
         if (have.has(id)) {
           if (c.deleted) stmts.push(db.prepare('UPDATE memories SET deleted = 1, updated_at = ? WHERE id = ?').bind(now, id));
           else stmts.push(db.prepare('UPDATE memories SET char = ?, content = ?, kind = ?, meta = ?, deleted = 0, updated_at = ? WHERE id = ?').bind(char, content, kind, meta, now, id));
@@ -182,11 +184,11 @@ async function api(req, db, p, url) {
 // ---------- MCP：给别的小手机连（JSON-RPC，一问一答，不保持连接） ----------
 // 小手机连上后，它的 AI 能自己调用：了解自己（get_character）、回忆（recall）、记下（remember）、改（update_memory）、忘掉（forget）、看有哪些角色（list_characters）
 const MCP_INSTRUCTIONS = '这是用户的「眠花糖机记忆库」，几个小手机共用同一份角色记忆，让角色在哪里都是同一个人。' +
-  '每次新的对话开始、或者不确定自己是怎样的人、和用户之间发生过什么时，先用 get_character 取出你自己的设定、关系和最近的记忆，照着保持一致；' +
+  '每次新的对话开始、或者不确定自己是怎样的人、和用户之间发生过什么时，先用 get_character 取出你自己的人设核心、设定、关系和最近的记忆，照着保持一致；人设核心就是你是谁，它和这边给你的人设有出入时，以人设核心为准；' +
   '聊到具体的事想不起来时用 recall 搜一搜；用户告诉你重要的事、你们之间发生了值得记住的事、你第一次说出关于自己的新设定时，用 remember 记下来（一件事一条，写清时间和具体细节）。' +
   '记忆是你自己的经历，自然地用，不要对用户说「我查了记忆库」。char 参数写你自己的名字。';
 const MCP_TOOLS = [
-  { name: 'get_character', description: '了解你自己：取出这个角色在记忆库里的全部设定、和用户的关系、最近的记忆。新对话开始时先调用。Get this character\'s settings, relationship and recent memories.',
+  { name: 'get_character', description: '了解你自己：取出这个角色在记忆库里的人设核心（你是谁）、全部设定、和用户的关系、最近的记忆。新对话开始时先调用。Get this character\'s core persona, settings, relationship and recent memories.',
     inputSchema: { type: 'object', properties: { char: { type: 'string', description: '角色名字（你自己的名字）' } }, required: ['char'] } },
   { name: 'recall', description: '回忆：按关键词搜这个角色的记忆。Search memories by keywords.',
     inputSchema: { type: 'object', properties: { char: { type: 'string', description: '角色名字' }, query: { type: 'string', description: '想找的内容，几个关键词' }, limit: { type: 'number', description: '最多几条，默认 8' } }, required: ['char', 'query'] } },
@@ -272,8 +274,10 @@ async function mcpTool(db, name, a, app) {
     const r = await db.prepare('SELECT * FROM memories WHERE deleted = 0 AND char = ? ORDER BY updated_at DESC').bind(char).all();
     const rows = r.results || [];
     if (!rows.length) return '记忆库里还没有「' + char + '」的记忆。可以用 list_characters 看看有哪些角色名字。';
+    const core = rows.filter(m => m.kind === 'core')[0];   // 有好几份时用最近改过的那份
     const facts = rows.filter(m => m.kind === 'fact'), rel = rows.filter(m => m.kind === 'relation'), mem = rows.filter(m => m.kind === 'memory');
     const parts = ['【' + char + '】记忆库里一共 ' + rows.length + ' 条'];
+    if (core) parts.push('【人设核心（你是谁。在哪个小手机里都照这个来）】\n' + core.content);
     if (facts.length) parts.push('【设定（关于你自己）】\n' + facts.slice(0, 80).map(memLine).join('\n'));
     if (rel.length) parts.push('【和用户的关系】\n' + rel.slice(0, 20).map(memLine).join('\n'));
     if (mem.length) parts.push('【最近的记忆】（共 ' + mem.length + ' 条，这里是最近 20 条，更早的用 recall 搜）\n' + mem.slice(0, 20).map(memLine).join('\n'));
@@ -281,7 +285,7 @@ async function mcpTool(db, name, a, app) {
   }
   if (name === 'recall') {
     const char = await findChar(db, a.char), kw = keywords(a.query), limit = Math.min(30, Math.max(1, parseInt(a.limit, 10) || 8));
-    const r = await db.prepare('SELECT * FROM memories WHERE deleted = 0 AND char = ? ORDER BY updated_at DESC LIMIT 3000').bind(char).all();
+    const r = await db.prepare('SELECT * FROM memories WHERE deleted = 0 AND char = ? AND kind != \'core\' ORDER BY updated_at DESC LIMIT 3000').bind(char).all();
     const scored = (r.results || []).map(m => { const t = m.content.toLowerCase(); return { m, s: kw.reduce((n, k) => n + (t.includes(k) ? (k.length > 1 ? 2 : 1) : 0), 0) }; })
       .filter(x => x.s > 0).sort((x, y) => y.s - x.s || y.m.updated_at - x.m.updated_at).slice(0, limit);
     return scored.length ? scored.map(x => memLine(x.m)).join('\n') : '没找到和「' + a.query + '」有关的记忆。';
@@ -289,7 +293,7 @@ async function mcpTool(db, name, a, app) {
   if (name === 'remember') {
     const char = await findChar(db, a.char), content = String(a.content || '').trim();
     if (!content) throw new Error('content 是空的');
-    const kind = KINDS.includes(a.kind) ? a.kind : 'memory';
+    const kind = AI_KINDS.includes(a.kind) ? a.kind : 'memory';
     const dup = await db.prepare('SELECT id FROM memories WHERE deleted = 0 AND char = ? AND content = ?').bind(char, content).first();
     if (dup) return '这条已经记过了（id: ' + dup.id + '）';
     const now = Date.now(), id = 'm' + now.toString(36) + randomId(4);
@@ -298,13 +302,14 @@ async function mcpTool(db, name, a, app) {
     return '记下了（id: ' + id + '）';
   }
   if (name === 'update_memory') {
-    const cur = await db.prepare('SELECT id FROM memories WHERE id = ? AND deleted = 0').bind(String(a.id || '')).first();
+    const cur = await db.prepare('SELECT id, kind FROM memories WHERE id = ? AND deleted = 0').bind(String(a.id || '')).first();
     if (!cur) throw new Error('没有这条（id 不对）');
+    if (cur.kind === 'core') throw new Error('人设核心只有用户能改');
     await db.prepare('UPDATE memories SET content = ?, updated_at = ? WHERE id = ?').bind(String(a.content || '').slice(0, 4000), Date.now(), cur.id).run();
     return '改好了';
   }
   if (name === 'forget') {
-    const r = await db.prepare('UPDATE memories SET deleted = 1, updated_at = ? WHERE id = ? AND deleted = 0').bind(Date.now(), String(a.id || '')).run();
+    const r = await db.prepare('UPDATE memories SET deleted = 1, updated_at = ? WHERE id = ? AND deleted = 0 AND kind != \'core\'').bind(Date.now(), String(a.id || '')).run();
     return r.meta && r.meta.changes ? '删掉了' : '没有这条（id 不对）';
   }
   throw new Error('没有这个工具：' + name);
@@ -353,6 +358,8 @@ button.primary { background: var(--accent); color: #fff; }
 .mem-text { white-space: pre-wrap; word-break: break-word; }
 .mem-meta { display: flex; gap: 10px; margin-top: 6px; font-size: 11.5px; color: var(--sub); }
 .tag { padding: 0 8px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); }
+.mem.core { border-color: var(--accent); }
+.mem.core .mem-text { max-height: 8em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 60%, transparent); mask-image: linear-gradient(#000 60%, transparent); }
 .empty { text-align: center; color: var(--sub); padding: 40px 0; font-size: 13.5px; }
 .fab { position: fixed; right: 20px; bottom: 24px; width: 54px; height: 54px; border-radius: 50%; font-size: 26px; padding: 0; background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(208,112,143,0.35); }
 .mask { position: fixed; inset: 0; background: rgba(60,40,55,0.28); display: none; align-items: flex-end; justify-content: center; }
@@ -413,7 +420,7 @@ details.card summary { cursor: pointer; color: var(--accent); font-size: 14px; }
     <label>角色</label>
     <input id="editChar" placeholder="角色名字，比如：简然" maxlength="60">
     <label>类型</label>
-    <select id="editKind"><option value="memory">记忆（发生过的事）</option><option value="fact">设定（关于 TA 自己）</option><option value="relation">关系（你们之间）</option></select>
+    <select id="editKind"><option value="core">人设核心（TA 是谁，一个角色一份）</option><option value="memory">记忆（发生过的事）</option><option value="fact">设定（关于 TA 自己）</option><option value="relation">关系（你们之间）</option></select>
     <label>内容</label>
     <textarea id="editText" placeholder="写具体一点：什么时候、发生了什么、TA 怎么想"></textarea>
     <div class="row"><button id="editDel">删除</button><span style="flex:1"></span><button id="editCancel">取消</button><button class="primary" id="editSave">保存</button></div>
@@ -425,7 +432,7 @@ details.card summary { cursor: pointer; color: var(--accent); font-size: 14px; }
 var $ = function(id) { return document.getElementById(id); };
 var pass = '', curChar = '', all = [], editing = null;
 try { pass = localStorage.getItem('mmPass') || ''; } catch (e) {}
-var KIND = { memory: '记忆', fact: '设定', relation: '关系' };
+var KIND = { core: '人设核心', memory: '记忆', fact: '设定', relation: '关系' };
 function api(path, opt) {
   opt = opt || {};
   opt.headers = Object.assign({ 'content-type': 'application/json', authorization: 'Bearer ' + pass }, opt.headers || {});
@@ -466,10 +473,11 @@ function render() {
   });
   var q = $('search').value.trim();
   var list = all.filter(function(m) { return (!curChar || m.char === curChar) && (!q || m.content.indexOf(q) >= 0); });
+  list = list.filter(function(m) { return m.kind === 'core'; }).concat(list.filter(function(m) { return m.kind !== 'core'; }));   // 人设核心排最前面
   $('subLine').textContent = '共 ' + all.length + ' 条，' + names.length + ' 个角色';
   $('list').innerHTML = list.length ? '' : '<div class="empty">' + (all.length ? '没有对上的' : '还没有记忆，点右下角的 ＋ 记第一条') + '</div>';
   list.forEach(function(m) {
-    var d = document.createElement('div'); d.className = 'card mem';
+    var d = document.createElement('div'); d.className = 'card mem' + (m.kind === 'core' ? ' core' : '');
     d.innerHTML = '<div class="mem-text"></div><div class="mem-meta"><span class="tag"></span><span class="who"></span><span class="when"></span><span class="src"></span></div>';
     d.querySelector('.mem-text').textContent = m.content;
     d.querySelector('.tag').textContent = KIND[m.kind] || '记忆';
